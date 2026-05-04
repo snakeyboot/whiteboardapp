@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Controller — Classroom</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+
+    .dot.disconnected { background: #ef4444; }
+
+    .sections {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid #334155;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 16px;
+    }
+
+    /* Timer */
+    .timer-display {
+      font-size: 64px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+      color: #f8fafc;
+      margin-bottom: 16px;
+      letter-spacing: -2px;
+    }
+
+    .timer-display.urgent { color: #f87171; }
+    .timer-display.warning { color: #fbbf24; }
+
+    .timer-presets {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      flex: 1;
+      min-width: 60px;
+      padding: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+
+    .timer-custom {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+
+    .timer-custom input {
+      flex: 1;
+      padding: 10px 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 14px;
+    }
+
+    .timer-custom input:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-green { background: #16a34a; color: #fff; }
+    .btn-green:hover { background: #15803d; }
+    .btn-yellow { background: #d97706; color: #fff; }
+    .btn-yellow:hover { background: #b45309; }
+    .btn-gray { background: #334155; color: #e2e8f0; }
+    .btn-gray:hover { background: #475569; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-red { background: #dc2626; color: #fff; }
+    .btn-red:hover { background: #b91c1c; }
+    .btn-purple { background: #7c3aed; color: #fff; }
+    .btn-purple:hover { background: #6d28d9; }
+
+    /* Roster tabs */
+    .roster-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .tab-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .tab-btn.active {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #fff;
+    }
+
+    .tab-btn.add-tab {
+      background: transparent;
+      border-style: dashed;
+      color: #64748b;
+      padding: 6px 10px;
+    }
+
+    .tab-btn.add-tab:hover { color: #94a3b8; border-color: #64748b; }
+
+    .roster-name-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .roster-name-input {
+      flex: 1;
+      padding: 8px 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 14px;
+    }
+
+    .roster-name-input:focus { outline: none; border-color: #3b82f6; }
+
+    .roster-textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 14px;
+      resize: vertical;
+      font-family: inherit;
+      line-height: 1.6;
+    }
+
+    .roster-textarea:focus { outline: none; border-color: #3b82f6; }
+
+    .roster-hint {
+      font-size: 11px;
+      color: #475569;
+      margin-top: 6px;
+      margin-bottom: 12px;
+    }
+
+    .pick-result {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #fbbf24;
+      min-height: 34px;
+      margin-bottom: 12px;
+      transition: all 0.3s;
+    }
+
+    .pick-result.empty { color: #334155; font-weight: 400; font-size: 14px; }
+
+    .pick-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Slides */
+    .slides-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .slides-input {
+      flex: 1;
+      padding: 10px 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 13px;
+    }
+
+    .slides-input:focus { outline: none; border-color: #3b82f6; }
+  </style>
+</head>
+<body>
+  <h1><span class="dot" id="dot"></span>Control Center</h1>
+
+  <div class="sections">
+
+    <!-- Timer -->
+    <div class="card">
+      <div class="card-title">Timer</div>
+      <div class="timer-display" id="timerDisplay">5:00</div>
+      <div class="timer-presets">
+        <button class="preset-btn" onclick="setPreset(60)">1m</button>
+        <button class="preset-btn" onclick="setPreset(120)">2m</button>
+        <button class="preset-btn" onclick="setPreset(300)">5m</button>
+        <button class="preset-btn" onclick="setPreset(600)">10m</button>
+        <button class="preset-btn" onclick="setPreset(900)">15m</button>
+        <button class="preset-btn" onclick="setPreset(1800)">30m</button>
+      </div>
+      <div class="timer-custom">
+        <input type="number" id="customMinutes" placeholder="min" min="0" max="99" style="width:80px;flex:none;">
+        <input type="number" id="customSeconds" placeholder="sec" min="0" max="59" style="width:80px;flex:none;">
+        <button class="btn btn-gray" onclick="setCustom()" style="flex:1;">Set</button>
+      </div>
+      <div class="timer-controls">
+        <button class="btn btn-green" id="startPauseBtn" onclick="toggleTimer()">Start</button>
+        <button class="btn btn-gray" onclick="resetTimer()">Reset</button>
+      </div>
+    </div>
+
+    <!-- Student Picker -->
+    <div class="card">
+      <div class="card-title">Random Student Picker</div>
+
+      <div class="roster-tabs" id="rosterTabs"></div>
+
+      <div class="roster-name-row">
+        <input class="roster-name-input" id="rosterNameInput" type="text" placeholder="Class name (e.g. Period 3)">
+        <button class="btn btn-gray" style="flex:none;padding:8px 14px;font-size:13px;" onclick="renameCurrentRoster()">Rename</button>
+        <button class="btn btn-red" style="flex:none;padding:8px 12px;font-size:13px;" onclick="deleteCurrentRoster()">✕</button>
+      </div>
+
+      <textarea class="roster-textarea" id="rosterTextarea"
+        placeholder="Enter student names, one per line"></textarea>
+      <div class="roster-hint">One name per line. Changes save automatically.</div>
+
+      <div class="pick-result" id="pickResult">—</div>
+
+      <div class="pick-controls">
+        <button class="btn btn-purple" onclick="pickStudent()">Pick Random</button>
+        <button class="btn btn-gray" onclick="clearPick()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Google Slides -->
+    <div class="card">
+      <div class="card-title">Google Slides</div>
+      <div class="slides-row">
+        <input class="slides-input" id="slidesInput" type="url"
+          placeholder="Paste Google Slides share URL…">
+        <button class="btn btn-blue" style="flex:none;padding:12px 18px;" onclick="sendSlides()">Send</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const dot = document.getElementById('dot');
+
+    socket.on('connect', () => dot.classList.remove('disconnected'));
+    socket.on('disconnect', () => dot.classList.add('disconnected'));
+
+    // ── Timer ──────────────────────────────────────────────
+    let timerRemaining = 300;
+    let timerDuration = 300;
+    let timerRunning = false;
+    let timerInterval = null;
+
+    const timerDisplay = document.getElementById('timerDisplay');
+    const startPauseBtn = document.getElementById('startPauseBtn');
+
+    function fmt(s) {
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${m}:${String(sec).padStart(2, '0')}`;
+    }
+
+    function updateTimerDisplay() {
+      timerDisplay.textContent = fmt(timerRemaining);
+      timerDisplay.classList.remove('urgent', 'warning');
+      const pct = timerRemaining / timerDuration;
+      if (pct <= 0.1) timerDisplay.classList.add('urgent');
+      else if (pct <= 0.25) timerDisplay.classList.add('warning');
+    }
+
+    function setPreset(secs) {
+      socket.emit('timer:set', secs);
+    }
+
+    function setCustom() {
+      const m = parseInt(document.getElementById('customMinutes').value) || 0;
+      const s = parseInt(document.getElementById('customSeconds').value) || 0;
+      const total = m * 60 + s;
+      if (total > 0) socket.emit('timer:set', total);
+    }
+
+    function toggleTimer() {
+      if (timerRunning) {
+        socket.emit('timer:pause');
+      } else {
+        socket.emit('timer:start');
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      socket.emit('timer:reset');
+    }
+
+    function startLocalTick() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (timerRemaining > 0) {
+          timerRemaining--;
+          updateTimerDisplay();
+          socket.emit('timer:tick', timerRemaining);
+        } else {
+          clearInterval(timerInterval);
+          timerRunning = false;
+          startPauseBtn.textContent = 'Start';
+          socket.emit('timer:pause');
+        }
+      }, 1000);
+    }
+
+    socket.on('state', (s) => {
+      timerDuration = s.timer.duration;
+      timerRemaining = s.timer.remaining;
+      timerRunning = s.timer.running;
+      updateTimerDisplay();
+      startPauseBtn.textContent = timerRunning ? 'Pause' : 'Start';
+      if (timerRunning) startLocalTick();
+      if (s.slides.url) document.getElementById('slidesInput').value = s.slides.url;
+    });
+
+    socket.on('timer:update', (t) => {
+      clearInterval(timerInterval);
+      timerDuration = t.duration;
+      timerRemaining = t.remaining;
+      timerRunning = t.running;
+      updateTimerDisplay();
+      startPauseBtn.textContent = timerRunning ? 'Pause' : 'Start';
+      if (timerRunning) startLocalTick();
+    });
+
+    // ── Rosters ────────────────────────────────────────────
+    const STORAGE_KEY = 'classroom_rosters';
+    const ACTIVE_KEY = 'classroom_active_roster';
+
+    let rosters = {};  // { id: { name, students: string } }
+    let activeId = null;
+
+    function loadRosters() {
+      try {
+        rosters = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      } catch { rosters = {}; }
+      if (Object.keys(rosters).length === 0) {
+        const id = uid();
+        rosters[id] = { name: 'Period 1', students: '' };
+      }
+      activeId = localStorage.getItem(ACTIVE_KEY) || Object.keys(rosters)[0];
+      if (!rosters[activeId]) activeId = Object.keys(rosters)[0];
+    }
+
+    function saveRosters() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(rosters));
+      localStorage.setItem(ACTIVE_KEY, activeId);
+    }
+
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+
+    function renderTabs() {
+      const container = document.getElementById('rosterTabs');
+      container.innerHTML = '';
+      Object.entries(rosters).forEach(([id, r]) => {
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn' + (id === activeId ? ' active' : '');
+        btn.textContent = r.name;
+        btn.onclick = () => switchRoster(id);
+        container.appendChild(btn);
+      });
+      const addBtn = document.createElement('button');
+      addBtn.className = 'tab-btn add-tab';
+      addBtn.textContent = '+ New';
+      addBtn.onclick = addRoster;
+      container.appendChild(addBtn);
+    }
+
+    function renderCurrentRoster() {
+      const r = rosters[activeId];
+      document.getElementById('rosterNameInput').value = r.name;
+      document.getElementById('rosterTextarea').value = r.students;
+    }
+
+    function switchRoster(id) {
+      saveCurrentRosterText();
+      activeId = id;
+      saveRosters();
+      renderTabs();
+      renderCurrentRoster();
+    }
+
+    function saveCurrentRosterText() {
+      if (rosters[activeId]) {
+        rosters[activeId].students = document.getElementById('rosterTextarea').value;
+      }
+    }
+
+    function addRoster() {
+      saveCurrentRosterText();
+      const id = uid();
+      rosters[id] = { name: `Period ${Object.keys(rosters).length + 1}`, students: '' };
+      activeId = id;
+      saveRosters();
+      renderTabs();
+      renderCurrentRoster();
+    }
+
+    function renameCurrentRoster() {
+      const name = document.getElementById('rosterNameInput').value.trim();
+      if (name) {
+        rosters[activeId].name = name;
+        saveCurrentRosterText();
+        saveRosters();
+        renderTabs();
+      }
+    }
+
+    function deleteCurrentRoster() {
+      const ids = Object.keys(rosters);
+      if (ids.length <= 1) return;
+      delete rosters[activeId];
+      activeId = Object.keys(rosters)[0];
+      saveRosters();
+      renderTabs();
+      renderCurrentRoster();
+    }
+
+    document.getElementById('rosterTextarea').addEventListener('input', () => {
+      saveCurrentRosterText();
+      saveRosters();
+    });
+
+    // ── Picker ─────────────────────────────────────────────
+    function pickStudent() {
+      saveCurrentRosterText();
+      const lines = rosters[activeId].students
+        .split('\n')
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (lines.length === 0) return;
+      const name = lines[Math.floor(Math.random() * lines.length)];
+      document.getElementById('pickResult').textContent = name;
+      document.getElementById('pickResult').classList.remove('empty');
+      socket.emit('pick:student', name);
+    }
+
+    function clearPick() {
+      document.getElementById('pickResult').textContent = '—';
+      document.getElementById('pickResult').classList.add('empty');
+      socket.emit('pick:clear');
+    }
+
+    socket.on('pick:show', (name) => {
+      document.getElementById('pickResult').textContent = name;
+      document.getElementById('pickResult').classList.remove('empty');
+    });
+
+    socket.on('pick:clear', () => {
+      document.getElementById('pickResult').textContent = '—';
+    });
+
+    // ── Slides ─────────────────────────────────────────────
+    function sendSlides() {
+      const url = document.getElementById('slidesInput').value.trim();
+      socket.emit('slides:set', url);
+    }
+
+    socket.on('slides:update', (url) => {
+      document.getElementById('slidesInput').value = url;
+    });
+
+    // ── Init ───────────────────────────────────────────────
+    loadRosters();
+    renderTabs();
+    renderCurrentRoster();
+  </script>
+</body>
+</html>

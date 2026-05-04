@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classroom Display</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top bar: timer + picked student */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      gap: 20px;
+      flex-shrink: 0;
+      min-height: 96px;
+    }
+
+    /* Timer */
+    .timer-block {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .timer-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .timer-value {
+      font-size: 60px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -2px;
+      color: #f8fafc;
+      transition: color 0.5s;
+      line-height: 1;
+    }
+
+    .timer-value.warning { color: #fbbf24; }
+    .timer-value.urgent  { color: #f87171; }
+
+    .timer-ring {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      flex-shrink: 0;
+    }
+
+    .timer-ring svg {
+      transform: rotate(-90deg);
+    }
+
+    .timer-ring .bg { stroke: #334155; }
+    .timer-ring .fg {
+      stroke: #3b82f6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear, stroke 0.5s;
+    }
+
+    .timer-ring .fg.warning { stroke: #fbbf24; }
+    .timer-ring .fg.urgent  { stroke: #f87171; }
+
+    /* Pick display */
+    .pick-block {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pick-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+
+    .pick-name {
+      font-size: 36px;
+      font-weight: 800;
+      color: #fbbf24;
+      text-align: center;
+      transition: all 0.3s;
+      opacity: 0;
+      transform: scale(0.8);
+    }
+
+    .pick-name.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .pick-name.pop {
+      animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes pop {
+      0%   { opacity: 0; transform: scale(0.5); }
+      60%  { transform: scale(1.1); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Slides area */
+    .slides-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      position: relative;
+    }
+
+    .slides-area iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .slides-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: #334155;
+    }
+
+    .slides-placeholder svg {
+      width: 64px;
+      height: 64px;
+      opacity: 0.4;
+    }
+
+    .slides-placeholder p {
+      font-size: 16px;
+      color: #475569;
+    }
+
+    /* Timer done overlay */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(239,68,68,0.15);
+      z-index: 10;
+      pointer-events: none;
+      animation: pulse-border 1s ease-in-out infinite alternate;
+    }
+
+    .done-overlay.show { display: block; }
+
+    @keyframes pulse-border {
+      from { box-shadow: inset 0 0 0 6px rgba(239,68,68,0.6); }
+      to   { box-shadow: inset 0 0 0 18px rgba(239,68,68,0.9); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="done-overlay" id="doneOverlay"></div>
+
+  <div class="topbar">
+    <!-- Timer -->
+    <div class="timer-block">
+      <div class="timer-ring">
+        <svg viewBox="0 0 72 72" width="72" height="72">
+          <circle class="bg" cx="36" cy="36" r="30" fill="none" stroke-width="6"/>
+          <circle class="fg" id="ringFg" cx="36" cy="36" r="30" fill="none" stroke-width="6"
+            stroke-dasharray="188.5" stroke-dashoffset="0"/>
+        </svg>
+      </div>
+      <div>
+        <div class="timer-label">Timer</div>
+        <div class="timer-value" id="timerValue">5:00</div>
+      </div>
+    </div>
+
+    <!-- Picked Student -->
+    <div class="pick-block">
+      <div class="pick-label" id="pickLabel" style="display:none">Called On</div>
+      <div class="pick-name" id="pickName"></div>
+    </div>
+  </div>
+
+  <!-- Slides -->
+  <div class="slides-area" id="slidesArea">
+    <div class="slides-placeholder" id="slidesPlaceholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <path d="M8 21h8M12 17v4"/>
+      </svg>
+      <p>Waiting for Google Slides…</p>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    let timerDuration = 300;
+    let timerRemaining = 300;
+    const circumference = 2 * Math.PI * 30; // 188.5
+
+    const timerValue = document.getElementById('timerValue');
+    const ringFg = document.getElementById('ringFg');
+    const doneOverlay = document.getElementById('doneOverlay');
+
+    function fmt(s) {
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${m}:${String(sec).padStart(2, '0')}`;
+    }
+
+    function updateTimer(remaining, duration) {
+      timerValue.textContent = fmt(remaining);
+      const pct = duration > 0 ? remaining / duration : 1;
+      const offset = circumference * (1 - pct);
+      ringFg.style.strokeDashoffset = offset;
+
+      timerValue.classList.remove('warning', 'urgent');
+      ringFg.classList.remove('warning', 'urgent');
+      doneOverlay.classList.remove('show');
+
+      if (remaining === 0) {
+        timerValue.classList.add('urgent');
+        ringFg.classList.add('urgent');
+        doneOverlay.classList.add('show');
+      } else if (pct <= 0.1) {
+        timerValue.classList.add('urgent');
+        ringFg.classList.add('urgent');
+      } else if (pct <= 0.25) {
+        timerValue.classList.add('warning');
+        ringFg.classList.add('warning');
+      }
+    }
+
+    socket.on('state', (s) => {
+      timerDuration = s.timer.duration;
+      timerRemaining = s.timer.remaining;
+      updateTimer(timerRemaining, timerDuration);
+      if (s.pick.name) showPick(s.pick.name, false);
+      if (s.slides.url) loadSlides(s.slides.url);
+    });
+
+    socket.on('timer:update', (t) => {
+      timerDuration = t.duration;
+      timerRemaining = t.remaining;
+      updateTimer(timerRemaining, timerDuration);
+    });
+
+    socket.on('timer:tick', (remaining) => {
+      timerRemaining = remaining;
+      updateTimer(timerRemaining, timerDuration);
+    });
+
+    // ── Picker ──────────────────────────────────────────────
+    const pickName = document.getElementById('pickName');
+    const pickLabel = document.getElementById('pickLabel');
+
+    function showPick(name, animate = true) {
+      pickLabel.style.display = '';
+      pickName.classList.remove('pop', 'visible');
+      void pickName.offsetWidth; // reflow
+      pickName.textContent = name;
+      if (animate) {
+        pickName.classList.add('pop');
+      } else {
+        pickName.classList.add('visible');
+      }
+    }
+
+    socket.on('pick:show', (name) => showPick(name, true));
+
+    socket.on('pick:clear', () => {
+      pickName.classList.remove('pop', 'visible');
+      pickLabel.style.display = 'none';
+      setTimeout(() => { pickName.textContent = ''; }, 300);
+    });
+
+    // ── Slides ──────────────────────────────────────────────
+    function toEmbedUrl(url) {
+      // Convert share URL to embed URL
+      // https://docs.google.com/presentation/d/ID/edit → .../embed
+      return url
+        .replace(/\/edit.*$/, '/embed')
+        .replace(/\/pub.*$/, '/embed')
+        .replace(/\/present.*$/, '/embed');
+    }
+
+    function loadSlides(url) {
+      if (!url) return;
+      const embedUrl = toEmbedUrl(url);
+      const placeholder = document.getElementById('slidesPlaceholder');
+      let iframe = document.querySelector('#slidesArea iframe');
+      if (!iframe) {
+        placeholder.style.display = 'none';
+        iframe = document.createElement('iframe');
+        iframe.allowFullscreen = true;
+        document.getElementById('slidesArea').appendChild(iframe);
+      }
+      iframe.src = embedUrl + '?start=false&loop=false&delayms=3000';
+    }
+
+    socket.on('slides:update', (url) => {
+      if (url) loadSlides(url);
+    });
+  </script>
+</body>
+</html>
