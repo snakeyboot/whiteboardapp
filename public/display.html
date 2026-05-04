@@ -520,6 +520,35 @@
 
     .att-save-btn:hover { background: #1d4ed8; }
 
+    /* ── Attendance tardy ── */
+    .att-row.tardy  { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.2); }
+    .att-badge.tardy { background: rgba(251,191,36,0.2); color: #fbbf24; }
+
+    /* ── Display timer numpad ── */
+    .disp-numpad {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+    .dp-btn {
+      padding: 7px 2px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dp-btn:active { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .dp-btn.dp-del { color: #94a3b8; font-size: 12px; }
+    .dp-btn.dp-clr { color: #f87171; font-size: 11px; font-weight: 700; }
+    .timer-num.entry { color: #60a5fa !important; }
+
     /* ── Timer done overlay ── */
     .done-overlay {
       display: none;
@@ -585,26 +614,32 @@
     <div class="widget-label">Timer</div>
   </div>
   <div class="widget-body">
-    <div class="timer-tap" onclick="toggleTimer()">
+    <div class="timer-tap" onclick="tapTimer()">
       <div class="timer-num" id="timerNum">5:00</div>
       <div class="timer-hint" id="timerHint">Tap to start</div>
     </div>
     <div class="timer-bar-wrap"><div class="timer-bar" id="timerBar"></div></div>
+    <div class="disp-numpad">
+      <button class="dp-btn" onclick="dispNumpadPress(1)">1</button>
+      <button class="dp-btn" onclick="dispNumpadPress(2)">2</button>
+      <button class="dp-btn" onclick="dispNumpadPress(3)">3</button>
+      <button class="dp-btn" onclick="dispNumpadPress(4)">4</button>
+      <button class="dp-btn" onclick="dispNumpadPress(5)">5</button>
+      <button class="dp-btn dp-del" onclick="dispNumpadBackspace()">⌫</button>
+      <button class="dp-btn" onclick="dispNumpadPress(6)">6</button>
+      <button class="dp-btn" onclick="dispNumpadPress(7)">7</button>
+      <button class="dp-btn" onclick="dispNumpadPress(8)">8</button>
+      <button class="dp-btn" onclick="dispNumpadPress(9)">9</button>
+      <button class="dp-btn" onclick="dispNumpadPress(0)">0</button>
+      <button class="dp-btn dp-clr" onclick="dispNumpadClear()">CLR</button>
+    </div>
     <div class="timer-add-row">
+      <button class="abtn" onclick="tapTimer()" id="dispStartBtn">▶ Start</button>
+      <button class="abtn" onclick="clearDisplayTimer()">Clear</button>
+      <button class="abtn" onclick="addTime(-10)">−10s</button>
+      <button class="abtn" onclick="addTime(10)">+10s</button>
       <button class="abtn" onclick="addTime(30)">+30s</button>
       <button class="abtn" onclick="addTime(60)">+1m</button>
-      <button class="abtn" onclick="addTime(300)">+5m</button>
-      <button class="abtn" onclick="addTime(600)">+10m</button>
-    </div>
-    <div class="timer-row2">
-      <button class="cbtn" onclick="toggleCustom()">Custom</button>
-      <button class="rbtn" onclick="resetTimer()">↺</button>
-    </div>
-    <div class="custom-row" id="customRow">
-      <input type="number" id="cMin" placeholder="min" min="0" max="99">
-      <span class="sep">:</span>
-      <input type="number" id="cSec" placeholder="sec" min="0" max="59">
-      <button class="set-btn" onclick="setCustom()">Set</button>
     </div>
   </div>
 </div>
@@ -778,43 +813,102 @@
   const timerHint = document.getElementById('timerHint');
   const doneOv    = document.getElementById('doneOverlay');
 
-  function fmt(s) { return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+  function fmt(s) {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return `${m}:${String(sec).padStart(2,'0')}`;
+  }
 
   function renderTimer(remaining, duration, isRunning) {
+    if (dispNumpadActive) return;
     timerNum.textContent  = fmt(remaining);
-    timerHint.textContent = isRunning ? 'Tap to pause' : (remaining === 0 ? "Time's up" : 'Tap to start');
-    timerNum.classList.remove('warning', 'urgent');
+    timerHint.textContent = isRunning ? 'Tap to pause' : (remaining === 0 && duration > 0 ? "Time's up" : 'Tap to start');
+    timerNum.classList.remove('warning', 'urgent', 'entry');
     doneOv.classList.remove('show');
+    if (doneOverlayTimer) { clearTimeout(doneOverlayTimer); doneOverlayTimer = null; }
     const pct = duration > 0 ? remaining / duration : (remaining > 0 ? 1 : 0);
     const bar = document.getElementById('timerBar');
     bar.style.width = (pct * 100) + '%';
     bar.style.background = (pct <= 0.1) ? '#ef4444' : (pct <= 0.25) ? '#fbbf24' : '#3b82f6';
-    if (remaining === 0)   { timerNum.classList.add('urgent');  doneOv.classList.add('show'); }
-    else if (pct <= 0.1)   { timerNum.classList.add('urgent'); }
-    else if (pct <= 0.25)  { timerNum.classList.add('warning'); }
+    if (remaining > 0 && pct <= 0.1)        timerNum.classList.add('urgent');
+    else if (remaining > 0 && pct <= 0.25)  timerNum.classList.add('warning');
+    const btn = document.getElementById('dispStartBtn');
+    if (btn) btn.textContent = isRunning ? '⏸ Pause' : '▶ Start';
   }
 
-  function toggleTimer() { socket.emit(running ? 'timer:pause' : 'timer:start'); }
-  function resetTimer()  { socket.emit('timer:reset'); }
-  function setPreset(s)  { socket.emit('timer:set', s); }
-  function addTime(s)    { socket.emit('timer:add', s); }
+  // ── Display numpad ──────────────────────────────────────────
+  let dispNumpadBuf    = [0,0,0,0,0,0]; // [H2,H1,M2,M1,S2,S1]
+  let dispNumpadActive = false;
+  let doneOverlayTimer = null;
 
-  let customOpen = false;
-  function toggleCustom() {
-    customOpen = !customOpen;
-    document.getElementById('customRow').classList.toggle('open', customOpen);
+  function dispNumpadFmt() {
+    const [h2,h1,m2,m1,s2,s1] = dispNumpadBuf;
+    const hrs = h2*10+h1, mins = m2*10+m1, secs = s2*10+s1;
+    if (hrs > 0) return `${hrs}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    return `${mins}:${String(secs).padStart(2,'0')}`;
   }
 
-  function setCustom() {
-    const m = parseInt(document.getElementById('cMin').value) || 0;
-    const s = parseInt(document.getElementById('cSec').value) || 0;
-    const total = m * 60 + s;
-    if (total > 0) {
-      socket.emit('timer:set', total);
-      customOpen = false;
-      document.getElementById('customRow').classList.remove('open');
+  function dispNumpadToSecs() {
+    const [h2,h1,m2,m1,s2,s1] = dispNumpadBuf;
+    return (h2*10+h1)*3600 + (m2*10+m1)*60 + (s2*10+s1);
+  }
+
+  function dispNumpadPress(d) {
+    dispNumpadActive = true;
+    dispNumpadBuf.shift();
+    dispNumpadBuf.push(d);
+    timerNum.textContent = dispNumpadFmt();
+    timerNum.classList.remove('warning','urgent');
+    timerNum.classList.add('entry');
+    timerHint.textContent = 'Press Start';
+    document.getElementById('dispStartBtn').textContent = '▶ Start';
+  }
+
+  function dispNumpadBackspace() {
+    if (!dispNumpadActive) return;
+    dispNumpadBuf.unshift(0);
+    dispNumpadBuf.pop();
+    if (dispNumpadBuf.every(d => d === 0)) {
+      dispNumpadActive = false;
+      timerNum.classList.remove('entry');
+      renderTimer(rem, dur, running);
+    } else {
+      timerNum.textContent = dispNumpadFmt();
     }
   }
+
+  function dispNumpadClear() {
+    dispNumpadBuf = [0,0,0,0,0,0];
+    dispNumpadActive = false;
+    timerNum.classList.remove('entry');
+    renderTimer(rem, dur, running);
+  }
+
+  function tapTimer() {
+    if (dispNumpadActive) {
+      const secs = dispNumpadToSecs();
+      if (secs > 0) {
+        dispNumpadBuf = [0,0,0,0,0,0];
+        dispNumpadActive = false;
+        timerNum.classList.remove('entry');
+        socket.emit('timer:set-start', secs);
+      }
+    } else {
+      socket.emit(running ? 'timer:pause' : 'timer:start');
+    }
+  }
+
+  function clearDisplayTimer() {
+    if (dispNumpadActive) {
+      dispNumpadClear();
+    } else {
+      socket.emit('timer:reset');
+    }
+  }
+
+  function addTime(s) { socket.emit('timer:add', s); }
 
   function updateDeckInfo(remaining, total) {
     const el = document.getElementById('deckInfo');
@@ -847,6 +941,10 @@
     updateClassWidget();
   });
 
+  socket.on('pick:stats', ({ rosterId, students }) => {
+    if (allRosters[rosterId]) allRosters[rosterId].students = students;
+  });
+
   socket.on('timer:update', t => {
     dur = t.duration; rem = t.remaining; running = t.running;
     renderTimer(rem, dur, running);
@@ -855,19 +953,46 @@
   socket.on('timer:tick', r => { rem = r; renderTimer(rem, dur, running); });
 
   socket.on('timer:done', () => {
-    running = false;
-    renderTimer(0, dur, false);
+    running = false; rem = 0;
+    if (!dispNumpadActive) {
+      timerNum.textContent = fmt(0);
+      timerNum.classList.remove('warning','urgent','entry');
+      timerNum.classList.add('urgent');
+      timerHint.textContent = "Time's up";
+      document.getElementById('timerBar').style.width = '0%';
+      document.getElementById('timerBar').style.background = '#ef4444';
+      document.getElementById('dispStartBtn').textContent = '▶ Start';
+    }
+    doneOv.classList.add('show');
+    if (doneOverlayTimer) clearTimeout(doneOverlayTimer);
+    doneOverlayTimer = setTimeout(() => {
+      doneOv.classList.remove('show');
+      doneOverlayTimer = null;
+    }, 4000);
     playChime();
   });
 
   // ── Picker ──────────────────────────────────────────────────
+  let pickCleared = false;
+
   function pickRandom() { socket.emit('pick:random'); }
-  function clearPick()  { socket.emit('pick:clear'); }
+
+  function clearPick() {
+    const name = document.getElementById('pickName').textContent.trim();
+    if (name) {
+      socket.emit('pick:clear');
+      pickCleared = true;
+    } else if (pickCleared) {
+      socket.emit('pick:reset-deck');
+      pickCleared = false;
+    }
+  }
 
   const pickName = document.getElementById('pickName');
   const pickSub  = document.getElementById('pickSub');
 
   function showPick(name, animate = true) {
+    pickCleared = false;
     pickSub.style.visibility = 'visible';
     pickName.classList.remove('pop', 'visible');
     void pickName.offsetWidth;
@@ -883,6 +1008,8 @@
   });
 
   // ── Slides ──────────────────────────────────────────────────
+  const slidePositions = {}; // baseUrl → last slide number
+
   function toEmbedUrl(url) {
     const m = url.match(/src=["']([^"']+)["']/);
     if (m) url = m[1];
@@ -913,13 +1040,22 @@
     let eu = toEmbedUrl(url);
     if (!eu.includes('?')) eu += '?start=false&loop=false&delayms=3000';
     slideBaseUrl = eu;
-    getOrCreateIframe().src = eu;
+    const saved = slidePositions[eu];
+    if (saved && saved > 1) {
+      const base  = eu.replace(/[&?]slide=[^&]*|[&?]page=[^&]*/g, '');
+      const sep   = base.includes('?') ? '&' : '?';
+      const param = base.includes('drive.google.com/file') ? `page=${saved}` : `slide=id.p${saved}`;
+      getOrCreateIframe().src = base + sep + param;
+    } else {
+      getOrCreateIframe().src = eu;
+    }
   }
 
   function navigateToSlide(n) {
     if (!slideBaseUrl) return;
-    const base = slideBaseUrl.replace(/[&?]slide=[^&]*|[&?]page=[^&]*/g, '');
-    const sep  = base.includes('?') ? '&' : '?';
+    slidePositions[slideBaseUrl] = n;
+    const base  = slideBaseUrl.replace(/[&?]slide=[^&]*|[&?]page=[^&]*/g, '');
+    const sep   = base.includes('?') ? '&' : '?';
     const param = base.includes('drive.google.com/file') ? `page=${n}` : `slide=id.p${n}`;
     getOrCreateIframe().src = base + sep + param;
   }
@@ -930,18 +1066,37 @@
   // ── Attendance ─────────────────────────────────────────────
   let attStudents = [];
 
+  function fullNameDisplay(s) {
+    if (!s) return '';
+    if (s.firstName || s.lastName) return [s.firstName, s.lastName].filter(Boolean).join(' ');
+    return s.name || '';
+  }
+
   function parseRosterStudents(raw) {
     if (!raw) return [];
+    const base = { firstName:'', lastName:'', attendance:'present', anchor:false, enl:false, introvert:false, gender:'', conflict:'', distractor:false, picks:0 };
     try {
       const p = JSON.parse(raw);
-      if (Array.isArray(p)) return p.map(s =>
-        typeof s === 'string'
-          ? { name: s, present: true, anchor: false, introvert: false, gender: '', conflict: '', distractor: false }
-          : { ...s }
-      );
+      if (Array.isArray(p)) return p.map(s => {
+        if (typeof s === 'string') {
+          const w = s.trim().split(/\s+/);
+          return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
+        }
+        let student;
+        if (s.name && !s.firstName) {
+          const w = (s.name||'').trim().split(/\s+/);
+          student = { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' '), ...s };
+        } else {
+          student = { ...base, ...s };
+        }
+        if (s.present === false && !s.attendance) student.attendance = 'absent';
+        return student;
+      });
     } catch {}
-    return raw.split('\n').map(s => s.trim()).filter(Boolean)
-      .map(name => ({ name, present: true, anchor: false, introvert: false, gender: '', conflict: '', distractor: false }));
+    return raw.split('\n').map(s => s.trim()).filter(Boolean).map(name => {
+      const w = name.split(/\s+/);
+      return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
+    });
   }
 
   function openAttendance() {
@@ -961,17 +1116,22 @@
     const list = document.getElementById('attList');
     list.innerHTML = '';
     attStudents.forEach((s, i) => {
-      const present = s.present !== false;
+      const att = s.attendance || 'present';
+      const label = att === 'present' ? 'Present' : att === 'absent' ? 'Absent' : 'Tardy';
       const row = document.createElement('div');
-      row.className = 'att-row ' + (present ? 'present' : 'absent');
-      row.innerHTML = `<span class="att-name">${s.name}</span><span class="att-badge ${present ? 'present' : 'absent'}">${present ? 'Present' : 'Absent'}</span>`;
-      row.onclick = () => { attStudents[i].present = !attStudents[i].present; renderAttList(); };
+      row.className = 'att-row ' + att;
+      row.innerHTML = `<span class="att-name">${fullNameDisplay(s)}</span><span class="att-badge ${att}">${label}</span>`;
+      row.onclick = () => {
+        const cur = attStudents[i].attendance || 'present';
+        attStudents[i].attendance = cur === 'present' ? 'absent' : cur === 'absent' ? 'tardy' : 'present';
+        renderAttList();
+      };
       list.appendChild(row);
     });
   }
 
   function markAllPresent() {
-    attStudents.forEach(s => s.present = true);
+    attStudents.forEach(s => s.attendance = 'present');
     renderAttList();
   }
 
@@ -984,7 +1144,8 @@
       name: r.name,
       students: studentsJson,
       slidesUrl: r.slidesUrl || '',
-      sortOrder: 0
+      sortOrder: 0,
+      materials: r.materials || '[]'
     });
     allRosters[activeRosterId].students = studentsJson;
     closeAttendance();
