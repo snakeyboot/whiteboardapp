@@ -48,13 +48,31 @@ async function getAllRosters() {
 
 function parseStudents(raw) {
   if (!raw) return [];
+  const base = { firstName:'', lastName:'', present:true, anchor:false, enl:false, introvert:false, gender:'', conflict:'', distractor:false, picks:0, quickGrade:'' };
   try {
     const p = JSON.parse(raw);
-    if (Array.isArray(p)) return p;
+    if (Array.isArray(p)) return p.map(s => {
+      if (typeof s === 'string') {
+        const w = s.trim().split(/\s+/);
+        return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
+      }
+      if (s.name && !s.firstName) {
+        const w = (s.name||'').trim().split(/\s+/);
+        return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' '), ...s };
+      }
+      return { ...base, ...s };
+    });
   } catch {}
-  // Migrate old plain-text format
-  return raw.split('\n').map(s => s.trim()).filter(Boolean)
-    .map(name => ({ name, present: true, anchor: false, introvert: false, gender: '', conflict: '', distractor: false }));
+  return raw.split('\n').map(s => s.trim()).filter(Boolean).map(name => {
+    const w = name.split(/\s+/);
+    return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
+  });
+}
+
+function fullName(s) {
+  if (!s) return '';
+  if (s.firstName || s.lastName) return [s.firstName, s.lastName].filter(Boolean).join(' ');
+  return s.name || '';
 }
 
 function shuffle(arr) {
@@ -85,7 +103,7 @@ async function buildDeck(rosterId) {
     const roster  = rosters[rosterId];
     if (!roster) { pickDeck = []; deckTotal = 0; }
     else {
-      const present = parseStudents(roster.students).filter(s => s.present !== false).map(s => s.name);
+      const present = parseStudents(roster.students).filter(s => s.present !== false).map(s => fullName(s));
       pickDeck  = shuffle(present);
       deckTotal = present.length;
     }
@@ -128,6 +146,13 @@ io.on('connection', async (socket) => {
     io.emit('timer:update', state.timer);
   });
 
+  socket.on('timer:set-start', (seconds) => {
+    clearInterval(timerInterval);
+    state.timer = { duration: seconds, remaining: seconds, running: true };
+    io.emit('timer:update', state.timer);
+    startTicking();
+  });
+
   socket.on('timer:add', (seconds) => {
     state.timer.remaining = Math.max(0, state.timer.remaining + seconds);
     if (state.timer.remaining > state.timer.duration) state.timer.duration = state.timer.remaining;
@@ -163,7 +188,7 @@ io.on('connection', async (socket) => {
       if (!roster) { socket.emit('pick:error', 'No active class.'); return; }
 
       const presentSet = new Set(
-        parseStudents(roster.students).filter(s => s.present !== false).map(s => s.name)
+        parseStudents(roster.students).filter(s => s.present !== false).map(s => fullName(s))
       );
       if (presentSet.size === 0) { socket.emit('pick:error', 'No students are marked present.'); return; }
 
@@ -181,7 +206,7 @@ io.on('connection', async (socket) => {
 
       // Track pick count on the student object
       const allStudents = parseStudents(roster.students);
-      const updated = allStudents.map(s => s.name === name ? { ...s, picks: (s.picks || 0) + 1 } : s);
+      const updated = allStudents.map(s => fullName(s) === name ? { ...s, picks: (s.picks || 0) + 1 } : s);
       await pool.query('UPDATE rosters SET students=$1 WHERE id=$2', [JSON.stringify(updated), state.activeRosterId]);
 
       io.emit('pick:show', name);
@@ -191,6 +216,17 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('pick:reset-deck', async () => { await buildDeck(state.activeRosterId); });
+
+  socket.on('pick:reset-stats', async () => {
+    try {
+      const rosters = await getAllRosters();
+      const roster  = rosters[state.activeRosterId];
+      if (!roster) return;
+      const allStudents = parseStudents(roster.students).map(s => ({ ...s, picks: 0 }));
+      await pool.query('UPDATE rosters SET students=$1 WHERE id=$2', [JSON.stringify(allStudents), state.activeRosterId]);
+      io.emit('pick:stats', { rosterId: state.activeRosterId, students: JSON.stringify(allStudents) });
+    } catch (e) { console.error('pick:reset-stats', e); }
+  });
 
   socket.on('pick:clear', () => {
     state.pick.name = null;

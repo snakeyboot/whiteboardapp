@@ -50,7 +50,7 @@
 
     /* ── Timer ── */
     .timer-display {
-      font-size: 64px;
+      font-size: 72px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       text-align: center;
@@ -61,47 +61,33 @@
 
     .timer-display.urgent  { color: #f87171; }
     .timer-display.warning { color: #fbbf24; }
+    .timer-display.entry   { color: #60a5fa; }
 
-    .timer-presets {
-      display: flex;
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 8px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
+      margin-bottom: 12px;
     }
 
-    .preset-btn {
-      flex: 1;
-      min-width: 60px;
-      padding: 8px 0;
-      border-radius: 8px;
+    .numpad-btn {
+      padding: 14px 0;
+      border-radius: 10px;
       border: 1px solid #334155;
       background: #0f172a;
-      color: #94a3b8;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .preset-btn:hover { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
-
-    .timer-custom {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-      align-items: center;
-    }
-
-    .timer-custom input {
-      width: 80px;
-      padding: 10px 12px;
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
       color: #e2e8f0;
-      font-size: 14px;
+      font-size: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.1s;
+      text-align: center;
     }
 
-    .timer-custom input:focus { outline: none; border-color: #3b82f6; }
+    .numpad-btn:hover  { background: #1e3a5f; border-color: #3b82f6; }
+    .numpad-btn:active { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+    .numpad-btn.del-btn { color: #94a3b8; font-size: 18px; }
+    .numpad-btn.clr-btn { color: #f87171; font-size: 14px; font-weight: 700; }
 
     .timer-controls { display: flex; gap: 8px; }
 
@@ -128,6 +114,8 @@
     .btn-red:hover    { background: #b91c1c; }
     .btn-purple { background: #7c3aed; color: #fff; }
     .btn-purple:hover { background: #6d28d9; }
+    .btn-teal   { background: #0d9488; color: #fff; }
+    .btn-teal:hover   { background: #0f766e; }
 
     /* ── Roster tabs ── */
     .roster-tabs {
@@ -196,7 +184,6 @@
       margin-bottom: 14px;
     }
 
-    /* ── Slides per roster ── */
     .slides-row {
       display: flex;
       gap: 8px;
@@ -222,7 +209,7 @@
 
     .pick-result.empty { color: #334155; font-weight: 400; font-size: 14px; }
 
-    .pick-controls { display: flex; gap: 8px; }
+    .pick-controls { display: flex; gap: 8px; margin-bottom: 14px; }
 
     /* ── Pick Stats ── */
     .stats-row {
@@ -374,6 +361,102 @@
     }
 
     .save-status.saved { color: #22c55e; }
+
+    /* ── Quick Grade Modal ── */
+    .qg-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .qg-overlay.open { display: flex; }
+
+    .qg-modal {
+      background: #1e293b;
+      border-radius: 16px;
+      border: 1px solid #334155;
+      width: 100%;
+      max-width: 400px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .qg-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid #334155;
+    }
+
+    .qg-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+
+    .qg-close {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    .qg-close:hover { color: #f8fafc; }
+
+    .qg-list {
+      overflow-y: auto;
+      padding: 8px 12px;
+      flex: 1;
+    }
+
+    .qg-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.1s;
+      gap: 12px;
+    }
+
+    .qg-row:hover { background: #0f172a; }
+
+    .qg-name {
+      font-size: 15px;
+      color: #e2e8f0;
+      flex: 1;
+    }
+
+    .qg-grade {
+      font-size: 18px;
+      font-weight: 700;
+      min-width: 32px;
+      text-align: center;
+      color: #fbbf24;
+    }
+
+    .qg-grade.empty { color: #334155; font-size: 14px; }
+
+    .qg-footer {
+      padding: 12px 20px;
+      border-top: 1px solid #334155;
+      display: flex;
+      gap: 8px;
+    }
   </style>
 </head>
 <body>
@@ -384,23 +467,24 @@
     <!-- Timer -->
     <div class="card">
       <div class="card-title">Timer</div>
-      <div class="timer-display" id="timerDisplay">5:00</div>
-      <div class="timer-presets">
-        <button class="preset-btn" onclick="setPreset(60)">1m</button>
-        <button class="preset-btn" onclick="setPreset(120)">2m</button>
-        <button class="preset-btn" onclick="setPreset(300)">5m</button>
-        <button class="preset-btn" onclick="setPreset(600)">10m</button>
-        <button class="preset-btn" onclick="setPreset(900)">15m</button>
-        <button class="preset-btn" onclick="setPreset(1800)">30m</button>
-      </div>
-      <div class="timer-custom">
-        <input type="number" id="customMinutes" placeholder="min" min="0" max="99">
-        <input type="number" id="customSeconds" placeholder="sec" min="0" max="59">
-        <button class="btn btn-gray" onclick="setCustom()" style="flex:1;">Set</button>
+      <div class="timer-display entry" id="timerDisplay">0:00</div>
+      <div class="numpad">
+        <button class="numpad-btn" onclick="numpadPress(1)">1</button>
+        <button class="numpad-btn" onclick="numpadPress(2)">2</button>
+        <button class="numpad-btn" onclick="numpadPress(3)">3</button>
+        <button class="numpad-btn" onclick="numpadPress(4)">4</button>
+        <button class="numpad-btn" onclick="numpadPress(5)">5</button>
+        <button class="numpad-btn" onclick="numpadPress(6)">6</button>
+        <button class="numpad-btn" onclick="numpadPress(7)">7</button>
+        <button class="numpad-btn" onclick="numpadPress(8)">8</button>
+        <button class="numpad-btn" onclick="numpadPress(9)">9</button>
+        <button class="numpad-btn del-btn" onclick="numpadBackspace()">⌫</button>
+        <button class="numpad-btn" onclick="numpadPress(0)">0</button>
+        <button class="numpad-btn clr-btn" onclick="numpadClear()">CLR</button>
       </div>
       <div class="timer-controls">
         <button class="btn btn-green" id="startPauseBtn" onclick="toggleTimer()">Start</button>
-        <button class="btn btn-gray" onclick="resetTimer()">Reset</button>
+        <button class="btn btn-gray"  onclick="clearTimer()">Clear</button>
       </div>
     </div>
 
@@ -435,6 +519,7 @@
       <div class="pick-controls">
         <button class="btn btn-purple" onclick="pickRandom()">Pick Random</button>
         <button class="btn btn-gray"   onclick="clearPick()">Clear</button>
+        <button class="btn btn-teal"   onclick="openQuickGrade()">Quick Grade</button>
       </div>
 
       <div class="save-status" id="saveStatus"></div>
@@ -465,6 +550,21 @@
 
   </div>
 
+  <!-- Quick Grade Modal -->
+  <div class="qg-overlay" id="qgOverlay" onclick="qgOverlayClick(event)">
+    <div class="qg-modal">
+      <div class="qg-header">
+        <span class="qg-title">Quick Grade</span>
+        <button class="qg-close" onclick="closeQuickGrade()">✕</button>
+      </div>
+      <div class="qg-list" id="qgList"></div>
+      <div class="qg-footer">
+        <button class="btn btn-gray" style="font-size:13px;" onclick="clearAllQuickGrades()">Clear All</button>
+        <button class="btn btn-teal" style="font-size:13px;" onclick="closeQuickGrade()">Done</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
@@ -473,39 +573,87 @@
     socket.on('disconnect', () => dot.classList.add('disconnected'));
 
     // ── Timer ──────────────────────────────────────────────
-    let timerRemaining = 300;
-    let timerDuration  = 300;
+    let timerRemaining = 0;
+    let timerDuration  = 0;
     let timerRunning   = false;
+
+    // Numpad state: 6-digit buffer [H2,H1,M2,M1,S2,S1]
+    let numpadBuf = [0,0,0,0,0,0];
+    let numpadActive = false; // user has started entering digits
 
     const timerDisplay  = document.getElementById('timerDisplay');
     const startPauseBtn = document.getElementById('startPauseBtn');
 
     function fmt(s) {
-      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+      return `${m}:${String(sec).padStart(2,'0')}`;
+    }
+
+    function numpadToSeconds() {
+      const [h2,h1,m2,m1,s2,s1] = numpadBuf;
+      return (h2*10+h1)*3600 + (m2*10+m1)*60 + (s2*10+s1);
+    }
+
+    function numpadFmt() {
+      const [h2,h1,m2,m1,s2,s1] = numpadBuf;
+      const hh = h2*10+h1, mm = m2*10+m1, ss = s2*10+s1;
+      if (hh > 0) return `${hh}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+      return `${mm}:${String(ss).padStart(2,'0')}`;
+    }
+
+    function numpadPress(d) {
+      numpadBuf = [...numpadBuf.slice(1), d];
+      numpadActive = true;
+      updateTimerDisplay();
+    }
+
+    function numpadBackspace() {
+      numpadBuf = [0, ...numpadBuf.slice(0, 5)];
+      if (numpadBuf.every(x => x === 0)) numpadActive = false;
+      updateTimerDisplay();
+    }
+
+    function numpadClear() {
+      numpadBuf = [0,0,0,0,0,0];
+      numpadActive = false;
+      updateTimerDisplay();
     }
 
     function updateTimerDisplay() {
+      if (numpadActive && !timerRunning) {
+        timerDisplay.textContent = numpadFmt();
+        timerDisplay.className = 'timer-display entry';
+        return;
+      }
       timerDisplay.textContent = fmt(timerRemaining);
-      timerDisplay.classList.remove('urgent', 'warning');
+      timerDisplay.className = 'timer-display';
       const pct = timerDuration > 0 ? timerRemaining / timerDuration : 1;
-      if (pct <= 0.1)       timerDisplay.classList.add('urgent');
+      if      (pct <= 0.1)  timerDisplay.classList.add('urgent');
       else if (pct <= 0.25) timerDisplay.classList.add('warning');
     }
 
-    function setPreset(secs) { socket.emit('timer:set', secs); }
-
-    function setCustom() {
-      const m = parseInt(document.getElementById('customMinutes').value) || 0;
-      const s = parseInt(document.getElementById('customSeconds').value) || 0;
-      const total = m * 60 + s;
-      if (total > 0) socket.emit('timer:set', total);
-    }
-
     function toggleTimer() {
-      socket.emit(timerRunning ? 'timer:pause' : 'timer:start');
+      if (timerRunning) {
+        socket.emit('timer:pause');
+      } else if (numpadActive) {
+        const secs = numpadToSeconds();
+        if (secs > 0) {
+          numpadActive = false;
+          numpadBuf = [0,0,0,0,0,0];
+          socket.emit('timer:set-start', secs);
+        }
+      } else {
+        if (timerRemaining > 0) socket.emit('timer:start');
+      }
     }
 
-    function resetTimer() { socket.emit('timer:reset'); }
+    function clearTimer() {
+      numpadClear();
+      socket.emit('timer:reset');
+    }
 
     socket.on('state', (s) => {
       timerDuration  = s.timer.duration;
@@ -532,6 +680,7 @@
     socket.on('timer:done', () => {
       timerRunning = false;
       startPauseBtn.textContent = 'Start';
+      updateTimerDisplay();
     });
 
     // ── Rosters ────────────────────────────────────────────
@@ -541,14 +690,33 @@
 
     function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
+    function fullNameClient(s) {
+      if (!s) return '';
+      if (s.firstName || s.lastName) return [s.firstName, s.lastName].filter(Boolean).join(' ');
+      return s.name || '';
+    }
+
     function parseStudentsClient(raw) {
       if (!raw) return [];
+      const base = { firstName:'', lastName:'', present:true, picks:0, quickGrade:'' };
       try {
         const p = JSON.parse(raw);
-        if (Array.isArray(p)) return p;
+        if (Array.isArray(p)) return p.map(s => {
+          if (typeof s === 'string') {
+            const w = s.trim().split(/\s+/);
+            return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
+          }
+          if (s.name && !s.firstName) {
+            const w = (s.name||'').trim().split(/\s+/);
+            return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' '), ...s };
+          }
+          return { ...base, ...s };
+        });
       } catch {}
-      return raw.split('\n').map(s => s.trim()).filter(Boolean)
-        .map(name => ({ name, present: true, picks: 0 }));
+      return raw.split('\n').map(s => s.trim()).filter(Boolean).map(name => {
+        const w = name.split(/\s+/);
+        return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
+      });
     }
 
     function renderStats() {
@@ -564,8 +732,9 @@
       const maxPicks = Math.max(1, ...sorted.map(s => s.picks || 0));
       container.innerHTML = sorted.map(s => {
         const p = s.picks || 0;
+        const name = fullNameClient(s);
         return `<div class="stats-row">
-          <span class="stats-name">${s.name}</span>
+          <span class="stats-name">${escHtml(name)}</span>
           <div class="stats-bar-wrap"><div class="stats-bar" style="width:${(p / maxPicks * 100).toFixed(1)}%"></div></div>
           <span class="stats-count">${p}</span>
         </div>`;
@@ -603,8 +772,11 @@
       const r = rosters[activeId];
       if (!r) return;
       document.getElementById('rosterNameInput').value = r.name;
-      document.getElementById('rosterTextarea').value  = r.students;
-      document.getElementById('slidesInput').value     = r.slidesUrl || '';
+      // Show names one-per-line (hide raw JSON from user)
+      const students = parseStudentsClient(r.students);
+      document.getElementById('rosterTextarea').value =
+        students.map(s => fullNameClient(s)).join('\n');
+      document.getElementById('slidesInput').value = r.slidesUrl || '';
     }
 
     function switchRoster(id) {
@@ -619,7 +791,7 @@
     function addRoster() {
       const id = uid();
       const n  = Object.keys(rosters).length + 1;
-      rosters[id] = { name: `Period ${n}`, students: '', slidesUrl: '' };
+      rosters[id] = { name: `Period ${n}`, students: '[]', slidesUrl: '' };
       activeId = id;
       socket.emit('roster:activate', id);
       saveCurrentRoster();
@@ -640,12 +812,31 @@
       socket.emit('roster:delete', activeId);
     }
 
+    function buildStudentsJson() {
+      // Merge textarea names back into existing student objects (preserve flags/picks)
+      const rawLines = document.getElementById('rosterTextarea').value
+        .split('\n').map(s => s.trim()).filter(Boolean);
+      const existing = parseStudentsClient(rosters[activeId]?.students || '[]');
+      const base = { firstName:'', lastName:'', present:true, picks:0, quickGrade:'' };
+
+      // Build lookup by full name
+      const byName = {};
+      existing.forEach(s => { byName[fullNameClient(s)] = s; });
+
+      return JSON.stringify(rawLines.map(name => {
+        const old = byName[name];
+        if (old) return old; // preserve existing student data
+        const w = name.split(/\s+/);
+        return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
+      }));
+    }
+
     function saveCurrentRoster() {
       const r = rosters[activeId];
       if (!r) return;
       const typedName = document.getElementById('rosterNameInput').value.trim();
       if (typedName) r.name = typedName;
-      r.students  = document.getElementById('rosterTextarea').value;
+      r.students  = buildStudentsJson();
       r.slidesUrl = document.getElementById('slidesInput').value.trim();
       socket.emit('roster:save', { id: activeId, ...r });
     }
@@ -695,15 +886,11 @@
 
     // ── Slides ─────────────────────────────────────────────
     function toEmbedUrl(raw) {
-      // Extract src from a pasted <iframe> tag
       const srcMatch = raw.match(/src=["']([^"']+)["']/);
       if (srcMatch) raw = srcMatch[1];
-      // Already an embed URL — return as-is
       if (raw.includes('/embed')) return raw;
-      // Published-to-web format: /d/e/2PACX.../
       const pubMatch = raw.match(/\/presentation\/d\/e\/([^/?#]+)/);
       if (pubMatch) return `https://docs.google.com/presentation/d/e/${pubMatch[1]}/embed`;
-      // Regular share/edit/view format: /d/DOCID/
       const docMatch = raw.match(/\/presentation\/d\/([^/?#]+)/);
       if (docMatch) return `https://docs.google.com/presentation/d/${docMatch[1]}/embed`;
       return raw;
@@ -723,7 +910,15 @@
 
     // ── Picker ─────────────────────────────────────────────
     function pickRandom() { socket.emit('pick:random'); }
-    function clearPick()  { socket.emit('pick:clear'); }
+
+    function clearPick() {
+      const el = document.getElementById('pickResult');
+      if (el.classList.contains('empty')) {
+        socket.emit('pick:reset-stats');
+      } else {
+        socket.emit('pick:clear');
+      }
+    }
 
     socket.on('pick:show', (name) => {
       const el = document.getElementById('pickResult');
@@ -750,19 +945,83 @@
       status.style.color = '#f87171';
     });
 
+    // ── Quick Grade ────────────────────────────────────────
+    const QG_STATES = ['', '✓', '✓+', '✓–'];
+
+    // quickGrades stored inside gbData.quickGrades = { studentName: stateIndex }
+    function getQuickGrades() {
+      return gbData.quickGrades || {};
+    }
+
+    function openQuickGrade() {
+      const r = rosters[activeId];
+      if (!r) return;
+      const students = parseStudentsClient(r.students).filter(s => s.present !== false);
+      const qg = getQuickGrades();
+      const list = document.getElementById('qgList');
+      list.innerHTML = students.map((s, i) => {
+        const name = fullNameClient(s);
+        const idx = qg[name] || 0;
+        return `<div class="qg-row" data-name="${escAttr(name)}" onclick="qgToggle(this)">
+          <span class="qg-name">${escHtml(name)}</span>
+          <span class="qg-grade${idx === 0 ? ' empty' : ''}">${QG_STATES[idx] || ''}</span>
+        </div>`;
+      }).join('');
+      document.getElementById('qgOverlay').classList.add('open');
+    }
+
+    function closeQuickGrade() {
+      document.getElementById('qgOverlay').classList.remove('open');
+    }
+
+    function qgOverlayClick(e) {
+      if (e.target === document.getElementById('qgOverlay')) closeQuickGrade();
+    }
+
+    function qgToggle(rowEl) {
+      const name = rowEl.dataset.name;
+      const qg   = getQuickGrades();
+      const cur  = qg[name] || 0;
+      const next = (cur + 1) % QG_STATES.length;
+      if (next === 0) delete qg[name];
+      else qg[name] = next;
+      gbData.quickGrades = qg;
+
+      const gradeEl = rowEl.querySelector('.qg-grade');
+      gradeEl.textContent = QG_STATES[next] || '';
+      gradeEl.className = 'qg-grade' + (next === 0 ? ' empty' : '');
+
+      scheduleGbSave();
+    }
+
+    function clearAllQuickGrades() {
+      gbData.quickGrades = {};
+      // Re-render all rows
+      document.querySelectorAll('.qg-row').forEach(row => {
+        const gradeEl = row.querySelector('.qg-grade');
+        gradeEl.textContent = '';
+        gradeEl.className = 'qg-grade empty';
+      });
+      scheduleGbSave();
+    }
+
     // ── Grade Book ─────────────────────────────────────────
-    let gbData     = { columns: [], rows: {} };
+    let gbData     = { columns: [], rows: {}, quickGrades: {} };
     let gbSaveTimer = null;
 
     function escHtml(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    function escAttr(s) {
+      return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
     function parseStudentsForGb(raw) {
       if (!raw) return [];
       try {
         const p = JSON.parse(raw);
-        if (Array.isArray(p)) return p.filter(s => s.present !== false).map(s => s.name || s);
+        if (Array.isArray(p)) return p.filter(s => s.present !== false).map(s => fullNameClient(s));
       } catch {}
       return raw.split('\n').map(s => s.trim()).filter(Boolean);
     }
@@ -770,12 +1029,13 @@
     function loadGradebook(rosterId) {
       const r = rosters[rosterId];
       document.getElementById('gbClassName').textContent = r ? r.name : '';
-      if (!r) { gbData = { columns: [], rows: {} }; renderGradebook([]); return; }
+      if (!r) { gbData = { columns: [], rows: {}, quickGrades: {} }; renderGradebook([]); return; }
       try {
         gbData = JSON.parse(r.grades || '{}');
-        if (!gbData.columns) gbData.columns = [];
-        if (!gbData.rows)    gbData.rows    = {};
-      } catch { gbData = { columns: [], rows: {} }; }
+        if (!gbData.columns)     gbData.columns     = [];
+        if (!gbData.rows)        gbData.rows        = {};
+        if (!gbData.quickGrades) gbData.quickGrades = {};
+      } catch { gbData = { columns: [], rows: {}, quickGrades: {} }; }
       renderGradebook(parseStudentsForGb(r.students));
     }
 
@@ -854,7 +1114,6 @@
       clearTimeout(gbSaveTimer);
       gbSaveTimer = setTimeout(() => {
         socket.emit('grades:save', { id: activeId, grades: JSON.stringify(gbData) });
-        // Keep local copy in sync so switching back shows latest
         if (rosters[activeId]) rosters[activeId].grades = JSON.stringify(gbData);
         status.textContent = 'Saved';
         status.className = 'save-status saved';
