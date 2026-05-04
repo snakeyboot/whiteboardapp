@@ -382,10 +382,11 @@
       const srcMatch = url.match(/src=["']([^"']+)["']/);
       if (srcMatch) url = srcMatch[1];
       if (url.includes('/embed')) return url;
-      return url
-        .replace(/\/edit[^?#]*/, '/embed')
-        .replace(/\/pub[^?#]*/,  '/embed')
-        .replace(/\/present[^?#]*/, '/embed');
+      const pubMatch = url.match(/\/presentation\/d\/e\/([^/?#]+)/);
+      if (pubMatch) return `https://docs.google.com/presentation/d/e/${pubMatch[1]}/embed`;
+      const docMatch = url.match(/\/presentation\/d\/([^/?#]+)/);
+      if (docMatch) return `https://docs.google.com/presentation/d/${docMatch[1]}/embed`;
+      return url;
     }
 
     function loadSlides(url) {

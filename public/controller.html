@@ -488,13 +488,18 @@
 
     // ── Slides ─────────────────────────────────────────────
     function toEmbedUrl(raw) {
+      // Extract src from a pasted <iframe> tag
       const srcMatch = raw.match(/src=["']([^"']+)["']/);
       if (srcMatch) raw = srcMatch[1];
+      // Already an embed URL — return as-is
       if (raw.includes('/embed')) return raw;
-      return raw
-        .replace(/\/edit[^?#]*/, '/embed')
-        .replace(/\/pub[^?#]*/,  '/embed')
-        .replace(/\/present[^?#]*/, '/embed');
+      // Published-to-web format: /d/e/2PACX.../
+      const pubMatch = raw.match(/\/presentation\/d\/e\/([^/?#]+)/);
+      if (pubMatch) return `https://docs.google.com/presentation/d/e/${pubMatch[1]}/embed`;
+      // Regular share/edit/view format: /d/DOCID/
+      const docMatch = raw.match(/\/presentation\/d\/([^/?#]+)/);
+      if (docMatch) return `https://docs.google.com/presentation/d/${docMatch[1]}/embed`;
+      return raw;
     }
 
     function pushSlides() {
