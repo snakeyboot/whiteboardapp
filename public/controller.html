@@ -27,19 +27,10 @@
       gap: 8px;
     }
 
-    .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #22c55e;
-    }
-
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
     .dot.disconnected { background: #ef4444; }
 
-    .sections {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
+    .sections { display: flex; flex-direction: column; gap: 16px; }
 
     .card {
       background: #1e293b;
@@ -57,7 +48,7 @@
       margin-bottom: 16px;
     }
 
-    /* Timer */
+    /* ── Timer ── */
     .timer-display {
       font-size: 64px;
       font-weight: 700;
@@ -68,7 +59,7 @@
       letter-spacing: -2px;
     }
 
-    .timer-display.urgent { color: #f87171; }
+    .timer-display.urgent  { color: #f87171; }
     .timer-display.warning { color: #fbbf24; }
 
     .timer-presets {
@@ -101,7 +92,7 @@
     }
 
     .timer-custom input {
-      flex: 1;
+      width: 80px;
       padding: 10px 12px;
       background: #0f172a;
       border: 1px solid #334155;
@@ -110,15 +101,9 @@
       font-size: 14px;
     }
 
-    .timer-custom input:focus {
-      outline: none;
-      border-color: #3b82f6;
-    }
+    .timer-custom input:focus { outline: none; border-color: #3b82f6; }
 
-    .timer-controls {
-      display: flex;
-      gap: 8px;
-    }
+    .timer-controls { display: flex; gap: 8px; }
 
     .btn {
       flex: 1;
@@ -131,20 +116,20 @@
       transition: all 0.15s;
     }
 
-    .btn-green { background: #16a34a; color: #fff; }
-    .btn-green:hover { background: #15803d; }
+    .btn-green  { background: #16a34a; color: #fff; }
+    .btn-green:hover  { background: #15803d; }
     .btn-yellow { background: #d97706; color: #fff; }
     .btn-yellow:hover { background: #b45309; }
-    .btn-gray { background: #334155; color: #e2e8f0; }
-    .btn-gray:hover { background: #475569; }
-    .btn-blue { background: #2563eb; color: #fff; }
-    .btn-blue:hover { background: #1d4ed8; }
-    .btn-red { background: #dc2626; color: #fff; }
-    .btn-red:hover { background: #b91c1c; }
+    .btn-gray   { background: #334155; color: #e2e8f0; }
+    .btn-gray:hover   { background: #475569; }
+    .btn-blue   { background: #2563eb; color: #fff; }
+    .btn-blue:hover   { background: #1d4ed8; }
+    .btn-red    { background: #dc2626; color: #fff; }
+    .btn-red:hover    { background: #b91c1c; }
     .btn-purple { background: #7c3aed; color: #fff; }
     .btn-purple:hover { background: #6d28d9; }
 
-    /* Roster tabs */
+    /* ── Roster tabs ── */
     .roster-tabs {
       display: flex;
       gap: 6px;
@@ -165,19 +150,8 @@
       white-space: nowrap;
     }
 
-    .tab-btn.active {
-      background: #2563eb;
-      border-color: #2563eb;
-      color: #fff;
-    }
-
-    .tab-btn.add-tab {
-      background: transparent;
-      border-style: dashed;
-      color: #64748b;
-      padding: 6px 10px;
-    }
-
+    .tab-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .tab-btn.add-tab { background: transparent; border-style: dashed; color: #64748b; padding: 6px 10px; }
     .tab-btn.add-tab:hover { color: #94a3b8; border-color: #64748b; }
 
     .roster-name-row {
@@ -187,17 +161,17 @@
       align-items: center;
     }
 
-    .roster-name-input {
-      flex: 1;
-      padding: 8px 12px;
+    input[type="text"], input[type="url"], input[type="number"] {
+      padding: 10px 12px;
       background: #0f172a;
       border: 1px solid #334155;
       border-radius: 8px;
       color: #e2e8f0;
       font-size: 14px;
+      font-family: inherit;
     }
 
-    .roster-name-input:focus { outline: none; border-color: #3b82f6; }
+    input:focus { outline: none; border-color: #3b82f6; }
 
     .roster-textarea {
       width: 100%;
@@ -219,9 +193,24 @@
       font-size: 11px;
       color: #475569;
       margin-top: 6px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
 
+    /* ── Slides per roster ── */
+    .slides-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .slides-hint {
+      font-size: 11px;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    /* ── Picker ── */
     .pick-result {
       text-align: center;
       font-size: 22px;
@@ -229,33 +218,23 @@
       color: #fbbf24;
       min-height: 34px;
       margin-bottom: 12px;
-      transition: all 0.3s;
     }
 
     .pick-result.empty { color: #334155; font-weight: 400; font-size: 14px; }
 
-    .pick-controls {
-      display: flex;
-      gap: 8px;
+    .pick-controls { display: flex; gap: 8px; }
+
+    /* ── Saving indicator ── */
+    .save-status {
+      font-size: 11px;
+      color: #475569;
+      text-align: right;
+      margin-top: 6px;
+      min-height: 16px;
+      transition: opacity 0.5s;
     }
 
-    /* Slides */
-    .slides-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    .slides-input {
-      flex: 1;
-      padding: 10px 12px;
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      color: #e2e8f0;
-      font-size: 13px;
-    }
-
-    .slides-input:focus { outline: none; border-color: #3b82f6; }
+    .save-status.saved { color: #22c55e; }
   </style>
 </head>
 <body>
@@ -276,8 +255,8 @@
         <button class="preset-btn" onclick="setPreset(1800)">30m</button>
       </div>
       <div class="timer-custom">
-        <input type="number" id="customMinutes" placeholder="min" min="0" max="99" style="width:80px;flex:none;">
-        <input type="number" id="customSeconds" placeholder="sec" min="0" max="59" style="width:80px;flex:none;">
+        <input type="number" id="customMinutes" placeholder="min" min="0" max="99">
+        <input type="number" id="customSeconds" placeholder="sec" min="0" max="59">
         <button class="btn btn-gray" onclick="setCustom()" style="flex:1;">Set</button>
       </div>
       <div class="timer-controls">
@@ -288,39 +267,38 @@
 
     <!-- Student Picker -->
     <div class="card">
-      <div class="card-title">Random Student Picker</div>
+      <div class="card-title">Classes &amp; Students</div>
 
       <div class="roster-tabs" id="rosterTabs"></div>
 
       <div class="roster-name-row">
-        <input class="roster-name-input" id="rosterNameInput" type="text" placeholder="Class name (e.g. Period 3)">
+        <input type="text" id="rosterNameInput" placeholder="Class name (e.g. Period 3)" style="flex:1;">
         <button class="btn btn-gray" style="flex:none;padding:8px 14px;font-size:13px;" onclick="renameCurrentRoster()">Rename</button>
-        <button class="btn btn-red" style="flex:none;padding:8px 12px;font-size:13px;" onclick="deleteCurrentRoster()">✕</button>
+        <button class="btn btn-red"  style="flex:none;padding:8px 12px;font-size:13px;" onclick="deleteCurrentRoster()">✕</button>
       </div>
 
       <textarea class="roster-textarea" id="rosterTextarea"
         placeholder="Enter student names, one per line"></textarea>
-      <div class="roster-hint">One name per line. Changes save automatically.</div>
+      <div class="roster-hint">One name per line — changes save automatically.</div>
 
-      <div class="pick-result" id="pickResult">—</div>
+      <!-- Per-roster slides -->
+      <div class="slides-row">
+        <input type="url" id="slidesInput" placeholder="Google Slides URL for this class…" style="flex:1;">
+        <button class="btn btn-blue" style="flex:none;padding:12px 16px;" onclick="pushSlides()">Push to Display</button>
+      </div>
+      <div class="slides-hint">
+        Paste any share or embed URL — or the full &lt;iframe&gt; from
+        <strong style="color:#64748b">File → Share → Publish to web → Embed</strong>
+      </div>
+
+      <div class="pick-result empty" id="pickResult">—</div>
 
       <div class="pick-controls">
-        <button class="btn btn-purple" onclick="pickStudent()">Pick Random</button>
-        <button class="btn btn-gray" onclick="clearPick()">Clear</button>
+        <button class="btn btn-purple" onclick="pickRandom()">Pick Random</button>
+        <button class="btn btn-gray"   onclick="clearPick()">Clear</button>
       </div>
-    </div>
 
-    <!-- Google Slides -->
-    <div class="card">
-      <div class="card-title">Google Slides</div>
-      <div class="slides-row">
-        <input class="slides-input" id="slidesInput" type="url"
-          placeholder="Paste embed URL from File → Share → Publish to web…">
-        <button class="btn btn-blue" style="flex:none;padding:12px 18px;" onclick="sendSlides()">Send</button>
-      </div>
-      <div style="font-size:11px;color:#475569;margin-top:8px;line-height:1.6;">
-        In Google Slides: <strong style="color:#64748b">File → Share → Publish to web → Embed tab</strong> → copy the URL inside the iframe src="…"
-      </div>
+      <div class="save-status" id="saveStatus"></div>
     </div>
 
   </div>
@@ -329,36 +307,30 @@
   <script>
     const socket = io();
     const dot = document.getElementById('dot');
-
-    socket.on('connect', () => dot.classList.remove('disconnected'));
+    socket.on('connect',    () => dot.classList.remove('disconnected'));
     socket.on('disconnect', () => dot.classList.add('disconnected'));
 
     // ── Timer ──────────────────────────────────────────────
     let timerRemaining = 300;
-    let timerDuration = 300;
-    let timerRunning = false;
-    let timerInterval = null;
+    let timerDuration  = 300;
+    let timerRunning   = false;
 
-    const timerDisplay = document.getElementById('timerDisplay');
+    const timerDisplay  = document.getElementById('timerDisplay');
     const startPauseBtn = document.getElementById('startPauseBtn');
 
     function fmt(s) {
-      const m = Math.floor(s / 60);
-      const sec = s % 60;
-      return `${m}:${String(sec).padStart(2, '0')}`;
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     }
 
     function updateTimerDisplay() {
       timerDisplay.textContent = fmt(timerRemaining);
       timerDisplay.classList.remove('urgent', 'warning');
-      const pct = timerRemaining / timerDuration;
-      if (pct <= 0.1) timerDisplay.classList.add('urgent');
+      const pct = timerDuration > 0 ? timerRemaining / timerDuration : 1;
+      if (pct <= 0.1)       timerDisplay.classList.add('urgent');
       else if (pct <= 0.25) timerDisplay.classList.add('warning');
     }
 
-    function setPreset(secs) {
-      socket.emit('timer:set', secs);
-    }
+    function setPreset(secs) { socket.emit('timer:set', secs); }
 
     function setCustom() {
       const m = parseInt(document.getElementById('customMinutes').value) || 0;
@@ -368,80 +340,50 @@
     }
 
     function toggleTimer() {
-      if (timerRunning) {
-        socket.emit('timer:pause');
-      } else {
-        socket.emit('timer:start');
-      }
+      socket.emit(timerRunning ? 'timer:pause' : 'timer:start');
     }
 
-    function resetTimer() {
-      clearInterval(timerInterval);
-      socket.emit('timer:reset');
-    }
-
-    function startLocalTick() {
-      clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        if (timerRemaining > 0) {
-          timerRemaining--;
-          updateTimerDisplay();
-          socket.emit('timer:tick', timerRemaining);
-        } else {
-          clearInterval(timerInterval);
-          timerRunning = false;
-          startPauseBtn.textContent = 'Start';
-          socket.emit('timer:pause');
-        }
-      }, 1000);
-    }
+    function resetTimer() { socket.emit('timer:reset'); }
 
     socket.on('state', (s) => {
-      timerDuration = s.timer.duration;
+      timerDuration  = s.timer.duration;
       timerRemaining = s.timer.remaining;
-      timerRunning = s.timer.running;
+      timerRunning   = s.timer.running;
       updateTimerDisplay();
       startPauseBtn.textContent = timerRunning ? 'Pause' : 'Start';
-      if (timerRunning) startLocalTick();
-      if (s.slides.url) document.getElementById('slidesInput').value = s.slides.url;
+      initRosters(s.rosters, s.activeRosterId);
     });
 
     socket.on('timer:update', (t) => {
-      clearInterval(timerInterval);
-      timerDuration = t.duration;
+      timerDuration  = t.duration;
       timerRemaining = t.remaining;
-      timerRunning = t.running;
+      timerRunning   = t.running;
       updateTimerDisplay();
       startPauseBtn.textContent = timerRunning ? 'Pause' : 'Start';
-      if (timerRunning) startLocalTick();
+    });
+
+    socket.on('timer:tick', (remaining) => {
+      timerRemaining = remaining;
+      updateTimerDisplay();
+    });
+
+    socket.on('timer:done', () => {
+      timerRunning = false;
+      startPauseBtn.textContent = 'Start';
     });
 
     // ── Rosters ────────────────────────────────────────────
-    const STORAGE_KEY = 'classroom_rosters';
-    const ACTIVE_KEY = 'classroom_active_roster';
-
-    let rosters = {};  // { id: { name, students: string } }
+    let rosters  = {};
     let activeId = null;
+    let saveTimer = null;
 
-    function loadRosters() {
-      try {
-        rosters = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-      } catch { rosters = {}; }
-      if (Object.keys(rosters).length === 0) {
-        const id = uid();
-        rosters[id] = { name: 'Period 1', students: '' };
-      }
-      activeId = localStorage.getItem(ACTIVE_KEY) || Object.keys(rosters)[0];
-      if (!rosters[activeId]) activeId = Object.keys(rosters)[0];
-    }
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
-    function saveRosters() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(rosters));
-      localStorage.setItem(ACTIVE_KEY, activeId);
-    }
-
-    function uid() {
-      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    function initRosters(data, serverId) {
+      rosters  = data || {};
+      activeId = (serverId && rosters[serverId]) ? serverId : Object.keys(rosters)[0];
+      renderTabs();
+      renderCurrentRoster();
     }
 
     function renderTabs() {
@@ -454,129 +396,130 @@
         btn.onclick = () => switchRoster(id);
         container.appendChild(btn);
       });
-      const addBtn = document.createElement('button');
-      addBtn.className = 'tab-btn add-tab';
-      addBtn.textContent = '+ New';
-      addBtn.onclick = addRoster;
-      container.appendChild(addBtn);
+      const add = document.createElement('button');
+      add.className = 'tab-btn add-tab';
+      add.textContent = '+ New';
+      add.onclick = addRoster;
+      container.appendChild(add);
     }
 
     function renderCurrentRoster() {
       const r = rosters[activeId];
+      if (!r) return;
       document.getElementById('rosterNameInput').value = r.name;
-      document.getElementById('rosterTextarea').value = r.students;
+      document.getElementById('rosterTextarea').value  = r.students;
+      document.getElementById('slidesInput').value     = r.slidesUrl || '';
     }
 
     function switchRoster(id) {
-      saveCurrentRosterText();
       activeId = id;
-      saveRosters();
+      socket.emit('roster:activate', id);
       renderTabs();
       renderCurrentRoster();
     }
 
-    function saveCurrentRosterText() {
-      if (rosters[activeId]) {
-        rosters[activeId].students = document.getElementById('rosterTextarea').value;
-      }
-    }
-
     function addRoster() {
-      saveCurrentRosterText();
       const id = uid();
-      rosters[id] = { name: `Period ${Object.keys(rosters).length + 1}`, students: '' };
+      const n  = Object.keys(rosters).length + 1;
+      rosters[id] = { name: `Period ${n}`, students: '', slidesUrl: '' };
       activeId = id;
-      saveRosters();
+      socket.emit('roster:activate', id);
+      saveCurrentRoster();
       renderTabs();
       renderCurrentRoster();
     }
 
     function renameCurrentRoster() {
       const name = document.getElementById('rosterNameInput').value.trim();
-      if (name) {
-        rosters[activeId].name = name;
-        saveCurrentRosterText();
-        saveRosters();
-        renderTabs();
-      }
+      if (!name) return;
+      rosters[activeId].name = name;
+      saveCurrentRoster();
+      renderTabs();
     }
 
     function deleteCurrentRoster() {
-      const ids = Object.keys(rosters);
-      if (ids.length <= 1) return;
-      delete rosters[activeId];
-      activeId = Object.keys(rosters)[0];
-      saveRosters();
+      if (Object.keys(rosters).length <= 1) return;
+      socket.emit('roster:delete', activeId);
+    }
+
+    function saveCurrentRoster() {
+      const r = rosters[activeId];
+      if (!r) return;
+      r.students  = document.getElementById('rosterTextarea').value;
+      r.slidesUrl = document.getElementById('slidesInput').value.trim();
+      socket.emit('roster:save', { id: activeId, ...r });
+    }
+
+    function scheduleSave() {
+      const status = document.getElementById('saveStatus');
+      status.textContent = 'Saving…';
+      status.className = 'save-status';
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        saveCurrentRoster();
+        status.textContent = 'Saved';
+        status.className = 'save-status saved';
+        setTimeout(() => { status.textContent = ''; }, 2000);
+      }, 800);
+    }
+
+    document.getElementById('rosterTextarea').addEventListener('input', scheduleSave);
+    document.getElementById('slidesInput').addEventListener('input', scheduleSave);
+
+    socket.on('roster:all', (data) => {
+      const prev = activeId;
+      rosters  = data;
+      activeId = data[prev] ? prev : Object.keys(data)[0];
       renderTabs();
       renderCurrentRoster();
-    }
-
-    document.getElementById('rosterTextarea').addEventListener('input', () => {
-      saveCurrentRosterText();
-      saveRosters();
     });
 
-    // ── Picker ─────────────────────────────────────────────
-    function pickStudent() {
-      saveCurrentRosterText();
-      const lines = rosters[activeId].students
-        .split('\n')
-        .map(s => s.trim())
-        .filter(Boolean);
-      if (lines.length === 0) return;
-      const name = lines[Math.floor(Math.random() * lines.length)];
-      document.getElementById('pickResult').textContent = name;
-      document.getElementById('pickResult').classList.remove('empty');
-      socket.emit('pick:student', name);
-    }
-
-    function clearPick() {
-      document.getElementById('pickResult').textContent = '—';
-      document.getElementById('pickResult').classList.add('empty');
-      socket.emit('pick:clear');
-    }
-
-    socket.on('pick:show', (name) => {
-      document.getElementById('pickResult').textContent = name;
-      document.getElementById('pickResult').classList.remove('empty');
-    });
-
-    socket.on('pick:clear', () => {
-      document.getElementById('pickResult').textContent = '—';
+    socket.on('roster:activated', (id) => {
+      if (id && rosters[id] && id !== activeId) {
+        activeId = id;
+        renderTabs();
+        renderCurrentRoster();
+      }
     });
 
     // ── Slides ─────────────────────────────────────────────
     function toEmbedUrl(raw) {
-      // Handle full <iframe ...> paste — extract src
       const srcMatch = raw.match(/src=["']([^"']+)["']/);
       if (srcMatch) raw = srcMatch[1];
-
-      // Already an embed URL
       if (raw.includes('/embed')) return raw;
-
-      // Convert share/edit/pub URL → embed
       return raw
-        .replace(/\/edit[^/]*$/, '/embed')
-        .replace(/\/pub[^/]*$/, '/embed')
-        .replace(/\/present[^/]*$/, '/embed');
+        .replace(/\/edit[^?#]*/, '/embed')
+        .replace(/\/pub[^?#]*/,  '/embed')
+        .replace(/\/present[^?#]*/, '/embed');
     }
 
-    function sendSlides() {
+    function pushSlides() {
       const raw = document.getElementById('slidesInput').value.trim();
       if (!raw) return;
       const url = toEmbedUrl(raw);
       document.getElementById('slidesInput').value = url;
-      socket.emit('slides:set', url);
+      if (rosters[activeId]) {
+        rosters[activeId].slidesUrl = url;
+        saveCurrentRoster();
+      }
+      socket.emit('slides:push', url);
     }
 
-    socket.on('slides:update', (url) => {
-      document.getElementById('slidesInput').value = url;
+    // ── Picker ─────────────────────────────────────────────
+    function pickRandom() { socket.emit('pick:random'); }
+    function clearPick()  { socket.emit('pick:clear'); }
+
+    socket.on('pick:show', (name) => {
+      const el = document.getElementById('pickResult');
+      el.textContent = name;
+      el.className = 'pick-result';
     });
 
-    // ── Init ───────────────────────────────────────────────
-    loadRosters();
-    renderTabs();
-    renderCurrentRoster();
+    socket.on('pick:clear', () => {
+      const el = document.getElementById('pickResult');
+      el.textContent = '—';
+      el.className = 'pick-result empty';
+    });
   </script>
 </body>
 </html>
