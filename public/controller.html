@@ -382,6 +382,8 @@
     function initRosters(data, serverId) {
       rosters  = data || {};
       activeId = (serverId && rosters[serverId]) ? serverId : Object.keys(rosters)[0];
+      // Tell server which roster is active so pick:random works immediately
+      if (activeId) socket.emit('roster:activate', activeId);
       renderTabs();
       renderCurrentRoster();
     }
@@ -445,6 +447,8 @@
     function saveCurrentRoster() {
       const r = rosters[activeId];
       if (!r) return;
+      const typedName = document.getElementById('rosterNameInput').value.trim();
+      if (typedName) r.name = typedName;
       r.students  = document.getElementById('rosterTextarea').value;
       r.slidesUrl = document.getElementById('slidesInput').value.trim();
       socket.emit('roster:save', { id: activeId, ...r });
@@ -519,6 +523,19 @@
       const el = document.getElementById('pickResult');
       el.textContent = '—';
       el.className = 'pick-result empty';
+    });
+
+    socket.on('pick:error', (msg) => {
+      const el = document.getElementById('pickResult');
+      el.textContent = msg;
+      el.className = 'pick-result empty';
+    });
+
+    socket.on('roster:error', (msg) => {
+      const status = document.getElementById('saveStatus');
+      status.textContent = '⚠ ' + msg;
+      status.className = 'save-status';
+      status.style.color = '#f87171';
     });
   </script>
 </body>

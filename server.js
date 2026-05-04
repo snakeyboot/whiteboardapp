@@ -108,14 +108,16 @@ io.on('connection', async (socket) => {
 
   // Picker — server picks from active roster
   socket.on('pick:random', async () => {
-    const rosters = await getAllRosters();
-    const roster = rosters[state.activeRosterId];
-    if (!roster) return;
-    const names = roster.students.split('\n').map(s => s.trim()).filter(Boolean);
-    if (!names.length) return;
-    const name = names[Math.floor(Math.random() * names.length)];
-    state.pick.name = name;
-    io.emit('pick:show', name);
+    try {
+      const rosters = await getAllRosters();
+      const roster = rosters[state.activeRosterId];
+      if (!roster) { socket.emit('pick:error', 'No active class selected.'); return; }
+      const names = roster.students.split('\n').map(s => s.trim()).filter(Boolean);
+      if (!names.length) { socket.emit('pick:error', 'No students in this class yet.'); return; }
+      const name = names[Math.floor(Math.random() * names.length)];
+      state.pick.name = name;
+      io.emit('pick:show', name);
+    } catch (e) { console.error('pick:random error', e); }
   });
 
   socket.on('pick:clear', () => {
@@ -125,23 +127,30 @@ io.on('connection', async (socket) => {
 
   // Rosters
   socket.on('roster:save', async ({ id, name, students, slidesUrl, sortOrder }) => {
-    await pool.query(`
-      INSERT INTO rosters (id, name, students, slides_url, sort_order)
-      VALUES ($1,$2,$3,$4,$5)
-      ON CONFLICT (id) DO UPDATE SET name=$2, students=$3, slides_url=$4, sort_order=$5
-    `, [id, name, students, slidesUrl || '', sortOrder || 0]);
-    const updated = await getAllRosters();
-    io.emit('roster:all', updated);
+    try {
+      await pool.query(`
+        INSERT INTO rosters (id, name, students, slides_url, sort_order)
+        VALUES ($1,$2,$3,$4,$5)
+        ON CONFLICT (id) DO UPDATE SET name=$2, students=$3, slides_url=$4, sort_order=$5
+      `, [id, name, students, slidesUrl || '', sortOrder || 0]);
+      const updated = await getAllRosters();
+      io.emit('roster:all', updated);
+    } catch (e) {
+      console.error('roster:save error', e);
+      socket.emit('roster:error', 'Failed to save. Check server logs.');
+    }
   });
 
   socket.on('roster:delete', async (id) => {
-    await pool.query('DELETE FROM rosters WHERE id=$1', [id]);
-    const updated = await getAllRosters();
-    if (!updated[state.activeRosterId]) {
-      state.activeRosterId = Object.keys(updated)[0] || null;
-    }
-    io.emit('roster:all', updated);
-    io.emit('roster:activated', state.activeRosterId);
+    try {
+      await pool.query('DELETE FROM rosters WHERE id=$1', [id]);
+      const updated = await getAllRosters();
+      if (!updated[state.activeRosterId]) {
+        state.activeRosterId = Object.keys(updated)[0] || null;
+      }
+      io.emit('roster:all', updated);
+      io.emit('roster:activated', state.activeRosterId);
+    } catch (e) { console.error('roster:delete error', e); }
   });
 
   socket.on('roster:activate', (id) => {
