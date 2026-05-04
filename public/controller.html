@@ -546,8 +546,26 @@
     });
 
     // ── Slides ─────────────────────────────────────────────
+    function toEmbedUrl(raw) {
+      // Handle full <iframe ...> paste — extract src
+      const srcMatch = raw.match(/src=["']([^"']+)["']/);
+      if (srcMatch) raw = srcMatch[1];
+
+      // Already an embed URL
+      if (raw.includes('/embed')) return raw;
+
+      // Convert share/edit/pub URL → embed
+      return raw
+        .replace(/\/edit[^/]*$/, '/embed')
+        .replace(/\/pub[^/]*$/, '/embed')
+        .replace(/\/present[^/]*$/, '/embed');
+    }
+
     function sendSlides() {
-      const url = document.getElementById('slidesInput').value.trim();
+      const raw = document.getElementById('slidesInput').value.trim();
+      if (!raw) return;
+      const url = toEmbedUrl(raw);
+      document.getElementById('slidesInput').value = url;
       socket.emit('slides:set', url);
     }
 
