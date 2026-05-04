@@ -12,6 +12,22 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/controller', (req, res) => res.sendFile(path.join(__dirname, 'public', 'controller.html')));
 app.get('/display',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'display.html')));
 
+app.get('/api/fetch-title', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.json({ title: '' });
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(5000), headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const html = await r.text();
+    const m = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const raw = m ? m[1].trim() : '';
+    // Google appends " - Google Slides / Docs / Drive" — strip it
+    const title = raw.replace(/\s*[-–—]\s*Google (Slides|Docs|Drive|Sheets|Forms)$/i, '').trim();
+    res.json({ title });
+  } catch {
+    res.json({ title: '' });
+  }
+});
+
 // ── Database ──────────────────────────────────────────────
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

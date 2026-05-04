@@ -268,8 +268,8 @@
       letter-spacing: 0.05em;
       flex-shrink: 0;
     }
-    .mat-slides { background: #1d4ed8; color: #93c5fd; }
-    .mat-doc    { background: #15803d; color: #86efac; }
+    .mat-slides { background: #F9AB00; color: #1a1a1a; }
+    .mat-doc    { background: #1a73e8; color: #fff; }
     .mat-pdf    { background: #9f1239; color: #fca5a5; }
     .mat-title  { flex: 1; font-size: 13px; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .mat-btns   { display: flex; gap: 5px; flex-shrink: 0; }
@@ -500,7 +500,7 @@
       <div id="materialsListEl"></div>
       <button class="add-btn" onclick="toggleAddForm()">+ Add Material</button>
       <div class="mat-add-form" id="matAddForm">
-        <input type="url" id="matUrl" placeholder="Paste Google Slides, Doc, or PDF URL…" oninput="matAutoDetect()">
+        <input type="url" id="matUrl" placeholder="Paste Google Slides, Doc, or PDF URL…" oninput="matAutoDetect()" onblur="matFetchTitle()">
         <div class="mat-form-row">
           <select id="matType" style="flex:1;">
             <option value="slides">Google Slides</option>
@@ -1032,7 +1032,7 @@
       const idx = students.findIndex(s => fullNameClient(s) === name);
       if (idx < 0) return;
       const cur = students[idx].attendance || 'present';
-      const next = cur === 'present' ? 'tardy' : cur === 'tardy' ? 'absent' : 'present';
+      const next = cur === 'present' ? 'absent' : cur === 'absent' ? 'tardy' : 'present';
       students[idx].attendance = next;
       rosters[activeId].students = JSON.stringify(students);
       // Save (debounced)
@@ -1204,6 +1204,21 @@
       const url = document.getElementById('matUrl').value.trim();
       if (!url) return;
       document.getElementById('matType').value = detectType(url);
+    }
+
+    async function matFetchTitle() {
+      const url = document.getElementById('matUrl').value.trim();
+      if (!url) return;
+      matAutoDetect();
+      const titleEl = document.getElementById('matTitle');
+      if (titleEl.value.trim()) return; // don't overwrite if user already typed something
+      titleEl.placeholder = 'Fetching title…';
+      try {
+        const res = await fetch(`/api/fetch-title?url=${encodeURIComponent(url)}`);
+        const { title } = await res.json();
+        if (title) titleEl.value = title;
+      } catch {}
+      titleEl.placeholder = 'Title (optional)';
     }
 
     function getMaterials() {
