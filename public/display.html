@@ -894,10 +894,9 @@
     return url;
   }
 
-  function loadSlides(url) {
-    if (!url) return;
-    let eu = toEmbedUrl(url);
-    if (!eu.includes('?')) eu += '?start=false&loop=false&delayms=3000';
+  let slideBaseUrl = '';
+
+  function getOrCreateIframe() {
     const ph = document.getElementById('slidesPlaceholder');
     let iframe = document.querySelector('#slidesInner iframe');
     if (!iframe) {
@@ -906,10 +905,27 @@
       iframe.allowFullscreen = true;
       document.getElementById('slidesInner').appendChild(iframe);
     }
-    iframe.src = eu;
+    return iframe;
   }
 
-  socket.on('slides:update', url => { if (url) loadSlides(url); });
+  function loadSlides(url) {
+    if (!url) return;
+    let eu = toEmbedUrl(url);
+    if (!eu.includes('?')) eu += '?start=false&loop=false&delayms=3000';
+    slideBaseUrl = eu;
+    getOrCreateIframe().src = eu;
+  }
+
+  function navigateToSlide(n) {
+    if (!slideBaseUrl) return;
+    const base = slideBaseUrl.replace(/[&?]slide=[^&]*|[&?]page=[^&]*/g, '');
+    const sep  = base.includes('?') ? '&' : '?';
+    const param = base.includes('drive.google.com/file') ? `page=${n}` : `slide=id.p${n}`;
+    getOrCreateIframe().src = base + sep + param;
+  }
+
+  socket.on('slides:update',   url   => { if (url) loadSlides(url); });
+  socket.on('slides:navigate', slide => navigateToSlide(slide));
 
   // ── Attendance ─────────────────────────────────────────────
   let attStudents = [];

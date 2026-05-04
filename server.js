@@ -110,7 +110,7 @@ function shuffle(arr) {
 const state = {
   timer: { duration: 300, remaining: 300, running: false },
   pick: { name: null },
-  slides: { url: '' },
+  slides: { url: '', slide: 1 },
   activeRosterId: null,
   activeRosterName: '',
 };
@@ -305,8 +305,37 @@ io.on('connection', async (socket) => {
 
   // ── Slides ──
   socket.on('slides:push', (url) => {
-    state.slides.url = url;
+    state.slides.url   = url;
+    state.slides.slide = 1;
     io.emit('slides:update', url);
+    io.emit('slides:navigate', 1);
+  });
+
+  socket.on('slides:prev', () => {
+    if (state.slides.slide > 1) state.slides.slide--;
+    io.emit('slides:navigate', state.slides.slide);
+  });
+
+  socket.on('slides:next', () => {
+    state.slides.slide++;
+    io.emit('slides:navigate', state.slides.slide);
+  });
+
+  // ── Force Pick ──
+  socket.on('pick:force', async (name) => {
+    try {
+      const rosters = await getAllRosters();
+      const roster  = rosters[state.activeRosterId];
+      if (!roster) return;
+      state.pick.name = name;
+      const allStudents = parseStudents(roster.students);
+      const updated = allStudents.map(s => fullName(s) === name ? { ...s, picks: (s.picks||0)+1 } : s);
+      await pool.query('UPDATE rosters SET students=$1 WHERE id=$2', [JSON.stringify(updated), state.activeRosterId]);
+      pickDeck = pickDeck.filter(n => n !== name);
+      io.emit('pick:show', name);
+      io.emit('deck:update', { remaining: pickDeck.length, total: deckTotal });
+      io.emit('pick:stats', { rosterId: state.activeRosterId, students: JSON.stringify(updated) });
+    } catch (e) { console.error('pick:force', e); }
   });
 });
 
