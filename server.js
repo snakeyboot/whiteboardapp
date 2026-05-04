@@ -29,6 +29,7 @@ async function initDB() {
     )
   `);
   await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS grades TEXT DEFAULT '{}'`);
+  await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS materials TEXT DEFAULT '[]'`);
   const { rows } = await pool.query('SELECT COUNT(*) FROM rosters');
   if (parseInt(rows[0].count) === 0) {
     const id = Date.now().toString(36);
@@ -42,13 +43,13 @@ async function initDB() {
 async function getAllRosters() {
   const { rows } = await pool.query('SELECT * FROM rosters ORDER BY sort_order, name');
   const out = {};
-  rows.forEach(r => { out[r.id] = { name: r.name, students: r.students, slidesUrl: r.slides_url, grades: r.grades || '{}' }; });
+  rows.forEach(r => { out[r.id] = { name: r.name, students: r.students, slidesUrl: r.slides_url, grades: r.grades || '{}', materials: r.materials || '[]' }; });
   return out;
 }
 
 function parseStudents(raw) {
   if (!raw) return [];
-  const base = { firstName:'', lastName:'', present:true, anchor:false, enl:false, introvert:false, gender:'', conflict:'', distractor:false, picks:0, quickGrade:'' };
+  const base = { firstName:'', lastName:'', attendance:'present', anchor:false, enl:false, introvert:false, gender:'', conflict:'', distractor:false, picks:0 };
   try {
     const p = JSON.parse(raw);
     if (Array.isArray(p)) return p.map(s => {
@@ -56,11 +57,16 @@ function parseStudents(raw) {
         const w = s.trim().split(/\s+/);
         return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
       }
+      let student;
       if (s.name && !s.firstName) {
         const w = (s.name||'').trim().split(/\s+/);
-        return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' '), ...s };
+        student = { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' '), ...s };
+      } else {
+        student = { ...base, ...s };
       }
-      return { ...base, ...s };
+      // Migrate old present:false → attendance:absent
+      if (s.present === false && !s.attendance) student.attendance = 'absent';
+      return student;
     });
   } catch {}
   return raw.split('\n').map(s => s.trim()).filter(Boolean).map(name => {
@@ -103,7 +109,7 @@ async function buildDeck(rosterId) {
     const roster  = rosters[rosterId];
     if (!roster) { pickDeck = []; deckTotal = 0; }
     else {
-      const present = parseStudents(roster.students).filter(s => s.present !== false).map(s => fullName(s));
+      const present = parseStudents(roster.students).filter(s => (s.attendance || 'present') !== 'absent').map(s => fullName(s));
       pickDeck  = shuffle(present);
       deckTotal = present.length;
     }
@@ -188,7 +194,7 @@ io.on('connection', async (socket) => {
       if (!roster) { socket.emit('pick:error', 'No active class.'); return; }
 
       const presentSet = new Set(
-        parseStudents(roster.students).filter(s => s.present !== false).map(s => fullName(s))
+        parseStudents(roster.students).filter(s => (s.attendance || 'present') !== 'absent').map(s => fullName(s))
       );
       if (presentSet.size === 0) { socket.emit('pick:error', 'No students are marked present.'); return; }
 
@@ -234,13 +240,13 @@ io.on('connection', async (socket) => {
   });
 
   // ── Rosters ──
-  socket.on('roster:save', async ({ id, name, students, slidesUrl, sortOrder }) => {
+  socket.on('roster:save', async ({ id, name, students, slidesUrl, sortOrder, materials }) => {
     try {
       await pool.query(`
-        INSERT INTO rosters (id,name,students,slides_url,sort_order)
-        VALUES ($1,$2,$3,$4,$5)
-        ON CONFLICT (id) DO UPDATE SET name=$2,students=$3,slides_url=$4,sort_order=$5
-      `, [id, name, students, slidesUrl || '', sortOrder || 0]);
+        INSERT INTO rosters (id,name,students,slides_url,sort_order,materials)
+        VALUES ($1,$2,$3,$4,$5,$6)
+        ON CONFLICT (id) DO UPDATE SET name=$2,students=$3,slides_url=$4,sort_order=$5,materials=$6
+      `, [id, name, students, slidesUrl || '', sortOrder || 0, materials || '[]']);
       const updated = await getAllRosters();
       io.emit('roster:all', updated);
     } catch (e) {

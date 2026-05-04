@@ -12,16 +12,16 @@
       background: #0f172a;
       color: #e2e8f0;
       min-height: 100vh;
-      padding: 16px;
+      padding: 12px;
     }
 
     h1 {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
       color: #94a3b8;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -30,104 +30,40 @@
     .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
     .dot.disconnected { background: #ef4444; }
 
-    .sections { display: flex; flex-direction: column; gap: 16px; }
+    .sections { display: flex; flex-direction: column; gap: 12px; }
 
     .card {
       background: #1e293b;
-      border-radius: 16px;
-      padding: 20px;
+      border-radius: 12px;
+      padding: 14px;
       border: 1px solid #334155;
     }
 
     .card-title {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: #64748b;
-      margin-bottom: 16px;
+      margin-bottom: 10px;
     }
 
-    /* ── Timer ── */
-    .timer-display {
-      font-size: 72px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      text-align: center;
-      color: #f8fafc;
-      margin-bottom: 16px;
-      letter-spacing: -2px;
-    }
-
-    .timer-display.urgent  { color: #f87171; }
-    .timer-display.warning { color: #fbbf24; }
-    .timer-display.entry   { color: #60a5fa; }
-
-    .numpad {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .numpad-btn {
-      padding: 14px 0;
-      border-radius: 10px;
-      border: 1px solid #334155;
-      background: #0f172a;
-      color: #e2e8f0;
-      font-size: 20px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.1s;
-      text-align: center;
-    }
-
-    .numpad-btn:hover  { background: #1e3a5f; border-color: #3b82f6; }
-    .numpad-btn:active { background: #2563eb; border-color: #2563eb; color: #fff; }
-
-    .numpad-btn.del-btn { color: #94a3b8; font-size: 18px; }
-    .numpad-btn.clr-btn { color: #f87171; font-size: 14px; font-weight: 700; }
-
-    .timer-controls { display: flex; gap: 8px; }
-
-    .btn {
-      flex: 1;
-      padding: 12px;
-      border-radius: 10px;
-      border: none;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .btn-green  { background: #16a34a; color: #fff; }
-    .btn-green:hover  { background: #15803d; }
-    .btn-yellow { background: #d97706; color: #fff; }
-    .btn-yellow:hover { background: #b45309; }
-    .btn-gray   { background: #334155; color: #e2e8f0; }
-    .btn-gray:hover   { background: #475569; }
-    .btn-blue   { background: #2563eb; color: #fff; }
-    .btn-blue:hover   { background: #1d4ed8; }
-    .btn-red    { background: #dc2626; color: #fff; }
-    .btn-red:hover    { background: #b91c1c; }
-    .btn-purple { background: #7c3aed; color: #fff; }
-    .btn-purple:hover { background: #6d28d9; }
-    .btn-teal   { background: #0d9488; color: #fff; }
-    .btn-teal:hover   { background: #0f766e; }
-
-    /* ── Roster tabs ── */
-    .roster-tabs {
+    /* ── Side-by-side row ── */
+    .side-row {
       display: flex;
-      gap: 6px;
-      margin-bottom: 14px;
+      gap: 10px;
+    }
+    .side-row > .card { flex: 1; min-width: 0; }
+
+    /* ── Classes (top compact) ── */
+    .classes-row {
+      display: flex;
       flex-wrap: wrap;
+      gap: 6px;
       align-items: center;
     }
-
     .tab-btn {
-      padding: 6px 14px;
+      padding: 6px 12px;
       border-radius: 8px;
       border: 1px solid #334155;
       background: #0f172a;
@@ -137,34 +73,339 @@
       transition: all 0.15s;
       white-space: nowrap;
     }
-
     .tab-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
-    .tab-btn.add-tab { background: transparent; border-style: dashed; color: #64748b; padding: 6px 10px; }
+    .tab-btn.add-tab { background: transparent; border-style: dashed; color: #64748b; }
     .tab-btn.add-tab:hover { color: #94a3b8; border-color: #64748b; }
+    .tab-edit-btn {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #64748b;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-edit-btn:hover { color: #e2e8f0; border-color: #94a3b8; }
 
-    .roster-name-row {
+    /* ── Timer ── */
+    .timer-display {
+      font-size: 46px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+      color: #f8fafc;
+      margin-bottom: 10px;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+    .timer-display.urgent  { color: #f87171; }
+    .timer-display.warning { color: #fbbf24; }
+    .timer-display.entry   { color: #60a5fa; }
+
+    .numpad-6 {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+      margin-bottom: 6px;
+    }
+    .np-btn {
+      padding: 9px 2px;
+      border-radius: 7px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .np-btn:active { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .np-btn.del { color: #94a3b8; font-size: 15px; }
+    .np-btn.clr { color: #f87171; font-size: 12px; font-weight: 700; }
+
+    .timer-row { display: flex; gap: 6px; margin-bottom: 6px; }
+    .timer-add  { display: flex; gap: 5px; }
+
+    .btn {
+      flex: 1;
+      padding: 10px 6px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-green  { background: #16a34a; color: #fff; }
+    .btn-green:active  { background: #15803d; }
+    .btn-gray   { background: #334155; color: #e2e8f0; }
+    .btn-gray:active   { background: #475569; }
+    .btn-blue   { background: #2563eb; color: #fff; }
+    .btn-blue:active   { background: #1d4ed8; }
+    .btn-red    { background: #dc2626; color: #fff; }
+    .btn-red:active    { background: #b91c1c; }
+    .btn-purple { background: #7c3aed; color: #fff; }
+    .btn-purple:active { background: #6d28d9; }
+    .btn-teal   { background: #0d9488; color: #fff; }
+    .btn-teal:active   { background: #0f766e; }
+    .btn-add    { background: transparent; border: 1px dashed #334155 !important; color: #64748b; }
+    .btn-add:active    { background: #1e293b; color: #94a3b8; }
+    .btn-sm { padding: 8px 6px; font-size: 12px; }
+    .add-btn {
       display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px dashed #334155;
+      background: transparent;
+      color: #64748b;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .add-btn:hover { border-color: #64748b; color: #94a3b8; }
+
+    /* ── Picker ── */
+    .pick-result {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: #fbbf24;
+      min-height: 30px;
+      margin-bottom: 10px;
+    }
+    .pick-result.empty { color: #334155; font-weight: 400; font-size: 14px; }
+    .pick-controls { display: flex; gap: 6px; margin-bottom: 10px; }
+    .deck-badge {
+      font-size: 10px;
+      color: #475569;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    /* ── Pick Stats ── */
+    .stats-section { border-top: 1px solid #1e293b; padding-top: 10px; }
+    .stats-label { font-size: 10px; color: #475569; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+    .stats-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 0;
+    }
+    .stats-name {
+      width: 90px;
+      flex-shrink: 0;
+      font-size: 12px;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .stats-bar-wrap { flex: 1; height: 5px; background: #0f172a; border-radius: 3px; overflow: hidden; }
+    .stats-bar { height: 100%; background: #7c3aed; border-radius: 3px; transition: width 0.4s; }
+    .stats-count { width: 20px; text-align: right; font-size: 11px; font-weight: 700; color: #64748b; font-variant-numeric: tabular-nums; }
+
+    /* ── Gradebook ── */
+    .gb-header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
       gap: 8px;
       margin-bottom: 10px;
-      align-items: center;
     }
-
-    input[type="text"], input[type="url"], input[type="number"] {
-      padding: 10px 12px;
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      color: #e2e8f0;
-      font-size: 14px;
-      font-family: inherit;
-    }
-
-    input:focus { outline: none; border-color: #3b82f6; }
-
-    .roster-textarea {
+    .gb-class-label { font-size: 12px; font-weight: 600; color: #94a3b8; margin-top: 2px; }
+    .gb-scroll { overflow-x: auto; border-radius: 8px; margin-bottom: 6px; }
+    .gb-table {
       width: 100%;
-      min-height: 120px;
+      border-collapse: collapse;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .gb-table th {
+      padding: 7px 8px;
+      background: #0f172a;
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid #334155;
+      text-align: center;
+    }
+    .gb-table td { padding: 3px 5px; border: 1px solid #1e293b; text-align: center; }
+    .gb-table tbody tr:hover td { background: rgba(255,255,255,0.03); }
+    .gb-name-th { text-align: left !important; min-width: 100px; }
+    .gb-name-td {
+      text-align: left !important;
+      padding: 5px 8px !important;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .gb-name-td:active { background: rgba(255,255,255,0.05); }
+    .gb-name-td.att-present { color: #22c55e; }
+    .gb-name-td.att-tardy   { color: #fbbf24; }
+    .gb-name-td.att-absent  { color: #ef4444; text-decoration: line-through; }
+    .gb-col-header { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .gb-col-name { color: #94a3b8; }
+    .gb-col-max  { font-size: 9px; color: #475569; font-weight: 400; }
+    .gb-col-top  { display: flex; align-items: center; gap: 3px; }
+    .gb-del-btn {
+      background: none; border: none; color: #475569; font-size: 10px;
+      cursor: pointer; padding: 0 2px; transition: color 0.15s; line-height: 1;
+    }
+    .gb-del-btn:hover { color: #ef4444; }
+    .gb-input {
+      width: 50px; padding: 4px 3px; background: transparent;
+      border: 1px solid transparent; border-radius: 4px;
+      color: #94a3b8; font-size: 12px; text-align: center; font-family: inherit;
+    }
+    .gb-input:focus { outline: none; border-color: #3b82f6; background: #0f172a; color: #e2e8f0; }
+    .gb-empty { text-align: center; padding: 20px; color: #475569; font-size: 12px; }
+
+    /* ── Materials ── */
+    .material-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    .material-row:last-child { border-bottom: none; }
+    .mat-type-badge {
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+    .mat-slides { background: #1d4ed8; color: #93c5fd; }
+    .mat-doc    { background: #15803d; color: #86efac; }
+    .mat-pdf    { background: #9f1239; color: #fca5a5; }
+    .mat-title  { flex: 1; font-size: 13px; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mat-btns   { display: flex; gap: 5px; flex-shrink: 0; }
+    .mat-btn {
+      padding: 5px 10px; border-radius: 6px; border: none;
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    .mat-push { background: #2563eb; color: #fff; }
+    .mat-push:active { background: #1d4ed8; }
+    .mat-del  { background: #334155; color: #94a3b8; }
+    .mat-del:active  { background: #dc2626; color: #fff; }
+    .mat-add-form {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
       padding: 12px;
+      background: #0f172a;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+    .mat-add-form.open { display: flex; }
+    .mat-add-form input, .mat-add-form select {
+      padding: 9px 11px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 7px;
+      color: #e2e8f0;
+      font-size: 13px;
+      font-family: inherit;
+      width: 100%;
+    }
+    .mat-add-form input:focus, .mat-add-form select:focus { outline: none; border-color: #3b82f6; }
+    .mat-add-form select option { background: #1e293b; }
+    .mat-form-row { display: flex; gap: 6px; }
+
+    /* ── Saving indicator ── */
+    .save-status {
+      font-size: 10px; color: #475569; text-align: right;
+      margin-top: 4px; min-height: 14px; transition: opacity 0.5s;
+    }
+    .save-status.saved { color: #22c55e; }
+
+    /* ── Modals (shared) ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: #1e293b;
+      border-radius: 14px;
+      border: 1px solid #334155;
+      width: 100%;
+      max-width: 420px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid #334155;
+    }
+    .modal-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .modal-close {
+      background: none; border: none; color: #64748b;
+      font-size: 18px; cursor: pointer; padding: 0 3px; line-height: 1;
+    }
+    .modal-close:hover { color: #f8fafc; }
+    .modal-body { overflow-y: auto; padding: 10px 14px; flex: 1; }
+    .modal-footer {
+      padding: 10px 14px;
+      border-top: 1px solid #334155;
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ── Quick Grade modal ── */
+    .qg-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.1s;
+      gap: 12px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .qg-row:active { background: #0f172a; }
+    .qg-name { font-size: 15px; color: #e2e8f0; flex: 1; }
+    .qg-grade { font-size: 17px; font-weight: 700; min-width: 30px; text-align: center; color: #fbbf24; }
+    .qg-grade.empty { color: #334155; font-size: 13px; }
+
+    /* ── Manage Students modal ── */
+    .manage-textarea {
+      width: 100%;
+      min-height: 180px;
+      padding: 10px 12px;
       background: #0f172a;
       border: 1px solid #334155;
       border-radius: 8px;
@@ -172,291 +413,28 @@
       font-size: 14px;
       resize: vertical;
       font-family: inherit;
-      line-height: 1.6;
+      line-height: 1.7;
     }
-
-    .roster-textarea:focus { outline: none; border-color: #3b82f6; }
-
-    .roster-hint {
-      font-size: 11px;
-      color: #475569;
-      margin-top: 6px;
-      margin-bottom: 14px;
-    }
-
-    .slides-row {
+    .manage-textarea:focus { outline: none; border-color: #3b82f6; }
+    .manage-name-row {
       display: flex;
       gap: 8px;
-      margin-bottom: 6px;
-    }
-
-    .slides-hint {
-      font-size: 11px;
-      color: #475569;
-      line-height: 1.6;
-      margin-bottom: 14px;
-    }
-
-    /* ── Picker ── */
-    .pick-result {
-      text-align: center;
-      font-size: 22px;
-      font-weight: 700;
-      color: #fbbf24;
-      min-height: 34px;
-      margin-bottom: 12px;
-    }
-
-    .pick-result.empty { color: #334155; font-weight: 400; font-size: 14px; }
-
-    .pick-controls { display: flex; gap: 8px; margin-bottom: 14px; }
-
-    /* ── Pick Stats ── */
-    .stats-row {
-      display: flex;
+      margin-bottom: 10px;
       align-items: center;
-      gap: 10px;
-      padding: 5px 0;
     }
-
-    .stats-name {
-      width: 120px;
-      flex-shrink: 0;
-      font-size: 13px;
-      color: #e2e8f0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .stats-bar-wrap {
+    .manage-name-row input {
       flex: 1;
-      height: 6px;
+      padding: 9px 11px;
       background: #0f172a;
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .stats-bar {
-      height: 100%;
-      background: #7c3aed;
-      border-radius: 3px;
-      transition: width 0.4s;
-    }
-
-    .stats-count {
-      width: 26px;
-      text-align: right;
-      font-size: 12px;
-      font-weight: 700;
-      color: #64748b;
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* ── Grade Book ── */
-    .gb-header-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-
-    .gb-class-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: #94a3b8;
-      margin-top: 2px;
-    }
-
-    .gb-scroll {
-      overflow-x: auto;
-      border-radius: 8px;
-      margin-bottom: 8px;
-    }
-
-    .gb-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-
-    .gb-table th {
-      padding: 8px 10px;
-      background: #0f172a;
-      color: #64748b;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
       border: 1px solid #334155;
-      text-align: center;
-    }
-
-    .gb-table td {
-      padding: 3px 6px;
-      border: 1px solid #1e293b;
-      text-align: center;
-    }
-
-    .gb-table tbody tr:hover td { background: rgba(255,255,255,0.03); }
-
-    .gb-name-th { text-align: left !important; min-width: 130px; }
-    .gb-name-td { text-align: left !important; color: #e2e8f0; padding: 6px 10px !important; }
-
-    .gb-col-header { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-    .gb-col-name { color: #94a3b8; }
-    .gb-col-max  { font-size: 10px; color: #475569; font-weight: 400; }
-
-    .gb-col-top { display: flex; align-items: center; gap: 4px; }
-
-    .gb-del-btn {
-      background: none;
-      border: none;
-      color: #475569;
-      font-size: 11px;
-      cursor: pointer;
-      padding: 0 2px;
-      transition: color 0.15s;
-      line-height: 1;
-    }
-
-    .gb-del-btn:hover { color: #ef4444; }
-
-    .gb-input {
-      width: 56px;
-      padding: 5px 4px;
-      background: transparent;
-      border: 1px solid transparent;
-      border-radius: 4px;
-      color: #94a3b8;
-      font-size: 13px;
-      text-align: center;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 14px;
       font-family: inherit;
     }
-
-    .gb-input:focus {
-      outline: none;
-      border-color: #3b82f6;
-      background: #0f172a;
-      color: #e2e8f0;
-    }
-
-    .gb-empty {
-      text-align: center;
-      padding: 24px;
-      color: #475569;
-      font-size: 13px;
-    }
-
-    /* ── Saving indicator ── */
-    .save-status {
-      font-size: 11px;
-      color: #475569;
-      text-align: right;
-      margin-top: 6px;
-      min-height: 16px;
-      transition: opacity 0.5s;
-    }
-
-    .save-status.saved { color: #22c55e; }
-
-    /* ── Quick Grade Modal ── */
-    .qg-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
-
-    .qg-overlay.open { display: flex; }
-
-    .qg-modal {
-      background: #1e293b;
-      border-radius: 16px;
-      border: 1px solid #334155;
-      width: 100%;
-      max-width: 400px;
-      max-height: 80vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .qg-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px;
-      border-bottom: 1px solid #334155;
-    }
-
-    .qg-title {
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #94a3b8;
-    }
-
-    .qg-close {
-      background: none;
-      border: none;
-      color: #64748b;
-      font-size: 20px;
-      cursor: pointer;
-      padding: 0 4px;
-      line-height: 1;
-    }
-
-    .qg-close:hover { color: #f8fafc; }
-
-    .qg-list {
-      overflow-y: auto;
-      padding: 8px 12px;
-      flex: 1;
-    }
-
-    .qg-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.1s;
-      gap: 12px;
-    }
-
-    .qg-row:hover { background: #0f172a; }
-
-    .qg-name {
-      font-size: 15px;
-      color: #e2e8f0;
-      flex: 1;
-    }
-
-    .qg-grade {
-      font-size: 18px;
-      font-weight: 700;
-      min-width: 32px;
-      text-align: center;
-      color: #fbbf24;
-    }
-
-    .qg-grade.empty { color: #334155; font-size: 14px; }
-
-    .qg-footer {
-      padding: 12px 20px;
-      border-top: 1px solid #334155;
-      display: flex;
-      gap: 8px;
-    }
+    .manage-name-row input:focus { outline: none; border-color: #3b82f6; }
+    .manage-hint { font-size: 11px; color: #475569; margin-top: 6px; }
+    .danger-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid #334155; }
   </style>
 </head>
 <body>
@@ -464,80 +442,71 @@
 
   <div class="sections">
 
-    <!-- Timer -->
+    <!-- Classes (compact top) -->
     <div class="card">
-      <div class="card-title">Timer</div>
-      <div class="timer-display entry" id="timerDisplay">0:00</div>
-      <div class="numpad">
-        <button class="numpad-btn" onclick="numpadPress(1)">1</button>
-        <button class="numpad-btn" onclick="numpadPress(2)">2</button>
-        <button class="numpad-btn" onclick="numpadPress(3)">3</button>
-        <button class="numpad-btn" onclick="numpadPress(4)">4</button>
-        <button class="numpad-btn" onclick="numpadPress(5)">5</button>
-        <button class="numpad-btn" onclick="numpadPress(6)">6</button>
-        <button class="numpad-btn" onclick="numpadPress(7)">7</button>
-        <button class="numpad-btn" onclick="numpadPress(8)">8</button>
-        <button class="numpad-btn" onclick="numpadPress(9)">9</button>
-        <button class="numpad-btn del-btn" onclick="numpadBackspace()">⌫</button>
-        <button class="numpad-btn" onclick="numpadPress(0)">0</button>
-        <button class="numpad-btn clr-btn" onclick="numpadClear()">CLR</button>
-      </div>
-      <div class="timer-controls">
-        <button class="btn btn-green" id="startPauseBtn" onclick="toggleTimer()">Start</button>
-        <button class="btn btn-gray"  onclick="clearTimer()">Clear</button>
-      </div>
+      <div class="card-title">Classes</div>
+      <div class="classes-row" id="classesTabs"></div>
     </div>
 
-    <!-- Student Picker -->
-    <div class="card">
-      <div class="card-title">Classes &amp; Students</div>
+    <!-- Timer + Picker side by side -->
+    <div class="side-row">
 
-      <div class="roster-tabs" id="rosterTabs"></div>
-
-      <div class="roster-name-row">
-        <input type="text" id="rosterNameInput" placeholder="Class name (e.g. Period 3)" style="flex:1;">
-        <button class="btn btn-gray" style="flex:none;padding:8px 14px;font-size:13px;" onclick="renameCurrentRoster()">Rename</button>
-        <button class="btn btn-red"  style="flex:none;padding:8px 12px;font-size:13px;" onclick="deleteCurrentRoster()">✕</button>
+      <!-- Timer -->
+      <div class="card">
+        <div class="card-title">Timer</div>
+        <div class="timer-display entry" id="timerDisplay">0:00</div>
+        <div class="numpad-6">
+          <button class="np-btn" onclick="numpadPress(1)">1</button>
+          <button class="np-btn" onclick="numpadPress(2)">2</button>
+          <button class="np-btn" onclick="numpadPress(3)">3</button>
+          <button class="np-btn" onclick="numpadPress(4)">4</button>
+          <button class="np-btn" onclick="numpadPress(5)">5</button>
+          <button class="np-btn del" onclick="numpadBackspace()">⌫</button>
+          <button class="np-btn" onclick="numpadPress(6)">6</button>
+          <button class="np-btn" onclick="numpadPress(7)">7</button>
+          <button class="np-btn" onclick="numpadPress(8)">8</button>
+          <button class="np-btn" onclick="numpadPress(9)">9</button>
+          <button class="np-btn" onclick="numpadPress(0)">0</button>
+          <button class="np-btn clr" onclick="numpadClear()">CLR</button>
+        </div>
+        <div class="timer-row">
+          <button class="btn btn-green" id="startPauseBtn" onclick="toggleTimer()">Start</button>
+          <button class="btn btn-gray"  onclick="clearTimer()">Clear</button>
+        </div>
+        <div class="timer-add">
+          <button class="btn btn-gray btn-sm" onclick="addTime(10)">+10s</button>
+          <button class="btn btn-gray btn-sm" onclick="addTime(15)">+15s</button>
+          <button class="btn btn-gray btn-sm" onclick="addTime(30)">+30s</button>
+          <button class="btn btn-gray btn-sm" onclick="addTime(60)">+1m</button>
+        </div>
       </div>
 
-      <textarea class="roster-textarea" id="rosterTextarea"
-        placeholder="Enter student names, one per line"></textarea>
-      <div class="roster-hint">One name per line — changes save automatically.</div>
-
-      <!-- Per-roster slides -->
-      <div class="slides-row">
-        <input type="url" id="slidesInput" placeholder="Google Slides URL for this class…" style="flex:1;">
-        <button class="btn btn-blue" style="flex:none;padding:12px 16px;" onclick="pushSlides()">Push to Display</button>
-      </div>
-      <div class="slides-hint">
-        Paste any share or embed URL — or the full &lt;iframe&gt; from
-        <strong style="color:#64748b">File → Share → Publish to web → Embed</strong>
-      </div>
-
-      <div class="pick-result empty" id="pickResult">—</div>
-
-      <div class="pick-controls">
-        <button class="btn btn-purple" onclick="pickRandom()">Pick Random</button>
-        <button class="btn btn-gray"   onclick="clearPick()">Clear</button>
-        <button class="btn btn-teal"   onclick="openQuickGrade()">Quick Grade</button>
+      <!-- Picker -->
+      <div class="card">
+        <div class="card-title">Picker</div>
+        <div class="pick-result empty" id="pickResult">—</div>
+        <div class="pick-controls">
+          <button class="btn btn-purple btn-sm" onclick="pickRandom()">Pick</button>
+          <button class="btn btn-gray btn-sm"   onclick="clearPick()">Clear</button>
+        </div>
+        <button class="btn btn-teal btn-sm" style="width:100%;margin-bottom:10px;" onclick="openQuickGrade()">Quick Grade</button>
+        <div class="deck-badge" id="deckBadge"></div>
+        <div class="stats-section">
+          <div class="stats-label">Pick Stats</div>
+          <div id="statsContainer"></div>
+        </div>
       </div>
 
-      <div class="save-status" id="saveStatus"></div>
+    </div><!-- end side-row -->
 
-      <div style="border-top:1px solid #1e293b;margin-top:14px;padding-top:14px;">
-        <div class="card-title" style="margin-bottom:10px">Pick Stats</div>
-        <div id="statsContainer"></div>
-      </div>
-    </div>
-
-    <!-- Grade Book -->
+    <!-- Gradebook -->
     <div class="card">
       <div class="gb-header-row">
         <div>
           <div class="card-title" style="margin-bottom:2px">Grade Book</div>
           <div class="gb-class-label" id="gbClassName"></div>
         </div>
-        <button class="btn btn-gray" style="flex:none;padding:8px 14px;font-size:13px;" onclick="addAssignment()">+ Assignment</button>
+        <button class="btn btn-gray btn-sm" style="flex:none;" onclick="addAssignment()">+ Assignment</button>
       </div>
       <div class="gb-scroll">
         <table class="gb-table" id="gbTable">
@@ -548,19 +517,66 @@
       <div class="save-status" id="gbSaveStatus"></div>
     </div>
 
-  </div>
+    <!-- Materials -->
+    <div class="card">
+      <div class="card-title">Materials</div>
+      <div id="materialsListEl"></div>
+      <button class="add-btn" onclick="toggleAddForm()">+ Add Material</button>
+      <div class="mat-add-form" id="matAddForm">
+        <input type="url" id="matUrl" placeholder="Paste Google Slides, Doc, or PDF URL…" oninput="matAutoDetect()">
+        <div class="mat-form-row">
+          <select id="matType" style="flex:1;">
+            <option value="slides">Google Slides</option>
+            <option value="doc">Google Doc</option>
+            <option value="pdf">PDF / Drive</option>
+          </select>
+          <input type="text" id="matTitle" placeholder="Title (optional)" style="flex:2;">
+        </div>
+        <div class="mat-form-row">
+          <button class="btn btn-blue btn-sm" onclick="confirmAddMaterial()">Add</button>
+          <button class="btn btn-gray btn-sm" onclick="cancelAddForm()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end sections -->
 
   <!-- Quick Grade Modal -->
-  <div class="qg-overlay" id="qgOverlay" onclick="qgOverlayClick(event)">
-    <div class="qg-modal">
-      <div class="qg-header">
-        <span class="qg-title">Quick Grade</span>
-        <button class="qg-close" onclick="closeQuickGrade()">✕</button>
+  <div class="overlay" id="qgOverlay" onclick="qgOverlayClick(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="qgTitle">Quick Grade</span>
+        <button class="modal-close" onclick="closeQuickGrade()">✕</button>
       </div>
-      <div class="qg-list" id="qgList"></div>
-      <div class="qg-footer">
-        <button class="btn btn-gray" style="font-size:13px;" onclick="clearAllQuickGrades()">Clear All</button>
-        <button class="btn btn-teal" style="font-size:13px;" onclick="closeQuickGrade()">Done</button>
+      <div class="modal-body" id="qgList"></div>
+      <div class="modal-footer">
+        <button class="btn btn-gray btn-sm" onclick="clearAllQuickGrades()">Clear All</button>
+        <button class="btn btn-teal" onclick="doneQuickGrade()">Done → Gradebook</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Students Modal -->
+  <div class="overlay" id="manageOverlay" onclick="manageOverlayClick(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="manageTitle">Manage Students</span>
+        <button class="modal-close" onclick="closeManage()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="manage-name-row">
+          <input type="text" id="manageClassName" placeholder="Class name">
+          <button class="btn btn-gray btn-sm" style="flex:none;" onclick="saveClassName()">Rename</button>
+        </div>
+        <textarea class="manage-textarea" id="manageTextarea" placeholder="One student per line"></textarea>
+        <div class="manage-hint">One name per line. Existing attendance/picks are preserved when names match.</div>
+        <div class="danger-row">
+          <button class="btn btn-red btn-sm" onclick="deleteRoster()" style="width:100%;">Delete This Class</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gray" onclick="closeManage()">Cancel</button>
+        <button class="btn btn-blue" onclick="saveManage()">Save</button>
       </div>
     </div>
   </div>
@@ -572,14 +588,55 @@
     socket.on('connect',    () => dot.classList.remove('disconnected'));
     socket.on('disconnect', () => dot.classList.add('disconnected'));
 
+    // ── Helpers ────────────────────────────────────────────
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escAttr(s) {
+      return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+    function fullNameClient(s) {
+      if (!s) return '';
+      if (s.firstName || s.lastName) return [s.firstName, s.lastName].filter(Boolean).join(' ');
+      return s.name || '';
+    }
+
+    function parseStudentsClient(raw) {
+      if (!raw) return [];
+      const base = { firstName:'', lastName:'', attendance:'present', picks:0 };
+      try {
+        const p = JSON.parse(raw);
+        if (Array.isArray(p)) return p.map(s => {
+          if (typeof s === 'string') {
+            const w = s.trim().split(/\s+/);
+            return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
+          }
+          let student;
+          if (s.name && !s.firstName) {
+            const w = (s.name||'').trim().split(/\s+/);
+            student = { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' '), ...s };
+          } else {
+            student = { ...base, ...s };
+          }
+          if (s.present === false && !s.attendance) student.attendance = 'absent';
+          return student;
+        });
+      } catch {}
+      return raw.split('\n').map(s => s.trim()).filter(Boolean).map(name => {
+        const w = name.split(/\s+/);
+        return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
+      });
+    }
+
     // ── Timer ──────────────────────────────────────────────
     let timerRemaining = 0;
     let timerDuration  = 0;
     let timerRunning   = false;
 
-    // Numpad state: 6-digit buffer [H2,H1,M2,M1,S2,S1]
-    let numpadBuf = [0,0,0,0,0,0];
-    let numpadActive = false; // user has started entering digits
+    let numpadBuf    = [0,0,0,0,0,0];
+    let numpadActive = false;
 
     const timerDisplay  = document.getElementById('timerDisplay');
     const startPauseBtn = document.getElementById('startPauseBtn');
@@ -645,8 +702,8 @@
           numpadBuf = [0,0,0,0,0,0];
           socket.emit('timer:set-start', secs);
         }
-      } else {
-        if (timerRemaining > 0) socket.emit('timer:start');
+      } else if (timerRemaining > 0) {
+        socket.emit('timer:start');
       }
     }
 
@@ -655,12 +712,15 @@
       socket.emit('timer:reset');
     }
 
+    function addTime(secs) { socket.emit('timer:add', secs); }
+
     socket.on('state', (s) => {
       timerDuration  = s.timer.duration;
       timerRemaining = s.timer.remaining;
       timerRunning   = s.timer.running;
       updateTimerDisplay();
       startPauseBtn.textContent = timerRunning ? 'Pause' : 'Start';
+      if (s.deckRemaining !== undefined) updateDeckBadge(s.deckRemaining, s.deckTotal);
       initRosters(s.rosters, s.activeRosterId);
     });
 
@@ -683,83 +743,42 @@
       updateTimerDisplay();
     });
 
-    // ── Rosters ────────────────────────────────────────────
+    // ── Rosters / Classes ──────────────────────────────────
     let rosters  = {};
     let activeId = null;
-    let saveTimer = null;
-
-    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
-
-    function fullNameClient(s) {
-      if (!s) return '';
-      if (s.firstName || s.lastName) return [s.firstName, s.lastName].filter(Boolean).join(' ');
-      return s.name || '';
-    }
-
-    function parseStudentsClient(raw) {
-      if (!raw) return [];
-      const base = { firstName:'', lastName:'', present:true, picks:0, quickGrade:'' };
-      try {
-        const p = JSON.parse(raw);
-        if (Array.isArray(p)) return p.map(s => {
-          if (typeof s === 'string') {
-            const w = s.trim().split(/\s+/);
-            return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
-          }
-          if (s.name && !s.firstName) {
-            const w = (s.name||'').trim().split(/\s+/);
-            return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' '), ...s };
-          }
-          return { ...base, ...s };
-        });
-      } catch {}
-      return raw.split('\n').map(s => s.trim()).filter(Boolean).map(name => {
-        const w = name.split(/\s+/);
-        return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
-      });
-    }
-
-    function renderStats() {
-      const container = document.getElementById('statsContainer');
-      const r = rosters[activeId];
-      if (!r) { container.innerHTML = ''; return; }
-      const students = parseStudentsClient(r.students);
-      if (students.length === 0) {
-        container.innerHTML = '<p style="color:#475569;font-size:13px">No students yet.</p>';
-        return;
-      }
-      const sorted = [...students].sort((a, b) => (b.picks || 0) - (a.picks || 0));
-      const maxPicks = Math.max(1, ...sorted.map(s => s.picks || 0));
-      container.innerHTML = sorted.map(s => {
-        const p = s.picks || 0;
-        const name = fullNameClient(s);
-        return `<div class="stats-row">
-          <span class="stats-name">${escHtml(name)}</span>
-          <div class="stats-bar-wrap"><div class="stats-bar" style="width:${(p / maxPicks * 100).toFixed(1)}%"></div></div>
-          <span class="stats-count">${p}</span>
-        </div>`;
-      }).join('');
-    }
 
     function initRosters(data, serverId) {
       rosters  = data || {};
       activeId = (serverId && rosters[serverId]) ? serverId : Object.keys(rosters)[0];
       if (activeId) socket.emit('roster:activate', activeId);
-      renderTabs();
-      renderCurrentRoster();
+      renderClassTabs();
       loadGradebook(activeId);
       renderStats();
+      renderMaterials();
     }
 
-    function renderTabs() {
-      const container = document.getElementById('rosterTabs');
+    function renderClassTabs() {
+      const container = document.getElementById('classesTabs');
       container.innerHTML = '';
       Object.entries(rosters).forEach(([id, r]) => {
+        const wrap = document.createElement('span');
+        wrap.style.display = 'inline-flex';
+        wrap.style.gap = '3px';
+
         const btn = document.createElement('button');
         btn.className = 'tab-btn' + (id === activeId ? ' active' : '');
         btn.textContent = r.name;
         btn.onclick = () => switchRoster(id);
-        container.appendChild(btn);
+
+        const edit = document.createElement('button');
+        edit.className = 'tab-edit-btn';
+        edit.textContent = '✏';
+        edit.title = 'Edit students';
+        edit.onclick = () => openManage(id);
+
+        wrap.appendChild(btn);
+        wrap.appendChild(edit);
+        container.appendChild(wrap);
       });
       const add = document.createElement('button');
       add.className = 'tab-btn add-tab';
@@ -768,112 +787,60 @@
       container.appendChild(add);
     }
 
-    function renderCurrentRoster() {
-      const r = rosters[activeId];
-      if (!r) return;
-      document.getElementById('rosterNameInput').value = r.name;
-      // Show names one-per-line (hide raw JSON from user)
-      const students = parseStudentsClient(r.students);
-      document.getElementById('rosterTextarea').value =
-        students.map(s => fullNameClient(s)).join('\n');
-      document.getElementById('slidesInput').value = r.slidesUrl || '';
-    }
-
     function switchRoster(id) {
       activeId = id;
       socket.emit('roster:activate', id);
-      renderTabs();
-      renderCurrentRoster();
+      renderClassTabs();
       loadGradebook(id);
       renderStats();
+      renderMaterials();
     }
 
     function addRoster() {
       const id = uid();
       const n  = Object.keys(rosters).length + 1;
-      rosters[id] = { name: `Period ${n}`, students: '[]', slidesUrl: '' };
+      rosters[id] = { name: `Period ${n}`, students: '[]', slidesUrl: '', grades: '{}', materials: '[]' };
       activeId = id;
       socket.emit('roster:activate', id);
       saveCurrentRoster();
-      renderTabs();
-      renderCurrentRoster();
-    }
-
-    function renameCurrentRoster() {
-      const name = document.getElementById('rosterNameInput').value.trim();
-      if (!name) return;
-      rosters[activeId].name = name;
-      saveCurrentRoster();
-      renderTabs();
-    }
-
-    function deleteCurrentRoster() {
-      if (Object.keys(rosters).length <= 1) return;
-      socket.emit('roster:delete', activeId);
-    }
-
-    function buildStudentsJson() {
-      // Merge textarea names back into existing student objects (preserve flags/picks)
-      const rawLines = document.getElementById('rosterTextarea').value
-        .split('\n').map(s => s.trim()).filter(Boolean);
-      const existing = parseStudentsClient(rosters[activeId]?.students || '[]');
-      const base = { firstName:'', lastName:'', present:true, picks:0, quickGrade:'' };
-
-      // Build lookup by full name
-      const byName = {};
-      existing.forEach(s => { byName[fullNameClient(s)] = s; });
-
-      return JSON.stringify(rawLines.map(name => {
-        const old = byName[name];
-        if (old) return old; // preserve existing student data
-        const w = name.split(/\s+/);
-        return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
-      }));
+      renderClassTabs();
+      loadGradebook(id);
+      renderStats();
+      renderMaterials();
+      // Open manage so user can name it and add students
+      openManage(id);
     }
 
     function saveCurrentRoster() {
       const r = rosters[activeId];
       if (!r) return;
-      const typedName = document.getElementById('rosterNameInput').value.trim();
-      if (typedName) r.name = typedName;
-      r.students  = buildStudentsJson();
-      r.slidesUrl = document.getElementById('slidesInput').value.trim();
-      socket.emit('roster:save', { id: activeId, ...r });
+      socket.emit('roster:save', {
+        id: activeId,
+        name: r.name,
+        students: r.students,
+        slidesUrl: r.slidesUrl || '',
+        sortOrder: 0,
+        materials: r.materials || '[]',
+      });
     }
-
-    function scheduleSave() {
-      const status = document.getElementById('saveStatus');
-      status.textContent = 'Saving…';
-      status.className = 'save-status';
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        saveCurrentRoster();
-        status.textContent = 'Saved';
-        status.className = 'save-status saved';
-        setTimeout(() => { status.textContent = ''; }, 2000);
-      }, 800);
-    }
-
-    document.getElementById('rosterTextarea').addEventListener('input', scheduleSave);
-    document.getElementById('slidesInput').addEventListener('input', scheduleSave);
 
     socket.on('roster:all', (data) => {
       const prev = activeId;
       rosters  = data;
       activeId = data[prev] ? prev : Object.keys(data)[0];
-      renderTabs();
-      renderCurrentRoster();
+      renderClassTabs();
       loadGradebook(activeId);
       renderStats();
+      renderMaterials();
     });
 
     socket.on('roster:activated', ({ id }) => {
       if (id && rosters[id] && id !== activeId) {
         activeId = id;
-        renderTabs();
-        renderCurrentRoster();
+        renderClassTabs();
         loadGradebook(id);
         renderStats();
+        renderMaterials();
       }
     });
 
@@ -884,31 +851,91 @@
       }
     });
 
-    // ── Slides ─────────────────────────────────────────────
-    function toEmbedUrl(raw) {
-      const srcMatch = raw.match(/src=["']([^"']+)["']/);
-      if (srcMatch) raw = srcMatch[1];
-      if (raw.includes('/embed')) return raw;
-      const pubMatch = raw.match(/\/presentation\/d\/e\/([^/?#]+)/);
-      if (pubMatch) return `https://docs.google.com/presentation/d/e/${pubMatch[1]}/embed`;
-      const docMatch = raw.match(/\/presentation\/d\/([^/?#]+)/);
-      if (docMatch) return `https://docs.google.com/presentation/d/${docMatch[1]}/embed`;
-      return raw;
+    // ── Manage Students Modal ──────────────────────────────
+    let manageId = null;
+
+    function openManage(id) {
+      manageId = id;
+      const r = rosters[id];
+      if (!r) return;
+      document.getElementById('manageTitle').textContent = r.name || 'Manage Students';
+      document.getElementById('manageClassName').value = r.name || '';
+      const students = parseStudentsClient(r.students);
+      document.getElementById('manageTextarea').value = students.map(s => fullNameClient(s)).join('\n');
+      document.getElementById('manageOverlay').classList.add('open');
     }
 
-    function pushSlides() {
-      const raw = document.getElementById('slidesInput').value.trim();
-      if (!raw) return;
-      const url = toEmbedUrl(raw);
-      document.getElementById('slidesInput').value = url;
-      if (rosters[activeId]) {
-        rosters[activeId].slidesUrl = url;
-        saveCurrentRoster();
-      }
-      socket.emit('slides:push', url);
+    function closeManage() {
+      document.getElementById('manageOverlay').classList.remove('open');
+      manageId = null;
+    }
+
+    function manageOverlayClick(e) {
+      if (e.target === document.getElementById('manageOverlay')) closeManage();
+    }
+
+    function saveClassName() {
+      const name = document.getElementById('manageClassName').value.trim();
+      if (!name || !manageId) return;
+      rosters[manageId].name = name;
+      document.getElementById('manageTitle').textContent = name;
+      renderClassTabs();
+    }
+
+    function saveManage() {
+      if (!manageId) return;
+      const name = document.getElementById('manageClassName').value.trim();
+      if (name) rosters[manageId].name = name;
+      const lines = document.getElementById('manageTextarea').value
+        .split('\n').map(s => s.trim()).filter(Boolean);
+      rosters[manageId].students = buildStudentsJson(manageId, lines);
+      saveCurrentRosterById(manageId);
+      renderClassTabs();
+      loadGradebook(manageId);
+      renderStats();
+      closeManage();
+    }
+
+    function deleteRoster() {
+      if (!manageId) return;
+      if (Object.keys(rosters).length <= 1) { alert('Cannot delete the only class.'); return; }
+      if (!confirm(`Delete "${rosters[manageId]?.name}"?`)) return;
+      socket.emit('roster:delete', manageId);
+      closeManage();
+    }
+
+    function buildStudentsJson(id, lines) {
+      const existing = parseStudentsClient(rosters[id]?.students || '[]');
+      const base = { firstName:'', lastName:'', attendance:'present', picks:0 };
+      const byName = {};
+      existing.forEach(s => { byName[fullNameClient(s)] = s; });
+      return JSON.stringify(lines.map(name => {
+        const old = byName[name];
+        if (old) return old;
+        const w = name.split(/\s+/);
+        return { ...base, firstName: w[0]||'', lastName: w.slice(1).join(' ') };
+      }));
+    }
+
+    function saveCurrentRosterById(id) {
+      const r = rosters[id];
+      if (!r) return;
+      socket.emit('roster:save', {
+        id,
+        name: r.name,
+        students: r.students,
+        slidesUrl: r.slidesUrl || '',
+        sortOrder: 0,
+        materials: r.materials || '[]',
+      });
     }
 
     // ── Picker ─────────────────────────────────────────────
+    function updateDeckBadge(remaining, total) {
+      const el = document.getElementById('deckBadge');
+      el.textContent = total ? `${remaining} / ${total} remaining` : '';
+    }
+
     function pickRandom() { socket.emit('pick:random'); }
 
     function clearPick() {
@@ -938,33 +965,46 @@
       el.className = 'pick-result empty';
     });
 
-    socket.on('roster:error', (msg) => {
-      const status = document.getElementById('saveStatus');
-      status.textContent = '⚠ ' + msg;
-      status.className = 'save-status';
-      status.style.color = '#f87171';
+    socket.on('deck:update', ({ remaining, total }) => {
+      updateDeckBadge(remaining, total);
     });
 
-    // ── Quick Grade ────────────────────────────────────────
-    const QG_STATES = ['', '✓', '✓+', '✓–'];
-
-    // quickGrades stored inside gbData.quickGrades = { studentName: stateIndex }
-    function getQuickGrades() {
-      return gbData.quickGrades || {};
+    // ── Pick Stats ─────────────────────────────────────────
+    function renderStats() {
+      const container = document.getElementById('statsContainer');
+      const r = rosters[activeId];
+      if (!r) { container.innerHTML = ''; return; }
+      const students = parseStudentsClient(r.students);
+      if (!students.length) { container.innerHTML = '<p style="color:#475569;font-size:12px">No students yet.</p>'; return; }
+      const sorted = [...students].sort((a, b) => (b.picks || 0) - (a.picks || 0));
+      const maxPicks = Math.max(1, ...sorted.map(s => s.picks || 0));
+      container.innerHTML = sorted.map(s => {
+        const p = s.picks || 0;
+        return `<div class="stats-row">
+          <span class="stats-name">${escHtml(fullNameClient(s))}</span>
+          <div class="stats-bar-wrap"><div class="stats-bar" style="width:${(p/maxPicks*100).toFixed(1)}%"></div></div>
+          <span class="stats-count">${p}</span>
+        </div>`;
+      }).join('');
     }
+
+    // ── Quick Grade ────────────────────────────────────────
+    const QG_STATES  = ['', '✓', '✓+', '✓–'];
+    const QG_GRADES  = [null, 85, 100, 70]; // index → numeric grade
 
     function openQuickGrade() {
       const r = rosters[activeId];
       if (!r) return;
-      const students = parseStudentsClient(r.students).filter(s => s.present !== false);
-      const qg = getQuickGrades();
+      const students = parseStudentsClient(r.students).filter(s => s.attendance !== 'absent');
+      const qg = (gbData.quickGrades || {});
+      document.getElementById('qgTitle').textContent = `Quick Grade — ${r.name}`;
       const list = document.getElementById('qgList');
-      list.innerHTML = students.map((s, i) => {
+      list.innerHTML = students.map(s => {
         const name = fullNameClient(s);
-        const idx = qg[name] || 0;
+        const idx  = qg[name] || 0;
         return `<div class="qg-row" data-name="${escAttr(name)}" onclick="qgToggle(this)">
           <span class="qg-name">${escHtml(name)}</span>
-          <span class="qg-grade${idx === 0 ? ' empty' : ''}">${QG_STATES[idx] || ''}</span>
+          <span class="qg-grade${idx === 0 ? ' empty' : ''}">${QG_STATES[idx]}</span>
         </div>`;
       }).join('');
       document.getElementById('qgOverlay').classList.add('open');
@@ -980,48 +1020,84 @@
 
     function qgToggle(rowEl) {
       const name = rowEl.dataset.name;
-      const qg   = getQuickGrades();
-      const cur  = qg[name] || 0;
-      const next = (cur + 1) % QG_STATES.length;
-      if (next === 0) delete qg[name];
-      else qg[name] = next;
-      gbData.quickGrades = qg;
-
+      const qg   = (gbData.quickGrades = gbData.quickGrades || {});
+      const next = ((qg[name] || 0) + 1) % QG_STATES.length;
+      if (next === 0) delete qg[name]; else qg[name] = next;
       const gradeEl = rowEl.querySelector('.qg-grade');
-      gradeEl.textContent = QG_STATES[next] || '';
-      gradeEl.className = 'qg-grade' + (next === 0 ? ' empty' : '');
-
-      scheduleGbSave();
+      gradeEl.textContent  = QG_STATES[next];
+      gradeEl.className    = 'qg-grade' + (next === 0 ? ' empty' : '');
     }
 
     function clearAllQuickGrades() {
       gbData.quickGrades = {};
-      // Re-render all rows
       document.querySelectorAll('.qg-row').forEach(row => {
-        const gradeEl = row.querySelector('.qg-grade');
-        gradeEl.textContent = '';
-        gradeEl.className = 'qg-grade empty';
+        const g = row.querySelector('.qg-grade');
+        g.textContent = '';
+        g.className = 'qg-grade empty';
       });
+    }
+
+    function doneQuickGrade() {
+      // Build today's date column name, e.g. "5/4"
+      const d = new Date();
+      const colName = `${d.getMonth()+1}/${d.getDate()}`;
+
+      // Find or create column
+      let col = gbData.columns.find(c => c.name === colName);
+      if (!col) {
+        col = { id: 'c' + Date.now().toString(36), name: colName, max: 100 };
+        gbData.columns.push(col);
+      }
+
+      // Apply grades
+      const qg = gbData.quickGrades || {};
+      Object.entries(qg).forEach(([name, idx]) => {
+        const grade = QG_GRADES[idx];
+        if (grade == null) return;
+        if (!gbData.rows[name]) gbData.rows[name] = {};
+        gbData.rows[name][col.id] = String(grade);
+      });
+
+      closeQuickGrade();
+      renderGradebook();
       scheduleGbSave();
     }
 
+    // ── Attendance (in Gradebook) ──────────────────────────
+    function toggleAttendance(name) {
+      const r = rosters[activeId];
+      if (!r) return;
+      const students = parseStudentsClient(r.students);
+      const idx = students.findIndex(s => fullNameClient(s) === name);
+      if (idx < 0) return;
+      const cur = students[idx].attendance || 'present';
+      const next = cur === 'present' ? 'tardy' : cur === 'tardy' ? 'absent' : 'present';
+      students[idx].attendance = next;
+      rosters[activeId].students = JSON.stringify(students);
+      // Save (debounced)
+      scheduleAttSave();
+      // Re-render just this cell
+      const cell = document.querySelector(`.gb-name-td[data-name="${escAttr(name)}"]`);
+      if (cell) {
+        cell.className = `gb-name-td att-${next}`;
+      }
+    }
+
+    let attSaveTimer = null;
+    function scheduleAttSave() {
+      clearTimeout(attSaveTimer);
+      attSaveTimer = setTimeout(() => saveCurrentRoster(), 600);
+    }
+
     // ── Grade Book ─────────────────────────────────────────
-    let gbData     = { columns: [], rows: {}, quickGrades: {} };
-    let gbSaveTimer = null;
-
-    function escHtml(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    function escAttr(s) {
-      return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    }
+    let gbData      = { columns: [], rows: {}, quickGrades: {} };
+    let gbSaveTimer  = null;
 
     function parseStudentsForGb(raw) {
       if (!raw) return [];
       try {
         const p = JSON.parse(raw);
-        if (Array.isArray(p)) return p.filter(s => s.present !== false).map(s => fullNameClient(s));
+        if (Array.isArray(p)) return p.map(s => fullNameClient(s));
       } catch {}
       return raw.split('\n').map(s => s.trim()).filter(Boolean);
     }
@@ -1029,18 +1105,22 @@
     function loadGradebook(rosterId) {
       const r = rosters[rosterId];
       document.getElementById('gbClassName').textContent = r ? r.name : '';
-      if (!r) { gbData = { columns: [], rows: {}, quickGrades: {} }; renderGradebook([]); return; }
+      if (!r) { gbData = { columns:[], rows:{}, quickGrades:{} }; renderGradebook([]); return; }
       try {
         gbData = JSON.parse(r.grades || '{}');
         if (!gbData.columns)     gbData.columns     = [];
         if (!gbData.rows)        gbData.rows        = {};
         if (!gbData.quickGrades) gbData.quickGrades = {};
-      } catch { gbData = { columns: [], rows: {}, quickGrades: {} }; }
+      } catch { gbData = { columns:[], rows:{}, quickGrades:{} }; }
       renderGradebook(parseStudentsForGb(r.students));
     }
 
     function renderGradebook(students) {
       if (!students) students = parseStudentsForGb(rosters[activeId]?.students || '[]');
+      const allStudents = parseStudentsClient(rosters[activeId]?.students || '[]');
+      const attMap = {};
+      allStudents.forEach(s => { attMap[fullNameClient(s)] = s.attendance || 'present'; });
+
       const thead = document.getElementById('gbThead');
       const tbody = document.getElementById('gbTbody');
 
@@ -1052,25 +1132,29 @@
               <span class="gb-col-name">${escHtml(col.name)}</span>
               <button class="gb-del-btn" onclick="deleteAssignment('${col.id}')" title="Remove">✕</button>
             </div>
-            <span class="gb-col-max">/ ${col.max || 100}</span>
+            <span class="gb-col-max">/ ${col.max||100}</span>
           </div>
         </th>`;
       });
       thead.innerHTML = thHtml;
 
       tbody.innerHTML = '';
-      if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${gbData.columns.length + 1}" class="gb-empty">No students in this class.</td></tr>`;
+      if (!students.length) {
+        tbody.innerHTML = `<tr><td colspan="${gbData.columns.length+1}" class="gb-empty">No students — tap ✏ to add.</td></tr>`;
         return;
       }
       students.forEach(name => {
-        const tr = document.createElement('tr');
+        const att = attMap[name] || 'present';
+        const tr  = document.createElement('tr');
         const nameTd = document.createElement('td');
-        nameTd.className = 'gb-name-td';
+        nameTd.className = `gb-name-td att-${att}`;
+        nameTd.dataset.name = name;
         nameTd.textContent = name;
+        nameTd.title = 'Tap to toggle attendance';
+        nameTd.onclick = () => toggleAttendance(name);
         tr.appendChild(nameTd);
         gbData.columns.forEach(col => {
-          const td = document.createElement('td');
+          const td    = document.createElement('td');
           const input = document.createElement('input');
           input.className = 'gb-input';
           input.type = 'text';
@@ -1093,7 +1177,7 @@
       if (!name?.trim()) return;
       const maxStr = prompt('Max score:', '100');
       const max = parseInt(maxStr) || 100;
-      const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
       gbData.columns.push({ id, name: name.trim(), max });
       renderGradebook();
       scheduleGbSave();
@@ -1119,6 +1203,111 @@
         status.className = 'save-status saved';
         setTimeout(() => { status.textContent = ''; }, 2000);
       }, 800);
+    }
+
+    // ── Materials ──────────────────────────────────────────
+    function detectType(url) {
+      if (url.includes('docs.google.com/presentation')) return 'slides';
+      if (url.includes('docs.google.com/document'))     return 'doc';
+      if (url.includes('drive.google.com/file') || /\.pdf($|\?)/.test(url)) return 'pdf';
+      return 'slides';
+    }
+
+    function toEmbedUrl(raw) {
+      const srcMatch = raw.match(/src=["']([^"']+)["']/);
+      if (srcMatch) raw = srcMatch[1];
+      if (raw.includes('/embed')) return raw;
+      const pubMatch = raw.match(/\/presentation\/d\/e\/([^/?#]+)/);
+      if (pubMatch) return `https://docs.google.com/presentation/d/e/${pubMatch[1]}/embed`;
+      const docMatch = raw.match(/\/presentation\/d\/([^/?#]+)/);
+      if (docMatch) return `https://docs.google.com/presentation/d/${docMatch[1]}/embed`;
+      return raw;
+    }
+
+    function toMaterialEmbed(url, type) {
+      if (type === 'slides') return toEmbedUrl(url);
+      if (type === 'doc') {
+        const m = url.match(/\/document\/d\/([^/?#]+)/);
+        if (m) return `https://docs.google.com/document/d/${m[1]}/preview`;
+        return url;
+      }
+      if (type === 'pdf') {
+        const m = url.match(/\/file\/d\/([^/?#]+)/);
+        if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
+        return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+      }
+      return url;
+    }
+
+    function matAutoDetect() {
+      const url = document.getElementById('matUrl').value.trim();
+      if (!url) return;
+      document.getElementById('matType').value = detectType(url);
+    }
+
+    function getMaterials() {
+      const r = rosters[activeId];
+      if (!r) return [];
+      try { return JSON.parse(r.materials || '[]'); } catch { return []; }
+    }
+
+    function saveMaterials(list) {
+      if (!rosters[activeId]) return;
+      rosters[activeId].materials = JSON.stringify(list);
+      saveCurrentRoster();
+    }
+
+    function renderMaterials() {
+      const list  = getMaterials();
+      const el    = document.getElementById('materialsListEl');
+      if (!list.length) { el.innerHTML = '<p style="color:#475569;font-size:12px;padding:4px 0">No materials yet.</p>'; return; }
+      el.innerHTML = list.map((m, i) => `
+        <div class="material-row">
+          <span class="mat-type-badge mat-${m.type}">${m.type.toUpperCase()}</span>
+          <span class="mat-title">${escHtml(m.title || m.url)}</span>
+          <div class="mat-btns">
+            <button class="mat-btn mat-push" onclick="pushMaterial(${i})">▶</button>
+            <button class="mat-btn mat-del"  onclick="removeMaterial(${i})">✕</button>
+          </div>
+        </div>`).join('');
+    }
+
+    function toggleAddForm() {
+      const form = document.getElementById('matAddForm');
+      form.classList.toggle('open');
+      if (form.classList.contains('open')) document.getElementById('matUrl').focus();
+    }
+
+    function cancelAddForm() {
+      document.getElementById('matAddForm').classList.remove('open');
+      document.getElementById('matUrl').value   = '';
+      document.getElementById('matTitle').value = '';
+    }
+
+    function confirmAddMaterial() {
+      const url   = document.getElementById('matUrl').value.trim();
+      if (!url) return;
+      const type  = document.getElementById('matType').value;
+      const title = document.getElementById('matTitle').value.trim() || url;
+      const embed = toMaterialEmbed(url, type);
+      const list  = getMaterials();
+      list.push({ id: uid(), type, title, url: embed });
+      saveMaterials(list);
+      renderMaterials();
+      cancelAddForm();
+    }
+
+    function removeMaterial(i) {
+      const list = getMaterials();
+      list.splice(i, 1);
+      saveMaterials(list);
+      renderMaterials();
+    }
+
+    function pushMaterial(i) {
+      const list = getMaterials();
+      if (!list[i]) return;
+      socket.emit('slides:push', list[i].url);
     }
   </script>
 </body>
