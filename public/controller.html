@@ -191,27 +191,6 @@
       margin-bottom: 10px;
     }
 
-    /* ── Pick Stats ── */
-    .stats-section { border-top: 1px solid #1e293b; padding-top: 10px; }
-    .stats-label { font-size: 10px; color: #475569; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
-    .stats-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 3px 0;
-    }
-    .stats-name {
-      width: 90px;
-      flex-shrink: 0;
-      font-size: 12px;
-      color: #e2e8f0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .stats-bar-wrap { flex: 1; height: 5px; background: #0f172a; border-radius: 3px; overflow: hidden; }
-    .stats-bar { height: 100%; background: #7c3aed; border-radius: 3px; transition: width 0.4s; }
-    .stats-count { width: 20px; text-align: right; font-size: 11px; font-weight: 700; color: #64748b; font-variant-numeric: tabular-nums; }
 
     /* ── Gradebook ── */
     .gb-header-row {
@@ -474,8 +453,8 @@
           <button class="btn btn-gray"  onclick="clearTimer()">Clear</button>
         </div>
         <div class="timer-add">
+          <button class="btn btn-gray btn-sm" onclick="addTime(-10)">-10s</button>
           <button class="btn btn-gray btn-sm" onclick="addTime(10)">+10s</button>
-          <button class="btn btn-gray btn-sm" onclick="addTime(15)">+15s</button>
           <button class="btn btn-gray btn-sm" onclick="addTime(30)">+30s</button>
           <button class="btn btn-gray btn-sm" onclick="addTime(60)">+1m</button>
         </div>
@@ -489,12 +468,7 @@
           <button class="btn btn-purple btn-sm" onclick="pickRandom()">Pick</button>
           <button class="btn btn-gray btn-sm"   onclick="clearPick()">Clear</button>
         </div>
-        <button class="btn btn-teal btn-sm" style="width:100%;margin-bottom:10px;" onclick="openQuickGrade()">Quick Grade</button>
         <div class="deck-badge" id="deckBadge"></div>
-        <div class="stats-section">
-          <div class="stats-label">Pick Stats</div>
-          <div id="statsContainer"></div>
-        </div>
       </div>
 
     </div><!-- end side-row -->
@@ -506,7 +480,10 @@
           <div class="card-title" style="margin-bottom:2px">Grade Book</div>
           <div class="gb-class-label" id="gbClassName"></div>
         </div>
-        <button class="btn btn-gray btn-sm" style="flex:none;" onclick="addAssignment()">+ Assignment</button>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button class="btn btn-teal btn-sm" style="flex:none;" onclick="openQuickGrade()">Quick Grade</button>
+          <button class="btn btn-gray btn-sm" style="flex:none;" onclick="addAssignment()">+ Assignment</button>
+        </div>
       </div>
       <div class="gb-scroll">
         <table class="gb-table" id="gbTable">
@@ -548,7 +525,13 @@
         <span class="modal-title" id="qgTitle">Quick Grade</span>
         <button class="modal-close" onclick="closeQuickGrade()">✕</button>
       </div>
-      <div class="modal-body" id="qgList"></div>
+      <div class="modal-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <label style="font-size:11px;color:#64748b;white-space:nowrap;text-transform:uppercase;letter-spacing:0.08em;">Assignment</label>
+          <input type="text" id="qgAssignmentName" style="flex:1;padding:7px 10px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#e2e8f0;font-size:13px;font-family:inherit;">
+        </div>
+        <div id="qgList"></div>
+      </div>
       <div class="modal-footer">
         <button class="btn btn-gray btn-sm" onclick="clearAllQuickGrades()">Clear All</button>
         <button class="btn btn-teal" onclick="doneQuickGrade()">Done → Gradebook</button>
@@ -753,7 +736,7 @@
       if (activeId) socket.emit('roster:activate', activeId);
       renderClassTabs();
       loadGradebook(activeId);
-      renderStats();
+
       renderMaterials();
     }
 
@@ -792,7 +775,7 @@
       socket.emit('roster:activate', id);
       renderClassTabs();
       loadGradebook(id);
-      renderStats();
+
       renderMaterials();
     }
 
@@ -805,7 +788,7 @@
       saveCurrentRoster();
       renderClassTabs();
       loadGradebook(id);
-      renderStats();
+
       renderMaterials();
       // Open manage so user can name it and add students
       openManage(id);
@@ -830,7 +813,7 @@
       activeId = data[prev] ? prev : Object.keys(data)[0];
       renderClassTabs();
       loadGradebook(activeId);
-      renderStats();
+
       renderMaterials();
     });
 
@@ -839,16 +822,13 @@
         activeId = id;
         renderClassTabs();
         loadGradebook(id);
-        renderStats();
+  
         renderMaterials();
       }
     });
 
     socket.on('pick:stats', ({ rosterId, students }) => {
-      if (rosters[rosterId]) {
-        rosters[rosterId].students = students;
-        if (rosterId === activeId) renderStats();
-      }
+      if (rosters[rosterId]) rosters[rosterId].students = students;
     });
 
     // ── Manage Students Modal ──────────────────────────────
@@ -892,7 +872,7 @@
       saveCurrentRosterById(manageId);
       renderClassTabs();
       loadGradebook(manageId);
-      renderStats();
+
       closeManage();
     }
 
@@ -941,7 +921,7 @@
     function clearPick() {
       const el = document.getElementById('pickResult');
       if (el.classList.contains('empty')) {
-        socket.emit('pick:reset-stats');
+        socket.emit('pick:reset-deck');
       } else {
         socket.emit('pick:clear');
       }
@@ -969,25 +949,6 @@
       updateDeckBadge(remaining, total);
     });
 
-    // ── Pick Stats ─────────────────────────────────────────
-    function renderStats() {
-      const container = document.getElementById('statsContainer');
-      const r = rosters[activeId];
-      if (!r) { container.innerHTML = ''; return; }
-      const students = parseStudentsClient(r.students);
-      if (!students.length) { container.innerHTML = '<p style="color:#475569;font-size:12px">No students yet.</p>'; return; }
-      const sorted = [...students].sort((a, b) => (b.picks || 0) - (a.picks || 0));
-      const maxPicks = Math.max(1, ...sorted.map(s => s.picks || 0));
-      container.innerHTML = sorted.map(s => {
-        const p = s.picks || 0;
-        return `<div class="stats-row">
-          <span class="stats-name">${escHtml(fullNameClient(s))}</span>
-          <div class="stats-bar-wrap"><div class="stats-bar" style="width:${(p/maxPicks*100).toFixed(1)}%"></div></div>
-          <span class="stats-count">${p}</span>
-        </div>`;
-      }).join('');
-    }
-
     // ── Quick Grade ────────────────────────────────────────
     const QG_STATES  = ['', '✓', '✓+', '✓–'];
     const QG_GRADES  = [null, 85, 100, 70]; // index → numeric grade
@@ -998,6 +959,8 @@
       const students = parseStudentsClient(r.students).filter(s => s.attendance !== 'absent');
       const qg = (gbData.quickGrades || {});
       document.getElementById('qgTitle').textContent = `Quick Grade — ${r.name}`;
+      const d = new Date();
+      document.getElementById('qgAssignmentName').value = `${d.getMonth()+1}/${d.getDate()}`;
       const list = document.getElementById('qgList');
       list.innerHTML = students.map(s => {
         const name = fullNameClient(s);
@@ -1038,9 +1001,7 @@
     }
 
     function doneQuickGrade() {
-      // Build today's date column name, e.g. "5/4"
-      const d = new Date();
-      const colName = `${d.getMonth()+1}/${d.getDate()}`;
+      const colName = document.getElementById('qgAssignmentName').value.trim() || (() => { const d = new Date(); return `${d.getMonth()+1}/${d.getDate()}`; })();
 
       // Find or create column
       let col = gbData.columns.find(c => c.name === colName);
