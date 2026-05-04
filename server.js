@@ -21,19 +21,20 @@ const pool = new Pool({
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS rosters (
-      id         TEXT PRIMARY KEY,
-      name       TEXT NOT NULL,
-      students   TEXT DEFAULT '',
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      students TEXT DEFAULT '[]',
       slides_url TEXT DEFAULT '',
       sort_order INTEGER DEFAULT 0
     )
   `);
+  await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS grades TEXT DEFAULT '{}'`);
   const { rows } = await pool.query('SELECT COUNT(*) FROM rosters');
   if (parseInt(rows[0].count) === 0) {
     const id = Date.now().toString(36);
     await pool.query(
-      'INSERT INTO rosters (id, name, students, slides_url, sort_order) VALUES ($1,$2,$3,$4,$5)',
-      [id, 'Period 1', '', '', 0]
+      'INSERT INTO rosters (id,name,students,slides_url,sort_order) VALUES ($1,$2,$3,$4,$5)',
+      [id, 'Period 1', '[]', '', 0]
     );
   }
 }
@@ -41,17 +42,56 @@ async function initDB() {
 async function getAllRosters() {
   const { rows } = await pool.query('SELECT * FROM rosters ORDER BY sort_order, name');
   const out = {};
-  rows.forEach(r => { out[r.id] = { name: r.name, students: r.students, slidesUrl: r.slides_url }; });
+  rows.forEach(r => { out[r.id] = { name: r.name, students: r.students, slidesUrl: r.slides_url, grades: r.grades || '{}' }; });
   return out;
+}
+
+function parseStudents(raw) {
+  if (!raw) return [];
+  try {
+    const p = JSON.parse(raw);
+    if (Array.isArray(p)) return p;
+  } catch {}
+  // Migrate old plain-text format
+  return raw.split('\n').map(s => s.trim()).filter(Boolean)
+    .map(name => ({ name, present: true, anchor: false, introvert: false, gender: '', conflict: '', distractor: false }));
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 // ── Session state ─────────────────────────────────────────
 const state = {
   timer: { duration: 300, remaining: 300, running: false },
-  pick:  { name: null },
+  pick: { name: null },
   slides: { url: '' },
   activeRosterId: null,
+  activeRosterName: '',
 };
+
+// Deck — shuffled list ensuring no repeats until everyone is called
+let pickDeck  = [];
+let deckTotal = 0;
+
+async function buildDeck(rosterId) {
+  try {
+    const rosters = await getAllRosters();
+    const roster  = rosters[rosterId];
+    if (!roster) { pickDeck = []; deckTotal = 0; }
+    else {
+      const present = parseStudents(roster.students).filter(s => s.present !== false).map(s => s.name);
+      pickDeck  = shuffle(present);
+      deckTotal = present.length;
+    }
+  } catch (e) { console.error('buildDeck', e); pickDeck = []; deckTotal = 0; }
+  io.emit('deck:update', { remaining: pickDeck.length, total: deckTotal });
+}
 
 // ── Server-side timer ─────────────────────────────────────
 let timerInterval = null;
@@ -75,14 +115,23 @@ function startTicking() {
 io.on('connection', async (socket) => {
   const rosters = await getAllRosters();
   if (!state.activeRosterId || !rosters[state.activeRosterId]) {
-    state.activeRosterId = Object.keys(rosters)[0] || null;
+    state.activeRosterId   = Object.keys(rosters)[0] || null;
+    state.activeRosterName = state.activeRosterId ? (rosters[state.activeRosterId]?.name || '') : '';
+    if (state.activeRosterId && pickDeck.length === 0) await buildDeck(state.activeRosterId);
   }
-  socket.emit('state', { ...state, rosters });
+  socket.emit('state', { ...state, rosters, deckRemaining: pickDeck.length, deckTotal });
 
-  // Timer
+  // ── Timer ──
   socket.on('timer:set', (seconds) => {
     clearInterval(timerInterval);
     state.timer = { duration: seconds, remaining: seconds, running: false };
+    io.emit('timer:update', state.timer);
+  });
+
+  socket.on('timer:add', (seconds) => {
+    state.timer.remaining = Math.max(0, state.timer.remaining + seconds);
+    if (state.timer.remaining > state.timer.duration) state.timer.duration = state.timer.remaining;
+    if (state.timer.running) { clearInterval(timerInterval); startTicking(); }
     io.emit('timer:update', state.timer);
   });
 
@@ -101,43 +150,66 @@ io.on('connection', async (socket) => {
 
   socket.on('timer:reset', () => {
     clearInterval(timerInterval);
-    state.timer.remaining = state.timer.duration;
-    state.timer.running = false;
+    state.timer.remaining = 0;
+    state.timer.running   = false;
     io.emit('timer:update', state.timer);
   });
 
-  // Picker — server picks from active roster
+  // ── Picker (deck shuffle — no repeats until everyone called) ──
   socket.on('pick:random', async () => {
     try {
       const rosters = await getAllRosters();
-      const roster = rosters[state.activeRosterId];
-      if (!roster) { socket.emit('pick:error', 'No active class selected.'); return; }
-      const names = roster.students.split('\n').map(s => s.trim()).filter(Boolean);
-      if (!names.length) { socket.emit('pick:error', 'No students in this class yet.'); return; }
-      const name = names[Math.floor(Math.random() * names.length)];
+      const roster  = rosters[state.activeRosterId];
+      if (!roster) { socket.emit('pick:error', 'No active class.'); return; }
+
+      const presentSet = new Set(
+        parseStudents(roster.students).filter(s => s.present !== false).map(s => s.name)
+      );
+      if (presentSet.size === 0) { socket.emit('pick:error', 'No students are marked present.'); return; }
+
+      // Remove newly-absent students from deck
+      pickDeck = pickDeck.filter(n => presentSet.has(n));
+
+      // Rebuild deck when exhausted
+      if (pickDeck.length === 0) {
+        pickDeck  = shuffle([...presentSet]);
+        deckTotal = pickDeck.length;
+      }
+
+      const name = pickDeck.pop();
       state.pick.name = name;
+
+      // Track pick count on the student object
+      const allStudents = parseStudents(roster.students);
+      const updated = allStudents.map(s => s.name === name ? { ...s, picks: (s.picks || 0) + 1 } : s);
+      await pool.query('UPDATE rosters SET students=$1 WHERE id=$2', [JSON.stringify(updated), state.activeRosterId]);
+
       io.emit('pick:show', name);
-    } catch (e) { console.error('pick:random error', e); }
+      io.emit('deck:update', { remaining: pickDeck.length, total: deckTotal });
+      io.emit('pick:stats', { rosterId: state.activeRosterId, students: JSON.stringify(updated) });
+    } catch (e) { console.error('pick:random', e); }
   });
+
+  socket.on('pick:reset-deck', async () => { await buildDeck(state.activeRosterId); });
 
   socket.on('pick:clear', () => {
     state.pick.name = null;
     io.emit('pick:clear');
   });
 
-  // Rosters
+  // ── Rosters ──
   socket.on('roster:save', async ({ id, name, students, slidesUrl, sortOrder }) => {
     try {
       await pool.query(`
-        INSERT INTO rosters (id, name, students, slides_url, sort_order)
+        INSERT INTO rosters (id,name,students,slides_url,sort_order)
         VALUES ($1,$2,$3,$4,$5)
-        ON CONFLICT (id) DO UPDATE SET name=$2, students=$3, slides_url=$4, sort_order=$5
+        ON CONFLICT (id) DO UPDATE SET name=$2,students=$3,slides_url=$4,sort_order=$5
       `, [id, name, students, slidesUrl || '', sortOrder || 0]);
       const updated = await getAllRosters();
       io.emit('roster:all', updated);
     } catch (e) {
-      console.error('roster:save error', e);
-      socket.emit('roster:error', 'Failed to save. Check server logs.');
+      console.error('roster:save', e);
+      socket.emit('roster:error', 'Failed to save.');
     }
   });
 
@@ -146,19 +218,34 @@ io.on('connection', async (socket) => {
       await pool.query('DELETE FROM rosters WHERE id=$1', [id]);
       const updated = await getAllRosters();
       if (!updated[state.activeRosterId]) {
-        state.activeRosterId = Object.keys(updated)[0] || null;
+        state.activeRosterId   = Object.keys(updated)[0] || null;
+        state.activeRosterName = state.activeRosterId ? (updated[state.activeRosterId]?.name || '') : '';
+        await buildDeck(state.activeRosterId);
       }
       io.emit('roster:all', updated);
-      io.emit('roster:activated', state.activeRosterId);
-    } catch (e) { console.error('roster:delete error', e); }
+      io.emit('roster:activated', { id: state.activeRosterId, name: state.activeRosterName });
+    } catch (e) { console.error('roster:delete', e); }
   });
 
-  socket.on('roster:activate', (id) => {
+  socket.on('roster:activate', async (id) => {
+    const changed = id !== state.activeRosterId;
     state.activeRosterId = id;
-    io.emit('roster:activated', id);
+    try {
+      const rosters = await getAllRosters();
+      state.activeRosterName = rosters[id]?.name || '';
+    } catch {}
+    if (changed) await buildDeck(id);
+    io.emit('roster:activated', { id, name: state.activeRosterName });
   });
 
-  // Slides
+  // ── Grades ──
+  socket.on('grades:save', async ({ id, grades }) => {
+    try {
+      await pool.query('UPDATE rosters SET grades=$1 WHERE id=$2', [grades, id]);
+    } catch (e) { console.error('grades:save', e); }
+  });
+
+  // ── Slides ──
   socket.on('slides:push', (url) => {
     state.slides.url = url;
     io.emit('slides:update', url);
@@ -167,7 +254,6 @@ io.on('connection', async (socket) => {
 
 // ── Start ─────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-
 initDB()
   .then(() => server.listen(PORT, '0.0.0.0', () => {
     console.log(`\nClassroom app running:`);

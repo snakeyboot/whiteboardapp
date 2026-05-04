@@ -280,6 +280,246 @@
     .pbtn-pick.gray   { background: #334155; color: #e2e8f0; }
     .pbtn-pick.gray:hover   { background: #475569; }
 
+    /* ── Class widget ── */
+    .class-name-big {
+      font-size: 20px;
+      font-weight: 800;
+      color: #e2e8f0;
+      text-align: center;
+      padding: 8px 6px 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .class-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .cnav-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .cnav-btn:hover:not(:disabled) { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+    .cnav-btn:disabled { opacity: 0.25; cursor: default; }
+
+    .class-pos {
+      font-size: 11px;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Timer progress bar ── */
+    .timer-bar-wrap {
+      height: 5px;
+      background: #1e293b;
+      border-radius: 3px;
+      margin: 6px 2px 10px;
+      overflow: hidden;
+    }
+
+    .timer-bar {
+      height: 100%;
+      border-radius: 3px;
+      background: #3b82f6;
+      width: 100%;
+    }
+
+    /* ── Add-time row ── */
+    .timer-add-row { display: flex; gap: 5px; margin-top: 0; margin-bottom: 6px; }
+
+    .abtn {
+      flex: 1;
+      padding: 7px 0;
+      border-radius: 7px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .abtn:hover { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+
+    /* ── Deck counter ── */
+    .deck-info {
+      text-align: center;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: #334155;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    /* ── Attendance open button ── */
+    .att-open-btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 9px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .att-open-btn:hover { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+
+    /* ── Attendance modal ── */
+    .att-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0,0,0,0.78);
+      backdrop-filter: blur(6px);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .att-overlay.open { display: flex; }
+
+    .att-modal {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      width: min(420px, 92vw);
+      max-height: 82vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.85);
+    }
+
+    .att-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .att-title { font-size: 16px; font-weight: 800; color: #f8fafc; }
+    .att-sub   { font-size: 12px; color: #475569; margin-top: 2px; }
+
+    .att-close {
+      background: #1e293b;
+      border: none;
+      color: #64748b;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .att-close:hover { background: #334155; color: #e2e8f0; }
+
+    .att-list {
+      overflow-y: auto;
+      padding: 12px 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .att-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: filter 0.12s;
+      user-select: none;
+    }
+
+    .att-row.present { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.25); }
+    .att-row.absent  { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); }
+    .att-row:hover   { filter: brightness(1.15); }
+
+    .att-name { font-size: 15px; font-weight: 600; color: #e2e8f0; }
+
+    .att-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 6px;
+    }
+
+    .att-badge.present { background: rgba(34,197,94,0.2);  color: #4ade80; }
+    .att-badge.absent  { background: rgba(239,68,68,0.15); color: #f87171; }
+
+    .att-footer {
+      padding: 14px 16px;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      gap: 8px;
+    }
+
+    .att-all-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .att-all-btn:hover { background: #334155; color: #e2e8f0; }
+
+    .att-save-btn {
+      flex: 2;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .att-save-btn:hover { background: #1d4ed8; }
+
     /* ── Timer done overlay ── */
     .done-overlay {
       display: none;
@@ -315,6 +555,26 @@
   </div>
 </div>
 
+<!-- Class Widget -->
+<div class="widget" id="classWidget">
+  <div class="widget-handle" id="classHandle">
+    <div class="grip">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <div class="widget-label">Class</div>
+  </div>
+  <div class="widget-body">
+    <div class="class-name-big" id="classNameBig">—</div>
+    <div class="class-nav">
+      <button class="cnav-btn" id="classPrevBtn" onclick="prevClass()">‹</button>
+      <div class="class-pos" id="classPos">— / —</div>
+      <button class="cnav-btn" id="classNextBtn" onclick="nextClass()">›</button>
+    </div>
+    <button class="att-open-btn" onclick="openAttendance()">Attendance</button>
+  </div>
+</div>
+
 <!-- Timer Widget -->
 <div class="widget" id="timerWidget">
   <div class="widget-handle" id="timerHandle">
@@ -329,11 +589,12 @@
       <div class="timer-num" id="timerNum">5:00</div>
       <div class="timer-hint" id="timerHint">Tap to start</div>
     </div>
-    <div class="presets">
-      <button class="pbtn" onclick="setPreset(60)">1'</button>
-      <button class="pbtn" onclick="setPreset(120)">2'</button>
-      <button class="pbtn" onclick="setPreset(300)">5'</button>
-      <button class="pbtn" onclick="setPreset(600)">10'</button>
+    <div class="timer-bar-wrap"><div class="timer-bar" id="timerBar"></div></div>
+    <div class="timer-add-row">
+      <button class="abtn" onclick="addTime(30)">+30s</button>
+      <button class="abtn" onclick="addTime(60)">+1m</button>
+      <button class="abtn" onclick="addTime(300)">+5m</button>
+      <button class="abtn" onclick="addTime(600)">+10m</button>
     </div>
     <div class="timer-row2">
       <button class="cbtn" onclick="toggleCustom()">Custom</button>
@@ -362,6 +623,7 @@
       <div class="pick-sub" id="pickSub" style="visibility:hidden">Called On</div>
       <div class="pick-name" id="pickName"></div>
     </div>
+    <div class="deck-info" id="deckInfo"></div>
     <div class="pick-btns">
       <button class="pbtn-pick purple" onclick="pickRandom()">Pick</button>
       <button class="pbtn-pick gray"   onclick="clearPick()">Clear</button>
@@ -369,9 +631,52 @@
   </div>
 </div>
 
+<!-- Attendance Modal -->
+<div class="att-overlay" id="attOverlay">
+  <div class="att-modal">
+    <div class="att-header">
+      <div>
+        <div class="att-title">Attendance</div>
+        <div class="att-sub" id="attSub"></div>
+      </div>
+      <button class="att-close" onclick="closeAttendance()">✕</button>
+    </div>
+    <div class="att-list" id="attList"></div>
+    <div class="att-footer">
+      <button class="att-all-btn" onclick="markAllPresent()">All Present</button>
+      <button class="att-save-btn" onclick="saveAttendance()">Save &amp; Close</button>
+    </div>
+  </div>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
+
+  // ── Class roster state ─────────────────────────────────────
+  let allRosters    = {};
+  let rosterIds     = [];
+  let activeRosterId = null;
+
+  function updateClassWidget() {
+    const name = allRosters[activeRosterId]?.name || '—';
+    document.getElementById('classNameBig').textContent = name;
+    const idx   = rosterIds.indexOf(activeRosterId);
+    const total = rosterIds.length;
+    document.getElementById('classPos').textContent = total > 0 ? `${idx + 1} / ${total}` : '— / —';
+    document.getElementById('classPrevBtn').disabled = idx <= 0;
+    document.getElementById('classNextBtn').disabled = idx >= total - 1;
+  }
+
+  function prevClass() {
+    const idx = rosterIds.indexOf(activeRosterId);
+    if (idx > 0) socket.emit('roster:activate', rosterIds[idx - 1]);
+  }
+
+  function nextClass() {
+    const idx = rosterIds.indexOf(activeRosterId);
+    if (idx < rosterIds.length - 1) socket.emit('roster:activate', rosterIds[idx + 1]);
+  }
 
   // ── Drag & drop ────────────────────────────────────────────
   const POS_KEY = 'croom_widget_pos_v1';
@@ -442,9 +747,11 @@
   window.addEventListener('load', () => {
     const tw = document.getElementById('timerWidget');
     const pw = document.getElementById('pickerWidget');
+    const cw = document.getElementById('classWidget');
     const cy = Math.round((window.innerHeight - tw.offsetHeight) / 2);
     makeDraggable(tw, document.getElementById('timerHandle'),  'timer',  16, cy);
     makeDraggable(pw, document.getElementById('pickerHandle'), 'picker', window.innerWidth - pw.offsetWidth - 16, cy);
+    makeDraggable(cw, document.getElementById('classHandle'),  'class',  Math.round((window.innerWidth - cw.offsetWidth) / 2), window.innerHeight - cw.offsetHeight - 16);
   });
 
   // ── Audio chime ────────────────────────────────────────────
@@ -478,8 +785,11 @@
     timerHint.textContent = isRunning ? 'Tap to pause' : (remaining === 0 ? "Time's up" : 'Tap to start');
     timerNum.classList.remove('warning', 'urgent');
     doneOv.classList.remove('show');
-    const pct = duration > 0 ? remaining / duration : 1;
-    if (remaining === 0)    { timerNum.classList.add('urgent');  doneOv.classList.add('show'); }
+    const pct = duration > 0 ? remaining / duration : (remaining > 0 ? 1 : 0);
+    const bar = document.getElementById('timerBar');
+    bar.style.width = (pct * 100) + '%';
+    bar.style.background = (pct <= 0.1) ? '#ef4444' : (pct <= 0.25) ? '#fbbf24' : '#3b82f6';
+    if (remaining === 0)   { timerNum.classList.add('urgent');  doneOv.classList.add('show'); }
     else if (pct <= 0.1)   { timerNum.classList.add('urgent'); }
     else if (pct <= 0.25)  { timerNum.classList.add('warning'); }
   }
@@ -487,6 +797,7 @@
   function toggleTimer() { socket.emit(running ? 'timer:pause' : 'timer:start'); }
   function resetTimer()  { socket.emit('timer:reset'); }
   function setPreset(s)  { socket.emit('timer:set', s); }
+  function addTime(s)    { socket.emit('timer:add', s); }
 
   let customOpen = false;
   function toggleCustom() {
@@ -505,11 +816,35 @@
     }
   }
 
+  function updateDeckInfo(remaining, total) {
+    const el = document.getElementById('deckInfo');
+    if (!total) { el.textContent = ''; return; }
+    el.textContent = remaining === 0 ? 'All called — reshuffling next' : `${remaining} of ${total} remaining`;
+  }
+
   socket.on('state', s => {
     dur = s.timer.duration; rem = s.timer.remaining; running = s.timer.running;
     renderTimer(rem, dur, running);
     if (s.pick.name) showPick(s.pick.name, false);
     if (s.slides.url) loadSlides(s.slides.url);
+    allRosters     = s.rosters || {};
+    rosterIds      = Object.keys(allRosters);
+    activeRosterId = s.activeRosterId;
+    updateClassWidget();
+    updateDeckInfo(s.deckRemaining, s.deckTotal);
+  });
+
+  socket.on('deck:update', ({ remaining, total }) => updateDeckInfo(remaining, total));
+
+  socket.on('roster:all', data => {
+    allRosters = data;
+    rosterIds  = Object.keys(data);
+    updateClassWidget();
+  });
+
+  socket.on('roster:activated', ({ id }) => {
+    activeRosterId = id;
+    updateClassWidget();
   });
 
   socket.on('timer:update', t => {
@@ -575,6 +910,69 @@
   }
 
   socket.on('slides:update', url => { if (url) loadSlides(url); });
+
+  // ── Attendance ─────────────────────────────────────────────
+  let attStudents = [];
+
+  function parseRosterStudents(raw) {
+    if (!raw) return [];
+    try {
+      const p = JSON.parse(raw);
+      if (Array.isArray(p)) return p.map(s =>
+        typeof s === 'string'
+          ? { name: s, present: true, anchor: false, introvert: false, gender: '', conflict: '', distractor: false }
+          : { ...s }
+      );
+    } catch {}
+    return raw.split('\n').map(s => s.trim()).filter(Boolean)
+      .map(name => ({ name, present: true, anchor: false, introvert: false, gender: '', conflict: '', distractor: false }));
+  }
+
+  function openAttendance() {
+    const r = allRosters[activeRosterId];
+    if (!r) return;
+    attStudents = parseRosterStudents(r.students);
+    document.getElementById('attSub').textContent = r.name;
+    renderAttList();
+    document.getElementById('attOverlay').classList.add('open');
+  }
+
+  function closeAttendance() {
+    document.getElementById('attOverlay').classList.remove('open');
+  }
+
+  function renderAttList() {
+    const list = document.getElementById('attList');
+    list.innerHTML = '';
+    attStudents.forEach((s, i) => {
+      const present = s.present !== false;
+      const row = document.createElement('div');
+      row.className = 'att-row ' + (present ? 'present' : 'absent');
+      row.innerHTML = `<span class="att-name">${s.name}</span><span class="att-badge ${present ? 'present' : 'absent'}">${present ? 'Present' : 'Absent'}</span>`;
+      row.onclick = () => { attStudents[i].present = !attStudents[i].present; renderAttList(); };
+      list.appendChild(row);
+    });
+  }
+
+  function markAllPresent() {
+    attStudents.forEach(s => s.present = true);
+    renderAttList();
+  }
+
+  function saveAttendance() {
+    const r = allRosters[activeRosterId];
+    if (!r || !activeRosterId) return;
+    const studentsJson = JSON.stringify(attStudents);
+    socket.emit('roster:save', {
+      id: activeRosterId,
+      name: r.name,
+      students: studentsJson,
+      slidesUrl: r.slidesUrl || '',
+      sortOrder: 0
+    });
+    allRosters[activeRosterId].students = studentsJson;
+    closeAttendance();
+  }
 </script>
 </body>
 </html>

@@ -224,6 +224,145 @@
 
     .pick-controls { display: flex; gap: 8px; }
 
+    /* ── Pick Stats ── */
+    .stats-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 0;
+    }
+
+    .stats-name {
+      width: 120px;
+      flex-shrink: 0;
+      font-size: 13px;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stats-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: #0f172a;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .stats-bar {
+      height: 100%;
+      background: #7c3aed;
+      border-radius: 3px;
+      transition: width 0.4s;
+    }
+
+    .stats-count {
+      width: 26px;
+      text-align: right;
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Grade Book ── */
+    .gb-header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .gb-class-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .gb-scroll {
+      overflow-x: auto;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .gb-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .gb-table th {
+      padding: 8px 10px;
+      background: #0f172a;
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1px solid #334155;
+      text-align: center;
+    }
+
+    .gb-table td {
+      padding: 3px 6px;
+      border: 1px solid #1e293b;
+      text-align: center;
+    }
+
+    .gb-table tbody tr:hover td { background: rgba(255,255,255,0.03); }
+
+    .gb-name-th { text-align: left !important; min-width: 130px; }
+    .gb-name-td { text-align: left !important; color: #e2e8f0; padding: 6px 10px !important; }
+
+    .gb-col-header { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .gb-col-name { color: #94a3b8; }
+    .gb-col-max  { font-size: 10px; color: #475569; font-weight: 400; }
+
+    .gb-col-top { display: flex; align-items: center; gap: 4px; }
+
+    .gb-del-btn {
+      background: none;
+      border: none;
+      color: #475569;
+      font-size: 11px;
+      cursor: pointer;
+      padding: 0 2px;
+      transition: color 0.15s;
+      line-height: 1;
+    }
+
+    .gb-del-btn:hover { color: #ef4444; }
+
+    .gb-input {
+      width: 56px;
+      padding: 5px 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: #94a3b8;
+      font-size: 13px;
+      text-align: center;
+      font-family: inherit;
+    }
+
+    .gb-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    .gb-empty {
+      text-align: center;
+      padding: 24px;
+      color: #475569;
+      font-size: 13px;
+    }
+
     /* ── Saving indicator ── */
     .save-status {
       font-size: 11px;
@@ -299,6 +438,29 @@
       </div>
 
       <div class="save-status" id="saveStatus"></div>
+
+      <div style="border-top:1px solid #1e293b;margin-top:14px;padding-top:14px;">
+        <div class="card-title" style="margin-bottom:10px">Pick Stats</div>
+        <div id="statsContainer"></div>
+      </div>
+    </div>
+
+    <!-- Grade Book -->
+    <div class="card">
+      <div class="gb-header-row">
+        <div>
+          <div class="card-title" style="margin-bottom:2px">Grade Book</div>
+          <div class="gb-class-label" id="gbClassName"></div>
+        </div>
+        <button class="btn btn-gray" style="flex:none;padding:8px 14px;font-size:13px;" onclick="addAssignment()">+ Assignment</button>
+      </div>
+      <div class="gb-scroll">
+        <table class="gb-table" id="gbTable">
+          <thead><tr id="gbThead"></tr></thead>
+          <tbody id="gbTbody"></tbody>
+        </table>
+      </div>
+      <div class="save-status" id="gbSaveStatus"></div>
     </div>
 
   </div>
@@ -379,13 +541,45 @@
 
     function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
+    function parseStudentsClient(raw) {
+      if (!raw) return [];
+      try {
+        const p = JSON.parse(raw);
+        if (Array.isArray(p)) return p;
+      } catch {}
+      return raw.split('\n').map(s => s.trim()).filter(Boolean)
+        .map(name => ({ name, present: true, picks: 0 }));
+    }
+
+    function renderStats() {
+      const container = document.getElementById('statsContainer');
+      const r = rosters[activeId];
+      if (!r) { container.innerHTML = ''; return; }
+      const students = parseStudentsClient(r.students);
+      if (students.length === 0) {
+        container.innerHTML = '<p style="color:#475569;font-size:13px">No students yet.</p>';
+        return;
+      }
+      const sorted = [...students].sort((a, b) => (b.picks || 0) - (a.picks || 0));
+      const maxPicks = Math.max(1, ...sorted.map(s => s.picks || 0));
+      container.innerHTML = sorted.map(s => {
+        const p = s.picks || 0;
+        return `<div class="stats-row">
+          <span class="stats-name">${s.name}</span>
+          <div class="stats-bar-wrap"><div class="stats-bar" style="width:${(p / maxPicks * 100).toFixed(1)}%"></div></div>
+          <span class="stats-count">${p}</span>
+        </div>`;
+      }).join('');
+    }
+
     function initRosters(data, serverId) {
       rosters  = data || {};
       activeId = (serverId && rosters[serverId]) ? serverId : Object.keys(rosters)[0];
-      // Tell server which roster is active so pick:random works immediately
       if (activeId) socket.emit('roster:activate', activeId);
       renderTabs();
       renderCurrentRoster();
+      loadGradebook(activeId);
+      renderStats();
     }
 
     function renderTabs() {
@@ -418,6 +612,8 @@
       socket.emit('roster:activate', id);
       renderTabs();
       renderCurrentRoster();
+      loadGradebook(id);
+      renderStats();
     }
 
     function addRoster() {
@@ -476,13 +672,24 @@
       activeId = data[prev] ? prev : Object.keys(data)[0];
       renderTabs();
       renderCurrentRoster();
+      loadGradebook(activeId);
+      renderStats();
     });
 
-    socket.on('roster:activated', (id) => {
+    socket.on('roster:activated', ({ id }) => {
       if (id && rosters[id] && id !== activeId) {
         activeId = id;
         renderTabs();
         renderCurrentRoster();
+        loadGradebook(id);
+        renderStats();
+      }
+    });
+
+    socket.on('pick:stats', ({ rosterId, students }) => {
+      if (rosters[rosterId]) {
+        rosters[rosterId].students = students;
+        if (rosterId === activeId) renderStats();
       }
     });
 
@@ -542,6 +749,118 @@
       status.className = 'save-status';
       status.style.color = '#f87171';
     });
+
+    // ── Grade Book ─────────────────────────────────────────
+    let gbData     = { columns: [], rows: {} };
+    let gbSaveTimer = null;
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function parseStudentsForGb(raw) {
+      if (!raw) return [];
+      try {
+        const p = JSON.parse(raw);
+        if (Array.isArray(p)) return p.filter(s => s.present !== false).map(s => s.name || s);
+      } catch {}
+      return raw.split('\n').map(s => s.trim()).filter(Boolean);
+    }
+
+    function loadGradebook(rosterId) {
+      const r = rosters[rosterId];
+      document.getElementById('gbClassName').textContent = r ? r.name : '';
+      if (!r) { gbData = { columns: [], rows: {} }; renderGradebook([]); return; }
+      try {
+        gbData = JSON.parse(r.grades || '{}');
+        if (!gbData.columns) gbData.columns = [];
+        if (!gbData.rows)    gbData.rows    = {};
+      } catch { gbData = { columns: [], rows: {} }; }
+      renderGradebook(parseStudentsForGb(r.students));
+    }
+
+    function renderGradebook(students) {
+      if (!students) students = parseStudentsForGb(rosters[activeId]?.students || '[]');
+      const thead = document.getElementById('gbThead');
+      const tbody = document.getElementById('gbTbody');
+
+      let thHtml = '<th class="gb-name-th">Student</th>';
+      gbData.columns.forEach(col => {
+        thHtml += `<th>
+          <div class="gb-col-header">
+            <div class="gb-col-top">
+              <span class="gb-col-name">${escHtml(col.name)}</span>
+              <button class="gb-del-btn" onclick="deleteAssignment('${col.id}')" title="Remove">✕</button>
+            </div>
+            <span class="gb-col-max">/ ${col.max || 100}</span>
+          </div>
+        </th>`;
+      });
+      thead.innerHTML = thHtml;
+
+      tbody.innerHTML = '';
+      if (students.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${gbData.columns.length + 1}" class="gb-empty">No students in this class.</td></tr>`;
+        return;
+      }
+      students.forEach(name => {
+        const tr = document.createElement('tr');
+        const nameTd = document.createElement('td');
+        nameTd.className = 'gb-name-td';
+        nameTd.textContent = name;
+        tr.appendChild(nameTd);
+        gbData.columns.forEach(col => {
+          const td = document.createElement('td');
+          const input = document.createElement('input');
+          input.className = 'gb-input';
+          input.type = 'text';
+          input.value = gbData.rows[name]?.[col.id] ?? '';
+          input.placeholder = '—';
+          input.addEventListener('input', () => {
+            if (!gbData.rows[name]) gbData.rows[name] = {};
+            gbData.rows[name][col.id] = input.value;
+            scheduleGbSave();
+          });
+          td.appendChild(input);
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function addAssignment() {
+      const name = prompt('Assignment name:');
+      if (!name?.trim()) return;
+      const maxStr = prompt('Max score:', '100');
+      const max = parseInt(maxStr) || 100;
+      const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      gbData.columns.push({ id, name: name.trim(), max });
+      renderGradebook();
+      scheduleGbSave();
+    }
+
+    function deleteAssignment(colId) {
+      if (!confirm('Remove this assignment column?')) return;
+      gbData.columns = gbData.columns.filter(c => c.id !== colId);
+      Object.values(gbData.rows).forEach(r => delete r[colId]);
+      renderGradebook();
+      scheduleGbSave();
+    }
+
+    function scheduleGbSave() {
+      const status = document.getElementById('gbSaveStatus');
+      status.textContent = 'Saving…';
+      status.className = 'save-status';
+      clearTimeout(gbSaveTimer);
+      gbSaveTimer = setTimeout(() => {
+        socket.emit('grades:save', { id: activeId, grades: JSON.stringify(gbData) });
+        // Keep local copy in sync so switching back shows latest
+        if (rosters[activeId]) rosters[activeId].grades = JSON.stringify(gbData);
+        status.textContent = 'Saved';
+        status.className = 'save-status saved';
+        setTimeout(() => { status.textContent = ''; }, 2000);
+      }, 800);
+    }
   </script>
 </body>
 </html>
