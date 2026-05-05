@@ -120,7 +120,7 @@ function shuffle(arr) {
 
 // ── Session state ─────────────────────────────────────────
 const state = {
-  timer: { duration: 300, remaining: 300, running: false },
+  timer: { duration: 120, remaining: 120, running: false },
   pick: { name: null },
   slides: { url: '', slide: 1 },
   activeRosterId: null,

@@ -683,7 +683,7 @@
   </div>
   <div class="widget-body">
     <div class="timer-tap" onclick="tapTimer()">
-      <div class="timer-num" id="timerNum">5:00</div>
+      <div class="timer-num" id="timerNum">2:00</div>
       <div class="timer-hint" id="timerHint">Tap to start</div>
     </div>
     <div class="timer-bar-wrap"><div class="timer-bar" id="timerBar"></div></div>
@@ -924,7 +924,7 @@
   }
 
   // ── Timer ──────────────────────────────────────────────────
-  let dur = 300, rem = 300, running = false;
+  let dur = 120, rem = 120, running = false;
 
   const timerNum  = document.getElementById('timerNum');
   const timerHint = document.getElementById('timerHint');
@@ -946,7 +946,7 @@
 
   function renderTimer(remaining, duration, isRunning) {
     if (dispNumpadActive) return;
-    if (doneActive) stopDone();
+    if (doneActive && remaining > 0) stopDone();
     const text = fmt(remaining);
     timerNum.textContent  = text;
     scaleTimerFont(text);
