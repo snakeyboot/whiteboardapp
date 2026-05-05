@@ -35,7 +35,7 @@
       background: #111;
     }
 
-    .slides-inner iframe { width: 100%; height: 100%; border: none; }
+    .slides-inner iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
 
     .slides-placeholder {
       position: absolute;
@@ -562,7 +562,7 @@
     /* ── Display timer numpad ── */
     .disp-numpad {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 4px;
       margin-bottom: 6px;
     }
@@ -580,9 +580,10 @@
       -webkit-tap-highlight-color: transparent;
     }
     .dp-btn:active { background: #2563eb; border-color: #2563eb; color: #fff; }
-    .dp-btn.dp-del { color: #94a3b8; font-size: 12px; }
-    .dp-btn.dp-clr { color: #f87171; font-size: 11px; font-weight: 700; }
     .timer-num.entry { color: #60a5fa !important; }
+
+    .tbtn-start.done { background: #dc2626; }
+    .tbtn-start.done:hover { background: #b91c1c; }
 
     /* ── Materials widget ── */
     .mat-btn {
@@ -692,13 +693,11 @@
       <button class="dp-btn" onclick="dispNumpadPress(3)">3</button>
       <button class="dp-btn" onclick="dispNumpadPress(4)">4</button>
       <button class="dp-btn" onclick="dispNumpadPress(5)">5</button>
-      <button class="dp-btn dp-del" onclick="dispNumpadBackspace()">⌫</button>
       <button class="dp-btn" onclick="dispNumpadPress(6)">6</button>
       <button class="dp-btn" onclick="dispNumpadPress(7)">7</button>
       <button class="dp-btn" onclick="dispNumpadPress(8)">8</button>
       <button class="dp-btn" onclick="dispNumpadPress(9)">9</button>
       <button class="dp-btn" onclick="dispNumpadPress(0)">0</button>
-      <button class="dp-btn dp-clr" onclick="dispNumpadClear()">CLR</button>
     </div>
     <div class="timer-add-row">
       <button class="abtn" onclick="addTime(-10)">−10s</button>
@@ -874,20 +873,32 @@
     makeDraggable(mw, document.getElementById('matsHandle'),   'mats',   Math.round((window.innerWidth - mw.offsetWidth) / 2), 16);
   });
 
-  // ── Audio chime ────────────────────────────────────────────
-  function playChime() {
+  // ── Audio alarm ────────────────────────────────────────────
+  let alarmCtx = null;
+
+  function stopAlarm() {
+    if (alarmCtx) { try { alarmCtx.close(); } catch (_) {} alarmCtx = null; }
+  }
+
+  function playAlarm() {
+    stopAlarm();
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [[523.25, 0], [659.25, 0.28], [783.99, 0.56]].forEach(([freq, delay]) => {
-        const osc = ctx.createOscillator(), g = ctx.createGain();
-        osc.connect(g); g.connect(ctx.destination);
-        osc.type = 'sine'; osc.frequency.value = freq;
-        const t = ctx.currentTime + delay;
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(0.22, t + 0.06);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
-        osc.start(t); osc.stop(t + 1.8);
-      });
+      alarmCtx = ctx;
+      // 5 repetitions spaced 2s apart (covers 10s done window)
+      for (let rep = 0; rep < 5; rep++) {
+        const base = rep * 2;
+        [[523.25, 0], [659.25, 0.28], [783.99, 0.56]].forEach(([freq, delay]) => {
+          const osc = ctx.createOscillator(), g = ctx.createGain();
+          osc.connect(g); g.connect(ctx.destination);
+          osc.type = 'sine'; osc.frequency.value = freq;
+          const t = ctx.currentTime + base + delay;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.22, t + 0.06);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+          osc.start(t); osc.stop(t + 1.8);
+        });
+      }
     } catch (_) {}
   }
 
@@ -914,13 +925,12 @@
 
   function renderTimer(remaining, duration, isRunning) {
     if (dispNumpadActive) return;
+    if (doneActive) stopDone();
     const text = fmt(remaining);
     timerNum.textContent  = text;
     scaleTimerFont(text);
     timerHint.textContent = isRunning ? 'Tap to pause' : (remaining === 0 && duration > 0 ? "Time's up" : 'Tap to start');
     timerNum.classList.remove('warning', 'urgent', 'entry');
-    doneOv.classList.remove('show');
-    if (doneOverlayTimer) { clearTimeout(doneOverlayTimer); doneOverlayTimer = null; }
     const pct = duration > 0 ? remaining / duration : (remaining > 0 ? 1 : 0);
     const bar = document.getElementById('timerBar');
     bar.style.width = (pct * 100) + '%';
@@ -928,13 +938,23 @@
     if (remaining > 0 && pct <= 0.1)        timerNum.classList.add('urgent');
     else if (remaining > 0 && pct <= 0.25)  timerNum.classList.add('warning');
     const btn = document.getElementById('dispStartBtn');
-    if (btn) { btn.textContent = isRunning ? '⏸ Pause' : '▶ Start'; btn.classList.toggle('running', isRunning); }
+    if (btn) { btn.textContent = isRunning ? '⏸ Pause' : '▶ Start'; btn.classList.toggle('running', isRunning); btn.classList.remove('done'); }
   }
 
   // ── Display numpad ──────────────────────────────────────────
   let dispNumpadBuf    = [0,0,0,0,0,0]; // [H2,H1,M2,M1,S2,S1]
   let dispNumpadActive = false;
   let doneOverlayTimer = null;
+  let doneActive       = false;
+
+  function stopDone() {
+    doneActive = false;
+    doneOv.classList.remove('show');
+    if (doneOverlayTimer) { clearTimeout(doneOverlayTimer); doneOverlayTimer = null; }
+    stopAlarm();
+    const btn = document.getElementById('dispStartBtn');
+    if (btn) { btn.textContent = '▶ Start'; btn.classList.remove('running', 'done'); }
+  }
 
   function dispNumpadFmt() {
     const [h2,h1,m2,m1,s2,s1] = dispNumpadBuf;
@@ -985,6 +1005,7 @@
   }
 
   function tapTimer() {
+    if (doneActive) { stopDone(); return; }
     if (dispNumpadActive) {
       const secs = dispNumpadToSecs();
       if (secs > 0) {
@@ -1018,7 +1039,7 @@
     dur = s.timer.duration; rem = s.timer.remaining; running = s.timer.running;
     renderTimer(rem, dur, running);
     if (s.pick.name) showPick(s.pick.name, false);
-    if (s.slides.url) loadSlides(s.slides.url);
+    if (s.slides.url) switchToMaterial(s.slides.url);
     allRosters     = s.rosters || {};
     rosterIds      = Object.keys(allRosters);
     activeRosterId = s.activeRosterId;
@@ -1054,7 +1075,7 @@
   socket.on('timer:tick', r => { rem = r; renderTimer(rem, dur, running); });
 
   socket.on('timer:done', () => {
-    running = false; rem = 0;
+    running = false; rem = 0; doneActive = true;
     if (!dispNumpadActive) {
       const text = fmt(0);
       timerNum.textContent = text;
@@ -1065,15 +1086,12 @@
       document.getElementById('timerBar').style.width = '0%';
       document.getElementById('timerBar').style.background = '#ef4444';
       const btn = document.getElementById('dispStartBtn');
-      btn.textContent = '▶ Start'; btn.classList.remove('running');
+      btn.textContent = '⏹ Stop'; btn.classList.remove('running'); btn.classList.add('done');
     }
     doneOv.classList.add('show');
     if (doneOverlayTimer) clearTimeout(doneOverlayTimer);
-    doneOverlayTimer = setTimeout(() => {
-      doneOv.classList.remove('show');
-      doneOverlayTimer = null;
-    }, 4000);
-    playChime();
+    doneOverlayTimer = setTimeout(stopDone, 10000);
+    playAlarm();
   });
 
   // ── Picker ──────────────────────────────────────────────────
@@ -1111,8 +1129,10 @@
     setTimeout(() => { pickName.textContent = ''; }, 300);
   });
 
-  // ── Slides ──────────────────────────────────────────────────
-  const slidePositions = {}; // baseUrl → last slide number
+  // ── Slides (multi-iframe — each material keeps its own iframe) ──
+  const iframeMap    = {}; // rawUrl → iframe element
+  const embedBaseMap = {}; // rawUrl → base embed URL (no slide params)
+  let activeRawUrl   = '';
 
   function toEmbedUrl(url) {
     const m = url.match(/src=["']([^"']+)["']/);
@@ -1125,46 +1145,41 @@
     return url;
   }
 
-  let slideBaseUrl = '';
-
-  function getOrCreateIframe() {
+  function switchToMaterial(rawUrl) {
+    if (!rawUrl) return;
     const ph = document.getElementById('slidesPlaceholder');
-    let iframe = document.querySelector('#slidesInner iframe');
-    if (!iframe) {
+    // Hide all existing iframes
+    Object.values(iframeMap).forEach(f => f.style.display = 'none');
+    if (iframeMap[rawUrl]) {
+      // Already loaded — just reveal it (position preserved)
       ph.style.display = 'none';
-      iframe = document.createElement('iframe');
-      iframe.allowFullscreen = true;
-      document.getElementById('slidesInner').appendChild(iframe);
-    }
-    return iframe;
-  }
-
-  function loadSlides(url) {
-    if (!url) return;
-    let eu = toEmbedUrl(url);
-    if (!eu.includes('?')) eu += '?start=false&loop=false&delayms=3000';
-    slideBaseUrl = eu;
-    const saved = slidePositions[eu];
-    if (saved && saved > 1) {
-      const base  = eu.replace(/[&?]slide=[^&]*|[&?]page=[^&]*/g, '');
-      const sep   = base.includes('?') ? '&' : '?';
-      const param = base.includes('drive.google.com/file') ? `page=${saved}` : `slide=id.p${saved}`;
-      getOrCreateIframe().src = base + sep + param;
+      iframeMap[rawUrl].style.display = '';
     } else {
-      getOrCreateIframe().src = eu;
+      // First time — create iframe
+      let eu = toEmbedUrl(rawUrl);
+      if (!eu.includes('?')) eu += '?start=false&loop=false&delayms=3000';
+      embedBaseMap[rawUrl] = eu;
+      ph.style.display = 'none';
+      const iframe = document.createElement('iframe');
+      iframe.allowFullscreen = true;
+      iframe.src = eu;
+      document.getElementById('slidesInner').appendChild(iframe);
+      iframeMap[rawUrl] = iframe;
     }
+    activeRawUrl = rawUrl;
   }
 
   function navigateToSlide(n) {
-    if (!slideBaseUrl) return;
-    slidePositions[slideBaseUrl] = n;
-    const base  = slideBaseUrl.replace(/[&?]slide=[^&]*|[&?]page=[^&]*/g, '');
+    const iframe  = iframeMap[activeRawUrl];
+    const baseUrl = embedBaseMap[activeRawUrl];
+    if (!iframe || !baseUrl) return;
+    const base  = baseUrl.replace(/[&?]slide=[^&]*|[&?]page=[^&]*/g, '');
     const sep   = base.includes('?') ? '&' : '?';
-    const param = base.includes('drive.google.com/file') ? `page=${n}` : `slide=id.p${n}`;
-    getOrCreateIframe().src = base + sep + param;
+    const param = baseUrl.includes('drive.google.com/file') ? `page=${n}` : `slide=id.p${n}`;
+    iframe.src  = base + sep + param;
   }
 
-  socket.on('slides:update',   url   => { if (url) loadSlides(url); });
+  socket.on('slides:update',   url   => { if (url) switchToMaterial(url); });
   socket.on('slides:navigate', slide => navigateToSlide(slide));
 
   // ── Materials widget ────────────────────────────────────────
@@ -1173,8 +1188,6 @@
     { key: 'doc',    label: 'Doc',    bg: '#1a73e8', color: '#fff'    },
     { key: 'pdf',    label: 'PDF',    bg: '#9f1239', color: '#fecdd3' },
   ];
-
-  let activeMatsUrl = '';
 
   function renderMaterialsWidget() {
     const r    = allRosters[activeRosterId];
@@ -1203,12 +1216,11 @@
         const isUrl = !t || t.startsWith('http') || t.startsWith('www.') || t.includes('://');
         const display = isUrl ? btnLabel : t;
         const btn = document.createElement('button');
-        btn.className = 'mat-btn' + (m.url === activeMatsUrl ? ' mat-active' : '');
+        btn.className = 'mat-btn' + (m.url === activeRawUrl ? ' mat-active' : '');
         btn.style.cssText = `background:${bg};color:${color};border-color:${bg}`;
         btn.textContent = display;
         btn.onclick = () => {
-          activeMatsUrl = m.url;
-          loadSlides(m.url);
+          switchToMaterial(m.url);
           document.querySelectorAll('.mat-btn').forEach(b => b.classList.remove('mat-active'));
           btn.classList.add('mat-active');
         };
