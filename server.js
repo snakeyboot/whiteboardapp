@@ -46,6 +46,13 @@ async function initDB() {
   `);
   await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS grades TEXT DEFAULT '{}'`);
   await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS materials TEXT DEFAULT '[]'`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS material_presets (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      materials TEXT DEFAULT '[]'
+    )
+  `);
   const { rows } = await pool.query('SELECT COUNT(*) FROM rosters');
   if (parseInt(rows[0].count) === 0) {
     const id = Date.now().toString(36);
@@ -54,6 +61,11 @@ async function initDB() {
       [id, 'Period 1', '[]', '', 0]
     );
   }
+}
+
+async function getAllPresets() {
+  const { rows } = await pool.query('SELECT * FROM material_presets ORDER BY name');
+  return rows.map(r => ({ id: r.id, name: r.name, materials: r.materials }));
 }
 
 async function getAllRosters() {
@@ -160,6 +172,7 @@ io.on('connection', async (socket) => {
     if (state.activeRosterId && pickDeck.length === 0) await buildDeck(state.activeRosterId);
   }
   socket.emit('state', { ...state, rosters, deckRemaining: pickDeck.length, deckTotal });
+  socket.emit('presets:all', await getAllPresets());
 
   // ── Timer ──
   socket.on('timer:set', (seconds) => {
@@ -319,6 +332,25 @@ io.on('connection', async (socket) => {
   socket.on('slides:next', () => {
     state.slides.slide++;
     io.emit('slides:navigate', state.slides.slide);
+  });
+
+  // ── Material Presets ──
+  socket.on('presets:save', async ({ id, name, materials }) => {
+    try {
+      await pool.query(
+        `INSERT INTO material_presets (id,name,materials) VALUES ($1,$2,$3)
+         ON CONFLICT (id) DO UPDATE SET name=$2, materials=$3`,
+        [id, name, materials]
+      );
+      io.emit('presets:all', await getAllPresets());
+    } catch (e) { console.error('presets:save', e); }
+  });
+
+  socket.on('presets:delete', async (id) => {
+    try {
+      await pool.query('DELETE FROM material_presets WHERE id=$1', [id]);
+      io.emit('presets:all', await getAllPresets());
+    } catch (e) { console.error('presets:delete', e); }
   });
 
   // ── Force Pick ──

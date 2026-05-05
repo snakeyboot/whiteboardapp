@@ -743,8 +743,11 @@
     </div>
     <div class="widget-label">Materials</div>
   </div>
-  <div class="widget-body" id="matsBody">
-    <div class="mat-empty">No materials loaded</div>
+  <div class="widget-body">
+    <div id="matsBody">
+      <div class="mat-empty">No materials loaded</div>
+    </div>
+    <button class="att-open-btn" style="margin-top:6px;" onclick="openDisplayPresets()">📂 Load Set</button>
   </div>
 </div>
 
@@ -762,6 +765,24 @@
     <div class="att-footer">
       <button class="att-all-btn" onclick="markAllPresent()">All Present</button>
       <button class="att-save-btn" onclick="saveAttendance()">Save &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Load Set Modal (display) -->
+<div class="att-overlay" id="dispPresetsOverlay">
+  <div class="att-modal">
+    <div class="att-header">
+      <div>
+        <div class="att-title">Load Material Set</div>
+        <div class="att-sub">Replaces widget buttons locally</div>
+      </div>
+      <button class="att-close" onclick="closeDisplayPresets()">✕</button>
+    </div>
+    <div class="att-list" id="dispPresetsList"></div>
+    <div class="att-footer">
+      <button class="att-all-btn" onclick="resetDisplayMaterials()">Use Roster Materials</button>
+      <button class="att-save-btn" onclick="closeDisplayPresets()">Close</button>
     </div>
   </div>
 </div>
@@ -1059,6 +1080,7 @@
 
   socket.on('roster:activated', ({ id }) => {
     activeRosterId = id;
+    displayMaterialsOverride = null;
     updateClassWidget();
     renderMaterialsWidget();
   });
@@ -1187,13 +1209,14 @@
     { key: 'slides', label: 'Slides', bg: '#F9AB00', color: '#1a1a1a' },
     { key: 'doc',    label: 'Doc',    bg: '#1a73e8', color: '#fff'    },
     { key: 'pdf',    label: 'PDF',    bg: '#9f1239', color: '#fecdd3' },
+    { key: 'web',    label: 'Web',    bg: '#0d9488', color: '#fff'    },
   ];
 
   function renderMaterialsWidget() {
     const r    = allRosters[activeRosterId];
     const body = document.getElementById('matsBody');
-    let mats   = [];
-    try { mats = JSON.parse(r?.materials || '[]'); } catch {}
+    let mats   = displayMaterialsOverride;
+    if (!mats) try { mats = JSON.parse(r?.materials || '[]'); } catch { mats = []; }
 
     body.innerHTML = '';
 
@@ -1315,6 +1338,50 @@
     });
     allRosters[activeRosterId].students = studentsJson;
     closeAttendance();
+  }
+
+  // ── Material presets (display — local load only) ────────────
+  let allPresets = [];
+  let displayMaterialsOverride = null;
+
+  socket.on('presets:all', (presets) => {
+    allPresets = presets || [];
+  });
+
+  function openDisplayPresets() {
+    const list = document.getElementById('dispPresetsList');
+    if (!allPresets.length) {
+      list.innerHTML = '<div class="mat-empty" style="padding:16px 0;">No saved sets yet.</div>';
+    } else {
+      list.innerHTML = allPresets.map(p => {
+        let count = 0;
+        try { count = JSON.parse(p.materials).length; } catch {}
+        const row = document.createElement('div');
+        return `<div class="att-row present" style="cursor:pointer;" onclick="applyDisplayPreset('${p.id}')">
+          <span class="att-name">${p.name}</span>
+          <span class="att-badge present">${count} item${count !== 1 ? 's' : ''}</span>
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('dispPresetsOverlay').classList.add('open');
+  }
+
+  function closeDisplayPresets() {
+    document.getElementById('dispPresetsOverlay').classList.remove('open');
+  }
+
+  function applyDisplayPreset(id) {
+    const p = allPresets.find(x => x.id === id);
+    if (!p) return;
+    try { displayMaterialsOverride = JSON.parse(p.materials); } catch { return; }
+    renderMaterialsWidget();
+    closeDisplayPresets();
+  }
+
+  function resetDisplayMaterials() {
+    displayMaterialsOverride = null;
+    renderMaterialsWidget();
+    closeDisplayPresets();
   }
 </script>
 </body>

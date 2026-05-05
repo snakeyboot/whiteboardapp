@@ -332,6 +332,17 @@
     .mat-slides { background: #F9AB00; color: #1a1a1a; }
     .mat-doc    { background: #1a73e8; color: #fff; }
     .mat-pdf    { background: #9f1239; color: #fca5a5; }
+    .mat-web    { background: #0d9488; color: #fff; }
+
+    /* ── Preset list rows ── */
+    .preset-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 0; border-bottom: 1px solid #1e293b;
+    }
+    .preset-row:last-child { border-bottom: none; }
+    .preset-info { flex: 1; min-width: 0; }
+    .preset-name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+    .preset-meta { font-size: 11px; color: #475569; margin-top: 1px; }
     .mat-title  { flex: 1; font-size: 13px; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .mat-btns   { display: flex; gap: 5px; flex-shrink: 0; }
     .mat-btn {
@@ -573,16 +584,20 @@
 
     <!-- Materials -->
     <div class="card">
-      <div class="card-title">Materials</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title" style="margin-bottom:0">Materials</div>
+        <button class="btn btn-gray btn-sm" style="flex:none;" onclick="openPresetsModal()">Sets ▾</button>
+      </div>
       <div id="materialsListEl"></div>
       <button class="add-btn" onclick="toggleAddForm()">+ Add Material</button>
       <div class="mat-add-form" id="matAddForm">
-        <input type="url" id="matUrl" placeholder="Paste Google Slides, Doc, or PDF URL…" oninput="matAutoDetect()" onblur="matFetchTitle()">
+        <input type="url" id="matUrl" placeholder="Paste URL (Slides, Doc, PDF, or any website)…" oninput="matAutoDetect()" onblur="matFetchTitle()">
         <div class="mat-form-row">
           <select id="matType" style="flex:1;">
             <option value="slides">Google Slides</option>
             <option value="doc">Google Doc</option>
             <option value="pdf">PDF / Drive</option>
+            <option value="web">Website</option>
           </select>
           <input type="text" id="matTitle" placeholder="Title (optional)" style="flex:2;">
         </div>
@@ -594,6 +609,24 @@
     </div>
 
   </div><!-- end sections -->
+
+  <!-- Material Sets Modal -->
+  <div class="overlay" id="presetsOverlay" onclick="presetsOverlayClick(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Material Sets</span>
+        <button class="modal-close" onclick="closePresetsModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+          <input type="text" id="presetNameInput" placeholder="Name this set…"
+            style="flex:1;padding:8px 10px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#e2e8f0;font-size:13px;font-family:inherit;">
+          <button class="btn btn-teal btn-sm" style="flex:none;white-space:nowrap;" onclick="savePreset()">Save Current</button>
+        </div>
+        <div id="presetsList"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Force Pick Modal -->
   <div class="overlay" id="forcePickOverlay" onclick="forcePickOverlayClick(event)">
@@ -1338,7 +1371,7 @@
       if (url.includes('docs.google.com/presentation')) return 'slides';
       if (url.includes('docs.google.com/document'))     return 'doc';
       if (url.includes('drive.google.com/file') || /\.pdf($|\?)/.test(url)) return 'pdf';
-      return 'slides';
+      return 'web';
     }
 
     function toEmbedUrl(raw) {
@@ -1364,7 +1397,7 @@
         if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
         return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
       }
-      return url;
+      return url; // 'web' and anything else: use URL as-is
     }
 
     function matAutoDetect() {
@@ -1451,6 +1484,73 @@
       const list = getMaterials();
       if (!list[i]) return;
       socket.emit('slides:push', list[i].url);
+    }
+
+    // ── Material Presets ───────────────────────────────────
+    let allPresets = [];
+
+    socket.on('presets:all', (presets) => {
+      allPresets = presets || [];
+      renderPresetsList();
+    });
+
+    function openPresetsModal() {
+      renderPresetsList();
+      document.getElementById('presetsOverlay').classList.add('open');
+    }
+
+    function closePresetsModal() {
+      document.getElementById('presetsOverlay').classList.remove('open');
+    }
+
+    function presetsOverlayClick(e) {
+      if (e.target === document.getElementById('presetsOverlay')) closePresetsModal();
+    }
+
+    function renderPresetsList() {
+      const el = document.getElementById('presetsList');
+      if (!el) return;
+      if (!allPresets.length) {
+        el.innerHTML = '<p style="color:#475569;font-size:12px;text-align:center;padding:10px 0">No saved sets yet.</p>';
+        return;
+      }
+      el.innerHTML = allPresets.map(p => {
+        let count = 0;
+        try { count = JSON.parse(p.materials).length; } catch {}
+        return `<div class="preset-row">
+          <div class="preset-info">
+            <div class="preset-name">${escHtml(p.name)}</div>
+            <div class="preset-meta">${count} item${count !== 1 ? 's' : ''}</div>
+          </div>
+          <button class="btn btn-blue btn-sm" style="flex:none;" onclick="loadPreset('${escAttr(p.id)}')">Load</button>
+          <button class="btn btn-gray btn-sm" style="flex:none;" onclick="deletePreset('${escAttr(p.id)}')">✕</button>
+        </div>`;
+      }).join('');
+    }
+
+    function savePreset() {
+      const name = document.getElementById('presetNameInput').value.trim();
+      if (!name) { document.getElementById('presetNameInput').focus(); return; }
+      const materials = rosters[activeId]?.materials || '[]';
+      socket.emit('presets:save', { id: uid(), name, materials });
+      document.getElementById('presetNameInput').value = '';
+    }
+
+    function loadPreset(id) {
+      const p = allPresets.find(x => x.id === id);
+      if (!p || !rosters[activeId]) return;
+      const rName = rosters[activeId].name;
+      if (!confirm(`Replace ${rName}'s materials with "${p.name}"?`)) return;
+      rosters[activeId].materials = p.materials;
+      saveCurrentRoster();
+      renderMaterials();
+      closePresetsModal();
+    }
+
+    function deletePreset(id) {
+      const p = allPresets.find(x => x.id === id);
+      if (!p || !confirm(`Delete set "${p.name}"?`)) return;
+      socket.emit('presets:delete', id);
     }
   </script>
 </body>
