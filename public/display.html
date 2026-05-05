@@ -1199,12 +1199,13 @@
       const items = byType[key] || [];
       items.forEach((m, i) => {
         const btnLabel = items.length > 1 ? `${label} ${i + 1}` : label;
-        const display  = (m.title && m.title.trim() && m.title !== m.url) ? m.title : btnLabel;
+        const t = (m.title || '').trim();
+        const isUrl = !t || t.startsWith('http') || t.startsWith('www.') || t.includes('://');
+        const display = isUrl ? btnLabel : t;
         const btn = document.createElement('button');
         btn.className = 'mat-btn' + (m.url === activeMatsUrl ? ' mat-active' : '');
         btn.style.cssText = `background:${bg};color:${color};border-color:${bg}`;
         btn.textContent = display;
-        btn.title = m.url;
         btn.onclick = () => {
           activeMatsUrl = m.url;
           loadSlides(m.url);
