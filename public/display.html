@@ -360,6 +360,41 @@
 
     .abtn:hover { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
 
+    /* ── Timer control row (Start / Clear) ── */
+    .timer-ctrl-row { display: flex; gap: 6px; }
+
+    .tbtn-start {
+      flex: 2;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .tbtn-start:hover { background: #1d4ed8; }
+    .tbtn-start.running { background: #334155; color: #e2e8f0; }
+    .tbtn-start.running:hover { background: #475569; }
+
+    .tbtn-clear {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tbtn-clear:hover { background: #334155; color: #e2e8f0; }
+
     /* ── Deck counter ── */
     .deck-info {
       text-align: center;
@@ -549,17 +584,49 @@
     .dp-btn.dp-clr { color: #f87171; font-size: 11px; font-weight: 700; }
     .timer-num.entry { color: #60a5fa !important; }
 
+    /* ── Materials widget ── */
+    .mat-btn {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: filter 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .mat-btn:last-child { margin-bottom: 0; }
+    .mat-btn:hover { filter: brightness(1.12); }
+    .mat-btn.mat-active { outline: 2px solid rgba(255,255,255,0.7); outline-offset: 1px; }
+
+    .mat-empty {
+      font-size: 11px;
+      color: #334155;
+      text-align: center;
+      padding: 6px 0;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
     /* ── Timer done overlay ── */
     .done-overlay {
-      display: none;
       position: fixed;
       inset: 0;
       z-index: 5;
       pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s;
       animation: pulse-ring 1s ease-in-out infinite alternate;
     }
 
-    .done-overlay.show { display: block; }
+    .done-overlay.show { opacity: 1; }
 
     @keyframes pulse-ring {
       from { box-shadow: inset 0 0 0 6px rgba(239,68,68,0.5); }
@@ -634,12 +701,14 @@
       <button class="dp-btn dp-clr" onclick="dispNumpadClear()">CLR</button>
     </div>
     <div class="timer-add-row">
-      <button class="abtn" onclick="tapTimer()" id="dispStartBtn">▶ Start</button>
-      <button class="abtn" onclick="clearDisplayTimer()">Clear</button>
       <button class="abtn" onclick="addTime(-10)">−10s</button>
       <button class="abtn" onclick="addTime(10)">+10s</button>
       <button class="abtn" onclick="addTime(30)">+30s</button>
       <button class="abtn" onclick="addTime(60)">+1m</button>
+    </div>
+    <div class="timer-ctrl-row">
+      <button class="tbtn-start" id="dispStartBtn" onclick="tapTimer()">▶ Start</button>
+      <button class="tbtn-clear" onclick="clearDisplayTimer()">Clear</button>
     </div>
   </div>
 </div>
@@ -663,6 +732,20 @@
       <button class="pbtn-pick purple" onclick="pickRandom()">Pick</button>
       <button class="pbtn-pick gray"   onclick="clearPick()">Clear</button>
     </div>
+  </div>
+</div>
+
+<!-- Materials Widget -->
+<div class="widget" id="matsWidget">
+  <div class="widget-handle" id="matsHandle">
+    <div class="grip">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <div class="widget-label">Materials</div>
+  </div>
+  <div class="widget-body" id="matsBody">
+    <div class="mat-empty">No materials loaded</div>
   </div>
 </div>
 
@@ -783,10 +866,12 @@
     const tw = document.getElementById('timerWidget');
     const pw = document.getElementById('pickerWidget');
     const cw = document.getElementById('classWidget');
+    const mw = document.getElementById('matsWidget');
     const cy = Math.round((window.innerHeight - tw.offsetHeight) / 2);
     makeDraggable(tw, document.getElementById('timerHandle'),  'timer',  16, cy);
     makeDraggable(pw, document.getElementById('pickerHandle'), 'picker', window.innerWidth - pw.offsetWidth - 16, cy);
     makeDraggable(cw, document.getElementById('classHandle'),  'class',  Math.round((window.innerWidth - cw.offsetWidth) / 2), window.innerHeight - cw.offsetHeight - 16);
+    makeDraggable(mw, document.getElementById('matsHandle'),   'mats',   Math.round((window.innerWidth - mw.offsetWidth) / 2), 16);
   });
 
   // ── Audio chime ────────────────────────────────────────────
@@ -821,9 +906,17 @@
     return `${m}:${String(sec).padStart(2,'0')}`;
   }
 
+  function scaleTimerFont(text) {
+    const len = text.length;
+    timerNum.style.fontSize    = len <= 4 ? '56px' : len <= 5 ? '48px' : len <= 7 ? '38px' : '32px';
+    timerNum.style.letterSpacing = len >= 7 ? '-2px' : '-3px';
+  }
+
   function renderTimer(remaining, duration, isRunning) {
     if (dispNumpadActive) return;
-    timerNum.textContent  = fmt(remaining);
+    const text = fmt(remaining);
+    timerNum.textContent  = text;
+    scaleTimerFont(text);
     timerHint.textContent = isRunning ? 'Tap to pause' : (remaining === 0 && duration > 0 ? "Time's up" : 'Tap to start');
     timerNum.classList.remove('warning', 'urgent', 'entry');
     doneOv.classList.remove('show');
@@ -835,7 +928,7 @@
     if (remaining > 0 && pct <= 0.1)        timerNum.classList.add('urgent');
     else if (remaining > 0 && pct <= 0.25)  timerNum.classList.add('warning');
     const btn = document.getElementById('dispStartBtn');
-    if (btn) btn.textContent = isRunning ? '⏸ Pause' : '▶ Start';
+    if (btn) { btn.textContent = isRunning ? '⏸ Pause' : '▶ Start'; btn.classList.toggle('running', isRunning); }
   }
 
   // ── Display numpad ──────────────────────────────────────────
@@ -859,11 +952,14 @@
     dispNumpadActive = true;
     dispNumpadBuf.shift();
     dispNumpadBuf.push(d);
-    timerNum.textContent = dispNumpadFmt();
+    const text = dispNumpadFmt();
+    timerNum.textContent = text;
+    scaleTimerFont(text);
     timerNum.classList.remove('warning','urgent');
     timerNum.classList.add('entry');
     timerHint.textContent = 'Press Start';
-    document.getElementById('dispStartBtn').textContent = '▶ Start';
+    const btn = document.getElementById('dispStartBtn');
+    btn.textContent = '▶ Start'; btn.classList.remove('running');
   }
 
   function dispNumpadBackspace() {
@@ -875,7 +971,9 @@
       timerNum.classList.remove('entry');
       renderTimer(rem, dur, running);
     } else {
-      timerNum.textContent = dispNumpadFmt();
+      const text = dispNumpadFmt();
+      timerNum.textContent = text;
+      scaleTimerFont(text);
     }
   }
 
@@ -926,6 +1024,7 @@
     activeRosterId = s.activeRosterId;
     updateClassWidget();
     updateDeckInfo(s.deckRemaining, s.deckTotal);
+    renderMaterialsWidget();
   });
 
   socket.on('deck:update', ({ remaining, total }) => updateDeckInfo(remaining, total));
@@ -934,11 +1033,13 @@
     allRosters = data;
     rosterIds  = Object.keys(data);
     updateClassWidget();
+    renderMaterialsWidget();
   });
 
   socket.on('roster:activated', ({ id }) => {
     activeRosterId = id;
     updateClassWidget();
+    renderMaterialsWidget();
   });
 
   socket.on('pick:stats', ({ rosterId, students }) => {
@@ -955,13 +1056,16 @@
   socket.on('timer:done', () => {
     running = false; rem = 0;
     if (!dispNumpadActive) {
-      timerNum.textContent = fmt(0);
+      const text = fmt(0);
+      timerNum.textContent = text;
+      scaleTimerFont(text);
       timerNum.classList.remove('warning','urgent','entry');
       timerNum.classList.add('urgent');
       timerHint.textContent = "Time's up";
       document.getElementById('timerBar').style.width = '0%';
       document.getElementById('timerBar').style.background = '#ef4444';
-      document.getElementById('dispStartBtn').textContent = '▶ Start';
+      const btn = document.getElementById('dispStartBtn');
+      btn.textContent = '▶ Start'; btn.classList.remove('running');
     }
     doneOv.classList.add('show');
     if (doneOverlayTimer) clearTimeout(doneOverlayTimer);
@@ -1062,6 +1166,55 @@
 
   socket.on('slides:update',   url   => { if (url) loadSlides(url); });
   socket.on('slides:navigate', slide => navigateToSlide(slide));
+
+  // ── Materials widget ────────────────────────────────────────
+  const MAT_TYPES = [
+    { key: 'slides', label: 'Slides', bg: '#F9AB00', color: '#1a1a1a' },
+    { key: 'doc',    label: 'Doc',    bg: '#1a73e8', color: '#fff'    },
+    { key: 'pdf',    label: 'PDF',    bg: '#9f1239', color: '#fecdd3' },
+  ];
+
+  let activeMatsUrl = '';
+
+  function renderMaterialsWidget() {
+    const r    = allRosters[activeRosterId];
+    const body = document.getElementById('matsBody');
+    let mats   = [];
+    try { mats = JSON.parse(r?.materials || '[]'); } catch {}
+
+    body.innerHTML = '';
+
+    if (!mats.length) {
+      body.innerHTML = '<div class="mat-empty">No materials loaded</div>';
+      return;
+    }
+
+    const byType = { slides: [], doc: [], pdf: [] };
+    mats.forEach(m => {
+      const k = (m.type || 'pdf').toLowerCase();
+      (byType[k] || byType.pdf).push(m);
+    });
+
+    MAT_TYPES.forEach(({ key, label, bg, color }) => {
+      const items = byType[key] || [];
+      items.forEach((m, i) => {
+        const btnLabel = items.length > 1 ? `${label} ${i + 1}` : label;
+        const display  = (m.title && m.title.trim() && m.title !== m.url) ? m.title : btnLabel;
+        const btn = document.createElement('button');
+        btn.className = 'mat-btn' + (m.url === activeMatsUrl ? ' mat-active' : '');
+        btn.style.cssText = `background:${bg};color:${color};border-color:${bg}`;
+        btn.textContent = display;
+        btn.title = m.url;
+        btn.onclick = () => {
+          activeMatsUrl = m.url;
+          loadSlides(m.url);
+          document.querySelectorAll('.mat-btn').forEach(b => b.classList.remove('mat-active'));
+          btn.classList.add('mat-active');
+        };
+        body.appendChild(btn);
+      });
+    });
+  }
 
   // ── Attendance ─────────────────────────────────────────────
   let attStudents = [];
