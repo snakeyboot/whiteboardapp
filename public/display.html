@@ -61,7 +61,33 @@
       backdrop-filter: blur(12px);
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
       transition: box-shadow 0.15s;
+      overflow: hidden;
     }
+
+    /* ── Resize handle ── */
+    .resize-handle {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 18px;
+      height: 18px;
+      cursor: nwse-resize;
+      z-index: 5;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .resize-handle::after {
+      content: '';
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      width: 7px;
+      height: 7px;
+      border-right: 2px solid #334155;
+      border-bottom: 2px solid #334155;
+      border-radius: 0 0 3px 0;
+      transition: border-color 0.15s;
+    }
+    .widget:hover .resize-handle::after { border-color: #475569; }
 
     .widget.dragging { box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
 
@@ -1248,25 +1274,28 @@
     </div>
     <div class="widget-label">Spotify</div>
   </div>
-  <!-- Not-connected / idle -->
-  <div id="spDisp0" class="widget-body" style="padding:10px 14px;text-align:center;">
-    <div style="font-size:22px;margin-bottom:4px;opacity:0.25;">♪</div>
-    <div style="font-size:10px;font-weight:600;color:#334155;letter-spacing:0.08em;text-transform:uppercase;">Not connected</div>
-  </div>
-  <!-- Player -->
-  <div id="spDisp1" style="display:none;padding:10px 10px 12px;">
-    <div class="sp-disp-art">
-      <img id="spDispArt" src="" alt="">
+  <!-- Body wrapper (scaled as one unit) -->
+  <div class="widget-body" id="spBody" style="padding:0;">
+    <!-- Not-connected / idle -->
+    <div id="spDisp0" style="padding:10px 14px;text-align:center;">
+      <div style="font-size:22px;margin-bottom:4px;opacity:0.25;">♪</div>
+      <div style="font-size:10px;font-weight:600;color:#334155;letter-spacing:0.08em;text-transform:uppercase;">Not connected</div>
     </div>
-    <div id="spDispTrack"  style="font-size:13px;font-weight:700;color:#f8fafc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;"></div>
-    <div id="spDispArtist" style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px;"></div>
-    <div class="sp-disp-prog-wrap">
-      <div class="sp-disp-prog" id="spDispProg"></div>
-    </div>
-    <div class="sp-disp-btns">
-      <button class="sp-disp-btn" onclick="spDispPrev()" title="Previous">⏮</button>
-      <button class="sp-disp-btn sp-disp-play" id="spDispPlayBtn" onclick="spDispTogglePlay()">▶</button>
-      <button class="sp-disp-btn" onclick="spDispNext()" title="Next">⏭</button>
+    <!-- Player -->
+    <div id="spDisp1" style="display:none;padding:10px 10px 12px;">
+      <div class="sp-disp-art">
+        <img id="spDispArt" src="" alt="">
+      </div>
+      <div id="spDispTrack"  style="font-size:13px;font-weight:700;color:#f8fafc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;"></div>
+      <div id="spDispArtist" style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px;"></div>
+      <div class="sp-disp-prog-wrap">
+        <div class="sp-disp-prog" id="spDispProg"></div>
+      </div>
+      <div class="sp-disp-btns">
+        <button class="sp-disp-btn" onclick="spDispPrev()" title="Previous">⏮</button>
+        <button class="sp-disp-btn sp-disp-play" id="spDispPlayBtn" onclick="spDispTogglePlay()">▶</button>
+        <button class="sp-disp-btn" onclick="spDispNext()" title="Next">⏭</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1315,6 +1344,10 @@
   <div style="padding:9px 12px 7px;border-bottom:1px solid rgba(51,65,85,0.35);display:flex;align-items:center;justify-content:space-between;">
     <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#475569;">Widgets</div>
     <div style="font-size:9px;color:#2d3e55;font-weight:600;">drag to reorder</div>
+  </div>
+  <div style="padding:6px 10px 6px;border-bottom:1px solid rgba(51,65,85,0.2);display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-size:11px;font-weight:600;color:#475569;">Lock Sizes</span>
+    <button id="lockSizesBtn" class="settings-toggle" onclick="toggleLockSizes()">Off</button>
   </div>
   <div id="settingsList" style="padding:4px 0 6px;"></div>
 </div>
@@ -1431,6 +1464,8 @@
     const sw = document.getElementById('spotifyWidget');
     makeDraggable(sw, document.getElementById('spotifyHandle'),    'spotify',  16, 16);
     applyWidgetVisibility();
+    addResizeHandles();
+    WIDGET_DEFS.forEach(d => reapplyBodyScale(d.key));
     tickClock();
   });
 
@@ -1863,6 +1898,7 @@
 
     if (!mats.length) {
       body.innerHTML = '<div class="mat-empty">No materials loaded</div>';
+      reapplyBodyScale('mats');
       return;
     }
 
@@ -1904,6 +1940,7 @@
         body.appendChild(row);
       });
     });
+    reapplyBodyScale('mats');
   }
 
   // ── Attendance ─────────────────────────────────────────────
@@ -2100,13 +2137,14 @@
     const wid = document.getElementById('groupsWidget');
     if (loadWVis()['groups'] === false) { renderGroupsWidget(); return; } // settings hidden
     wid.style.display = '';
+    renderGroupsWidget();
+    reapplyBodyScale('groups');
     if (!groupsWidgetReady) {
       groupsWidgetReady = true;
       makeDraggable(wid, document.getElementById('groupsHandle'), 'groups',
-        Math.round((window.innerWidth - 218) / 2),
+        Math.round((window.innerWidth - (loadWScales()['groups'] || NATURAL_W)) / 2),
         Math.round((window.innerHeight - wid.offsetHeight) / 2) || 80);
     }
-    renderGroupsWidget();
   }
 
   function closeGroupsWidget() {
@@ -2258,11 +2296,13 @@
     if (!body) return;
     if (!wwWords.length) {
       body.innerHTML = '<div class="mat-empty">No words loaded</div>';
+      reapplyBodyScale('wordwall');
       return;
     }
     body.innerHTML = wwWords.map((w, i) =>
       `<button class="ww-word-btn" onclick="openWwDef(${i})">${w.word}</button>`
     ).join('');
+    reapplyBodyScale('wordwall');
   }
 
   function openWwDef(i) {
@@ -2358,6 +2398,7 @@
   }
 
   function renderSettingsList() {
+    updateLockBtn();
     const vis  = loadWVis();
     const list = document.getElementById('settingsList');
     list.innerHTML = '';
@@ -2419,6 +2460,8 @@
       } else {
         el.style.display = '';
       }
+      // Re-apply scale after widget becomes visible
+      requestAnimationFrame(() => reapplyBodyScale(key));
     } else {
       // Turn OFF — save current inline display so we can restore correctly
       vis[key] = false;
@@ -2450,6 +2493,110 @@
     }
   });
 
+  // ── Resize system ─────────────────────────────────────────
+  const NATURAL_W = 218;
+  const MIN_W     = 140;
+  const MAX_W     = 480;
+  const SCALE_KEY = 'croom_widget_scales_v1';
+  const LOCK_KEY  = 'croom_lock_sizes_v1';
+
+  function loadWScales() { try { return JSON.parse(localStorage.getItem(SCALE_KEY)) || {}; } catch { return {}; } }
+  function saveWScales(s) { localStorage.setItem(SCALE_KEY, JSON.stringify(s)); }
+  function loadWLock()    { try { return JSON.parse(localStorage.getItem(LOCK_KEY)); } catch { return false; } }
+  function saveWLock(v)   { localStorage.setItem(LOCK_KEY, JSON.stringify(v)); }
+
+  function applyBodyScale(key, targetWidth) {
+    const def = WIDGET_DEFS.find(d => d.key === key);
+    if (!def) return;
+    const el = document.getElementById(def.id);
+    if (!el) return;
+    const bodyEl = el.querySelector('.widget-body');
+    if (!bodyEl) return;
+
+    // Pin body at natural width & reset transform so we measure true height
+    bodyEl.style.width     = NATURAL_W + 'px';
+    bodyEl.style.transform = '';
+
+    const naturalBodyH = bodyEl.offsetHeight;
+    if (naturalBodyH === 0) return; // widget is hidden — skip; will reapply when shown
+    const scale = targetWidth / NATURAL_W;
+
+    bodyEl.style.transformOrigin = 'top left';
+    bodyEl.style.transform       = `scale(${scale})`;
+
+    const handleEl = el.querySelector('.widget-handle');
+    const handleH  = handleEl ? handleEl.offsetHeight : 0;
+
+    el.style.width  = targetWidth + 'px';
+    el.style.height = (handleH + Math.round(naturalBodyH * scale)) + 'px';
+  }
+
+  function reapplyBodyScale(key) {
+    const scales = loadWScales();
+    applyBodyScale(key, scales[key] || NATURAL_W);
+  }
+
+  function setWidgetWidth(key, w) {
+    const scales = loadWScales();
+    if (loadWLock()) {
+      WIDGET_DEFS.forEach(d => { applyBodyScale(d.key, w); scales[d.key] = w; });
+    } else {
+      applyBodyScale(key, w);
+      scales[key] = w;
+    }
+    saveWScales(scales);
+  }
+
+  function toggleLockSizes() {
+    saveWLock(!loadWLock());
+    updateLockBtn();
+  }
+
+  function updateLockBtn() {
+    const btn = document.getElementById('lockSizesBtn');
+    if (!btn) return;
+    const on = !!loadWLock();
+    btn.textContent = on ? 'On' : 'Off';
+    btn.classList.toggle('is-on', on);
+  }
+
+  let resizeDrag = null;
+
+  function addResizeHandles() {
+    WIDGET_DEFS.forEach(def => {
+      const el = document.getElementById(def.id);
+      if (!el) return;
+      const rh = document.createElement('div');
+      rh.className = 'resize-handle';
+      el.appendChild(rh);
+
+      rh.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        resizeDrag = { key: def.key, startX: e.clientX, startW: loadWScales()[def.key] || NATURAL_W };
+      });
+      rh.addEventListener('touchstart', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        const t = e.touches[0];
+        resizeDrag = { key: def.key, startX: t.clientX, startW: loadWScales()[def.key] || NATURAL_W };
+      }, { passive: false });
+    });
+  }
+
+  document.addEventListener('mousemove', e => {
+    if (!resizeDrag) return;
+    const newW = Math.max(MIN_W, Math.min(MAX_W, resizeDrag.startW + e.clientX - resizeDrag.startX));
+    setWidgetWidth(resizeDrag.key, newW);
+  });
+  document.addEventListener('mouseup', () => { resizeDrag = null; });
+  document.addEventListener('touchmove', e => {
+    if (!resizeDrag) return;
+    const newW = Math.max(MIN_W, Math.min(MAX_W, resizeDrag.startW + e.touches[0].clientX - resizeDrag.startX));
+    setWidgetWidth(resizeDrag.key, newW);
+  }, { passive: false });
+  document.addEventListener('touchend', () => { resizeDrag = null; });
+
   // ── Spotify ────────────────────────────────────────────────
   let spConnected  = false;
   let spPlaying    = false;
@@ -2466,6 +2613,7 @@
     } else {
       document.getElementById('spDisp0').style.display = '';
       document.getElementById('spDisp1').style.display = 'none';
+      reapplyBodyScale('spotify');
     }
   });
 
@@ -2474,6 +2622,7 @@
       document.getElementById('spDisp0').style.display = '';
       document.getElementById('spDisp1').style.display = 'none';
       clearInterval(spProgTimer);
+      reapplyBodyScale('spotify');
       return;
     }
     document.getElementById('spDisp0').style.display = 'none';
@@ -2497,6 +2646,7 @@
         updateSpDispProg();
       }, 1000);
     }
+    reapplyBodyScale('spotify');
   });
 
   function updateSpDispProg() {
