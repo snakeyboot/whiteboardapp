@@ -603,9 +603,25 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    .mat-btn:last-child { margin-bottom: 0; }
+    .mat-row { display: flex; gap: 4px; align-items: stretch; margin-bottom: 5px; }
+    .mat-row:last-child { margin-bottom: 0; }
+    .mat-btn { flex: 1; margin-bottom: 0; }
     .mat-btn:hover { filter: brightness(1.12); }
     .mat-btn.mat-active { outline: 2px solid rgba(255,255,255,0.7); outline-offset: 1px; }
+    .mat-reload-btn {
+      flex-shrink: 0;
+      padding: 0 9px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.5);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      line-height: 1;
+    }
+    .mat-reload-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
 
     .mat-empty {
       font-size: 11px;
@@ -614,6 +630,108 @@
       padding: 6px 0;
       font-weight: 600;
       letter-spacing: 0.06em;
+    }
+
+    /* ── Clock widget ── */
+    .clock-date {
+      font-size: 20px;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-align: center;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .clock-date-full {
+      font-size: 14px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-align: center;
+      margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .clock-time-wrap {
+      text-align: center;
+      cursor: pointer;
+      padding: 4px 0 2px;
+      border-radius: 8px;
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .clock-time-wrap:hover { background: rgba(255,255,255,0.06); }
+    .clock-time {
+      font-size: 36px;
+      font-weight: 800;
+      color: #f8fafc;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .clock-show-btn {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: all 0.15s;
+    }
+    .clock-show-btn:hover { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+
+    /* ── Word Wall widget ── */
+    .ww-word-btn {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 4px;
+      border-radius: 9px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #e2e8f0;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ww-word-btn:last-child { margin-bottom: 0; }
+    .ww-word-btn:hover  { background: #334155; border-color: #475569; }
+    .ww-word-btn:active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+
+    /* ── Word def modal ── */
+    .ww-def-word {
+      font-size: 24px;
+      font-weight: 800;
+      color: #f8fafc;
+      padding: 20px 24px 4px;
+    }
+    .ww-def-pos {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #3b82f6;
+      padding: 0 24px 16px;
+    }
+    .ww-def-text {
+      font-size: 16px;
+      color: #cbd5e1;
+      line-height: 1.65;
+      padding: 0 24px 24px;
+    }
+    .ww-no-def {
+      font-size: 14px;
+      color: #475569;
+      font-style: italic;
+      padding: 0 24px 24px;
     }
 
     /* ── Timer done overlay ── */
@@ -747,7 +865,80 @@
     <div id="matsBody">
       <div class="mat-empty">No materials loaded</div>
     </div>
+    <div style="display:flex;align-items:center;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(51,65,85,0.35);">
+      <button class="abtn" onclick="zoomMat(-0.1)" style="font-size:16px;line-height:1;">−</button>
+      <div id="zoomLabel" style="flex:1;text-align:center;font-size:11px;font-weight:700;color:#475569;letter-spacing:0.06em;">100%</div>
+      <button class="abtn" onclick="zoomMat(0.1)"  style="font-size:16px;line-height:1;">+</button>
+      <button class="abtn" onclick="zoomMat(0)"    style="font-size:10px;font-weight:700;">↺</button>
+    </div>
     <button class="att-open-btn" style="margin-top:6px;" onclick="openDisplayPresets()">📂 Load Set</button>
+  </div>
+</div>
+
+<!-- Clock Widget -->
+<div class="widget" id="clockWidget">
+  <div class="widget-handle" id="clockHandle">
+    <div class="grip">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <div class="widget-label">Clock</div>
+  </div>
+  <div class="widget-body">
+    <div class="clock-date"     id="clockDay"></div>
+    <div class="clock-date-full" id="clockDate"></div>
+    <div class="clock-time-wrap" id="clockTimeWrap" onclick="toggleClockTime()">
+      <div class="clock-time" id="clockTime"></div>
+    </div>
+    <button class="clock-show-btn" id="clockShowBtn" onclick="toggleClockTime()" style="display:none;">Show Time</button>
+  </div>
+</div>
+
+<!-- Word Wall Widget -->
+<div class="widget" id="wordWallWidget" style="width:230px;">
+  <div class="widget-handle" id="wordWallHandle">
+    <div class="grip">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <div class="widget-label">Word Wall</div>
+  </div>
+  <div class="widget-body" style="padding:10px;max-height:300px;overflow-y:auto;" id="wwBody">
+    <div class="mat-empty">No words loaded</div>
+  </div>
+  <div style="padding:0 10px 10px;">
+    <button class="att-open-btn" style="margin-top:0;" onclick="openWwLoadModal()">📂 Load List</button>
+  </div>
+</div>
+
+<!-- Word Wall Definition Modal -->
+<div class="att-overlay" id="wwDefOverlay" onclick="if(event.target===this)closeWwDef()">
+  <div class="att-modal" style="max-width:min(480px,92vw);">
+    <div class="att-header">
+      <div style="flex:1;">
+        <div class="ww-def-word" id="wwDefWord" style="padding:0;font-size:22px;font-weight:800;color:#f8fafc;"></div>
+        <div class="att-sub" id="wwDefPos" style="color:#3b82f6;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;font-size:11px;margin-top:2px;"></div>
+      </div>
+      <button class="att-close" onclick="closeWwDef()">✕</button>
+    </div>
+    <div id="wwDefText" style="padding:16px 20px 20px;font-size:16px;color:#cbd5e1;line-height:1.65;"></div>
+  </div>
+</div>
+
+<!-- Word Wall Load List Modal -->
+<div class="att-overlay" id="wwLoadOverlay" onclick="if(event.target===this)closeWwLoadModal()">
+  <div class="att-modal">
+    <div class="att-header">
+      <div>
+        <div class="att-title">Load Word List</div>
+        <div class="att-sub">Sets the active list for everyone</div>
+      </div>
+      <button class="att-close" onclick="closeWwLoadModal()">✕</button>
+    </div>
+    <div class="att-list" id="wwLoadList"></div>
+    <div class="att-footer">
+      <button class="att-save-btn" onclick="closeWwLoadModal()">Close</button>
+    </div>
   </div>
 </div>
 
@@ -887,12 +1078,51 @@
     const pw = document.getElementById('pickerWidget');
     const cw = document.getElementById('classWidget');
     const mw = document.getElementById('matsWidget');
+    const dw = document.getElementById('clockWidget');
+    const ww = document.getElementById('wordWallWidget');
     const cy = Math.round((window.innerHeight - tw.offsetHeight) / 2);
-    makeDraggable(tw, document.getElementById('timerHandle'),  'timer',  16, cy);
-    makeDraggable(pw, document.getElementById('pickerHandle'), 'picker', window.innerWidth - pw.offsetWidth - 16, cy);
-    makeDraggable(cw, document.getElementById('classHandle'),  'class',  Math.round((window.innerWidth - cw.offsetWidth) / 2), window.innerHeight - cw.offsetHeight - 16);
-    makeDraggable(mw, document.getElementById('matsHandle'),   'mats',   Math.round((window.innerWidth - mw.offsetWidth) / 2), 16);
+    makeDraggable(tw, document.getElementById('timerHandle'),      'timer',    16, cy);
+    makeDraggable(pw, document.getElementById('pickerHandle'),     'picker',   window.innerWidth - pw.offsetWidth - 16, cy);
+    makeDraggable(cw, document.getElementById('classHandle'),      'class',    Math.round((window.innerWidth - cw.offsetWidth) / 2), window.innerHeight - cw.offsetHeight - 16);
+    makeDraggable(mw, document.getElementById('matsHandle'),       'mats',     Math.round((window.innerWidth - mw.offsetWidth) / 2), 16);
+    makeDraggable(dw, document.getElementById('clockHandle'),      'clock',    window.innerWidth - dw.offsetWidth - 16, window.innerHeight - dw.offsetHeight - 16);
+    makeDraggable(ww, document.getElementById('wordWallHandle'),   'wordwall', window.innerWidth - ww.offsetWidth - 16, Math.round((window.innerHeight - ww.offsetHeight) / 2));
+    tickClock();
   });
+
+  // ── Clock ──────────────────────────────────────────────────
+  let clockTimeHidden = false;
+
+  function ordinal(n) {
+    const s = ['th','st','nd','rd'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  function tickClock() {
+    const now    = new Date();
+    const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    document.getElementById('clockDay').textContent  = days[now.getDay()];
+    document.getElementById('clockDate').textContent = `${months[now.getMonth()]} ${ordinal(now.getDate())}, ${now.getFullYear()}`;
+
+    const h   = now.getHours();
+    const m   = String(now.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12  = String(h % 12 || 12).padStart(2, '0');
+    document.getElementById('clockTime').textContent = `${h12}:${m} ${ampm}`;
+
+    // Schedule next tick at the top of the next second
+    const delay = 1000 - now.getMilliseconds();
+    setTimeout(tickClock, delay);
+  }
+
+  function toggleClockTime() {
+    clockTimeHidden = !clockTimeHidden;
+    document.getElementById('clockTimeWrap').style.display = clockTimeHidden ? 'none' : '';
+    document.getElementById('clockShowBtn').style.display  = clockTimeHidden ? ''     : 'none';
+  }
 
   // ── Audio alarm ────────────────────────────────────────────
   let alarmCtx = null;
@@ -1067,6 +1297,7 @@
     updateClassWidget();
     updateDeckInfo(s.deckRemaining, s.deckTotal);
     renderMaterialsWidget();
+    if (s.wordWall) { wwWords = s.wordWall.words || []; renderWwWidget(); }
   });
 
   socket.on('deck:update', ({ remaining, total }) => updateDeckInfo(remaining, total));
@@ -1151,6 +1382,39 @@
     setTimeout(() => { pickName.textContent = ''; }, 300);
   });
 
+  // ── Material zoom ──────────────────────────────────────────
+  const zoomMap = {}; // rawUrl → zoom level (default 1.0)
+
+  function zoomMat(delta) {
+    if (!activeRawUrl) return;
+    if (delta === 0) {
+      zoomMap[activeRawUrl] = 1.0;
+    } else {
+      const cur = zoomMap[activeRawUrl] || 1.0;
+      zoomMap[activeRawUrl] = Math.min(4.0, Math.max(0.3, Math.round((cur + delta) * 10) / 10));
+    }
+    applyMatZoom();
+  }
+
+  function applyMatZoom() {
+    const zoom   = zoomMap[activeRawUrl] || 1.0;
+    const iframe = iframeMap[activeRawUrl];
+    const label  = document.getElementById('zoomLabel');
+    if (label) label.textContent = Math.round(zoom * 100) + '%';
+    if (!iframe) return;
+    if (zoom === 1.0) {
+      iframe.style.transform       = '';
+      iframe.style.transformOrigin = '';
+      iframe.style.width           = '100%';
+      iframe.style.height          = '100%';
+    } else {
+      iframe.style.transformOrigin = 'top left';
+      iframe.style.width           = (100 / zoom) + '%';
+      iframe.style.height          = (100 / zoom) + '%';
+      iframe.style.transform       = `scale(${zoom})`;
+    }
+  }
+
   // ── Slides (multi-iframe — each material keeps its own iframe) ──
   const iframeMap    = {}; // rawUrl → iframe element
   const embedBaseMap = {}; // rawUrl → base embed URL (no slide params)
@@ -1160,6 +1424,12 @@
     const m = url.match(/src=["']([^"']+)["']/);
     if (m) url = m[1];
     if (url.includes('/embed')) return url;
+    // Google Doc: published format /d/e/{id}/pub → add embedded param
+    const docPub = url.match(/docs\.google\.com\/document\/d\/e\/([^/?#]+)/);
+    if (docPub) return `https://docs.google.com/document/d/e/${docPub[1]}/pub?embedded=true`;
+    // Migrate old Google Doc /preview URLs → /pub?embedded=true (no page margins)
+    const docPreview = url.match(/docs\.google\.com\/document\/d\/([^/?#]+)\/preview/);
+    if (docPreview) return `https://docs.google.com/document/d/${docPreview[1]}/pub?embedded=true`;
     const pub = url.match(/\/presentation\/d\/e\/([^/?#]+)/);
     if (pub) return `https://docs.google.com/presentation/d/e/${pub[1]}/embed`;
     const doc = url.match(/\/presentation\/d\/([^/?#]+)/);
@@ -1173,13 +1443,16 @@
     // Hide all existing iframes
     Object.values(iframeMap).forEach(f => f.style.display = 'none');
     if (iframeMap[rawUrl]) {
-      // Already loaded — just reveal it (position preserved)
+      // Already loaded — just reveal it (position + zoom preserved)
       ph.style.display = 'none';
       iframeMap[rawUrl].style.display = '';
     } else {
       // First time — create iframe
       let eu = toEmbedUrl(rawUrl);
-      if (!eu.includes('?')) eu += '?start=false&loop=false&delayms=3000';
+      // Only append Slides autoplay params for actual Slides embeds
+      if (eu.includes('presentation') && eu.includes('/embed') && !eu.includes('?')) {
+        eu += '?start=false&loop=false&delayms=3000';
+      }
       embedBaseMap[rawUrl] = eu;
       ph.style.display = 'none';
       const iframe = document.createElement('iframe');
@@ -1189,27 +1462,51 @@
       iframeMap[rawUrl] = iframe;
     }
     activeRawUrl = rawUrl;
+    applyMatZoom();
   }
 
   function navigateToSlide(n) {
     const iframe  = iframeMap[activeRawUrl];
     const baseUrl = embedBaseMap[activeRawUrl];
     if (!iframe || !baseUrl) return;
+    // Only navigate for Google Slides and Drive PDF previews
+    const isSlides = baseUrl.includes('docs.google.com/presentation');
+    const isDrive  = baseUrl.includes('drive.google.com/file');
+    if (!isSlides && !isDrive) return;
     const base  = baseUrl.replace(/[&?]slide=[^&]*|[&?]page=[^&]*/g, '');
     const sep   = base.includes('?') ? '&' : '?';
-    const param = baseUrl.includes('drive.google.com/file') ? `page=${n}` : `slide=id.p${n}`;
+    const param = isDrive ? `page=${n}` : `slide=id.p${n}`;
     iframe.src  = base + sep + param;
   }
 
-  socket.on('slides:update',   url   => { if (url) switchToMaterial(url); });
-  socket.on('slides:navigate', slide => navigateToSlide(slide));
+  function reloadMaterial(rawUrl) {
+    if (!rawUrl) return;
+    const iframe = iframeMap[rawUrl];
+    if (iframe) {
+      iframe.remove();
+      delete iframeMap[rawUrl];
+      delete embedBaseMap[rawUrl];
+    }
+    if (activeRawUrl === rawUrl) {
+      // Re-create immediately if it's the active one
+      switchToMaterial(rawUrl);
+    }
+    // Re-render widget so active state is preserved
+    renderMaterialsWidget();
+  }
+
+  socket.on('slides:update',    url   => { if (url) switchToMaterial(url); });
+  socket.on('slides:navigate',  slide => navigateToSlide(slide));
+  socket.on('material:reload',  url   => reloadMaterial(url));
 
   // ── Materials widget ────────────────────────────────────────
   const MAT_TYPES = [
-    { key: 'slides', label: 'Slides', bg: '#F9AB00', color: '#1a1a1a' },
-    { key: 'doc',    label: 'Doc',    bg: '#1a73e8', color: '#fff'    },
-    { key: 'pdf',    label: 'PDF',    bg: '#9f1239', color: '#fecdd3' },
-    { key: 'web',    label: 'Web',    bg: '#0d9488', color: '#fff'    },
+    { key: 'slides',  label: 'Slides',  bg: '#F9AB00', color: '#1a1a1a' },
+    { key: 'doc',     label: 'Doc',     bg: '#1a73e8', color: '#fff'    },
+    { key: 'form',    label: 'Form',    bg: '#7c3aed', color: '#fff'    },
+    { key: 'pdf',     label: 'PDF',     bg: '#9f1239', color: '#fecdd3' },
+    { key: 'youtube', label: 'YouTube', bg: '#ff0000', color: '#fff'    },
+    { key: 'web',     label: 'Web',     bg: '#f8fafc', color: '#1a1a1a' },
   ];
 
   function renderMaterialsWidget() {
@@ -1225,10 +1522,11 @@
       return;
     }
 
-    const byType = { slides: [], doc: [], pdf: [] };
+    const byType = {};
     mats.forEach(m => {
-      const k = (m.type || 'pdf').toLowerCase();
-      (byType[k] || byType.pdf).push(m);
+      const k = (m.type || 'web').toLowerCase();
+      if (!byType[k]) byType[k] = [];
+      byType[k].push(m);
     });
 
     MAT_TYPES.forEach(({ key, label, bg, color }) => {
@@ -1238,6 +1536,9 @@
         const t = (m.title || '').trim();
         const isUrl = !t || t.startsWith('http') || t.startsWith('www.') || t.includes('://');
         const display = isUrl ? btnLabel : t;
+        const row = document.createElement('div');
+        row.className = 'mat-row';
+
         const btn = document.createElement('button');
         btn.className = 'mat-btn' + (m.url === activeRawUrl ? ' mat-active' : '');
         btn.style.cssText = `background:${bg};color:${color};border-color:${bg}`;
@@ -1247,7 +1548,16 @@
           document.querySelectorAll('.mat-btn').forEach(b => b.classList.remove('mat-active'));
           btn.classList.add('mat-active');
         };
-        body.appendChild(btn);
+
+        const rl = document.createElement('button');
+        rl.className = 'mat-reload-btn';
+        rl.textContent = '↺';
+        rl.title = 'Reload';
+        rl.onclick = () => reloadMaterial(m.url);
+
+        row.appendChild(btn);
+        row.appendChild(rl);
+        body.appendChild(row);
       });
     });
   }
@@ -1382,6 +1692,83 @@
     displayMaterialsOverride = null;
     renderMaterialsWidget();
     closeDisplayPresets();
+  }
+
+  // ── Word Wall ──────────────────────────────────────────────
+  let wwWords      = [];
+  let allWordLists = [];
+
+  socket.on('wordwall:update', ww => {
+    wwWords = ww.words || [];
+    renderWwWidget();
+  });
+
+  socket.on('wordlists:all', lists => {
+    allWordLists = lists || [];
+  });
+
+  function renderWwWidget() {
+    const body = document.getElementById('wwBody');
+    if (!body) return;
+    if (!wwWords.length) {
+      body.innerHTML = '<div class="mat-empty">No words loaded</div>';
+      return;
+    }
+    body.innerHTML = wwWords.map((w, i) =>
+      `<button class="ww-word-btn" onclick="openWwDef(${i})">${w.word}</button>`
+    ).join('');
+  }
+
+  function openWwDef(i) {
+    const w = wwWords[i];
+    if (!w) return;
+    document.getElementById('wwDefWord').textContent = w.word;
+    document.getElementById('wwDefPos').textContent  = w.partOfSpeech || '';
+    const textEl = document.getElementById('wwDefText');
+    if (w.definition) {
+      textEl.textContent = w.definition;
+      textEl.style.fontStyle = 'normal';
+      textEl.style.color = '#cbd5e1';
+    } else {
+      textEl.textContent = 'No definition available.';
+      textEl.style.fontStyle = 'italic';
+      textEl.style.color = '#475569';
+    }
+    document.getElementById('wwDefOverlay').classList.add('open');
+  }
+
+  function closeWwDef() {
+    document.getElementById('wwDefOverlay').classList.remove('open');
+  }
+
+  function openWwLoadModal() {
+    const list = document.getElementById('wwLoadList');
+    if (!allWordLists.length) {
+      list.innerHTML = '<div class="mat-empty" style="padding:16px 0;">No saved lists yet.</div>';
+    } else {
+      list.innerHTML = allWordLists.map(l => {
+        let count = 0;
+        try { count = JSON.parse(l.words).length; } catch {}
+        return `<div class="att-row present" style="cursor:pointer;" onclick="applyWwList('${l.id}')">
+          <span class="att-name">${l.name}</span>
+          <span class="att-badge present">${count} word${count !== 1 ? 's' : ''}</span>
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('wwLoadOverlay').classList.add('open');
+  }
+
+  function closeWwLoadModal() {
+    document.getElementById('wwLoadOverlay').classList.remove('open');
+  }
+
+  function applyWwList(id) {
+    const l = allWordLists.find(x => x.id === id);
+    if (!l) return;
+    let words = [];
+    try { words = JSON.parse(l.words); } catch {}
+    socket.emit('wordwall:set-words', { words, listName: l.name });
+    closeWwLoadModal();
   }
 </script>
 </body>

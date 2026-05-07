@@ -12,6 +12,38 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/controller', (req, res) => res.sendFile(path.join(__dirname, 'public', 'controller.html')));
 app.get('/display',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'display.html')));
 
+app.get('/api/proxy', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).send('');
+  try {
+    const target = new URL(url);
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      signal: AbortSignal.timeout(10000),
+      redirect: 'follow',
+    });
+    const contentType = r.headers.get('content-type') || 'text/html';
+    const skip = new Set(['x-frame-options','content-security-policy','x-xss-protection','transfer-encoding','connection','keep-alive']);
+    r.headers.forEach((v, k) => { if (!skip.has(k.toLowerCase())) { try { res.setHeader(k, v); } catch (_) {} } });
+    res.setHeader('content-type', contentType);
+    if (contentType.includes('text/html')) {
+      let html = await r.text();
+      // Inject <base> so relative URLs resolve against the original origin
+      const base = target.href.replace(/\/[^/]*$/, '/');
+      const baseTag = `<base href="${base}">`;
+      if (!html.includes('<base')) html = html.replace(/<head[^>]*>/i, m => m + baseTag);
+      res.send(html);
+    } else {
+      res.send(Buffer.from(await r.arrayBuffer()));
+    }
+  } catch (e) {
+    res.status(502).send(`<!DOCTYPE html><html><body style="background:#111;color:#475569;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;font-size:14px;flex-direction:column;gap:8px;"><span style="font-size:28px;">⚠</span><span>Could not load page</span></body></html>`);
+  }
+});
+
 app.get('/api/fetch-title', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.json({ title: '' });
@@ -25,6 +57,25 @@ app.get('/api/fetch-title', async (req, res) => {
     res.json({ title });
   } catch {
     res.json({ title: '' });
+  }
+});
+
+app.get('/api/define', async (req, res) => {
+  const { word } = req.query;
+  if (!word) return res.json({ definition: '', partOfSpeech: '' });
+  try {
+    const r = await fetch(
+      `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.trim().toLowerCase())}`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!r.ok) return res.json({ definition: '', partOfSpeech: '' });
+    const data = await r.json();
+    const meaning = data?.[0]?.meanings?.[0];
+    const definition  = meaning?.definitions?.[0]?.definition || '';
+    const partOfSpeech = meaning?.partOfSpeech || '';
+    res.json({ definition, partOfSpeech });
+  } catch {
+    res.json({ definition: '', partOfSpeech: '' });
   }
 });
 
@@ -53,6 +104,13 @@ async function initDB() {
       materials TEXT DEFAULT '[]'
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS word_lists (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      words TEXT DEFAULT '[]'
+    )
+  `);
   const { rows } = await pool.query('SELECT COUNT(*) FROM rosters');
   if (parseInt(rows[0].count) === 0) {
     const id = Date.now().toString(36);
@@ -61,6 +119,11 @@ async function initDB() {
       [id, 'Period 1', '[]', '', 0]
     );
   }
+}
+
+async function getAllWordLists() {
+  const { rows } = await pool.query('SELECT * FROM word_lists ORDER BY name');
+  return rows.map(r => ({ id: r.id, name: r.name, words: r.words }));
 }
 
 async function getAllPresets() {
@@ -77,7 +140,7 @@ async function getAllRosters() {
 
 function parseStudents(raw) {
   if (!raw) return [];
-  const base = { firstName:'', lastName:'', attendance:'present', anchor:false, enl:false, introvert:false, gender:'', conflict:'', distractor:false, picks:0 };
+  const base = { firstName:'', lastName:'', attendance:'present', anchor:false, enl:false, introvert:false, gender:'', conflict:'', distractor:false, picks:0, lexile:'' };
   try {
     const p = JSON.parse(raw);
     if (Array.isArray(p)) return p.map(s => {
@@ -125,6 +188,7 @@ const state = {
   slides: { url: '', slide: 1 },
   activeRosterId: null,
   activeRosterName: '',
+  wordWall: { words: [], listName: '' },
 };
 
 // Deck — shuffled list ensuring no repeats until everyone is called
@@ -173,6 +237,8 @@ io.on('connection', async (socket) => {
   }
   socket.emit('state', { ...state, rosters, deckRemaining: pickDeck.length, deckTotal });
   socket.emit('presets:all', await getAllPresets());
+  socket.emit('wordlists:all', await getAllWordLists());
+  socket.emit('wordwall:update', state.wordWall);
 
   // ── Timer ──
   socket.on('timer:set', (seconds) => {
@@ -321,7 +387,11 @@ io.on('connection', async (socket) => {
     state.slides.url   = url;
     state.slides.slide = 1;
     io.emit('slides:update', url);
-    io.emit('slides:navigate', 1);
+    // Do NOT emit slides:navigate — preserve existing iframe position
+  });
+
+  socket.on('material:reload', (url) => {
+    io.emit('material:reload', url);
   });
 
   socket.on('slides:prev', () => {
@@ -351,6 +421,30 @@ io.on('connection', async (socket) => {
       await pool.query('DELETE FROM material_presets WHERE id=$1', [id]);
       io.emit('presets:all', await getAllPresets());
     } catch (e) { console.error('presets:delete', e); }
+  });
+
+  // ── Word Wall ──
+  socket.on('wordwall:set-words', (payload) => {
+    state.wordWall = { words: payload.words || [], listName: payload.listName || '' };
+    io.emit('wordwall:update', state.wordWall);
+  });
+
+  socket.on('wordwall:save-list', async ({ id, name, words }) => {
+    try {
+      await pool.query(
+        `INSERT INTO word_lists (id,name,words) VALUES ($1,$2,$3)
+         ON CONFLICT (id) DO UPDATE SET name=$2, words=$3`,
+        [id, name, words]
+      );
+      io.emit('wordlists:all', await getAllWordLists());
+    } catch (e) { console.error('wordwall:save-list', e); }
+  });
+
+  socket.on('wordwall:delete-list', async (id) => {
+    try {
+      await pool.query('DELETE FROM word_lists WHERE id=$1', [id]);
+      io.emit('wordlists:all', await getAllWordLists());
+    } catch (e) { console.error('wordwall:delete-list', e); }
   });
 
   // ── Force Pick ──

@@ -329,10 +329,12 @@
       letter-spacing: 0.05em;
       flex-shrink: 0;
     }
-    .mat-slides { background: #F9AB00; color: #1a1a1a; }
-    .mat-doc    { background: #1a73e8; color: #fff; }
-    .mat-pdf    { background: #9f1239; color: #fca5a5; }
-    .mat-web    { background: #0d9488; color: #fff; }
+    .mat-slides  { background: #F9AB00; color: #1a1a1a; }
+    .mat-doc     { background: #1a73e8; color: #fff; }
+    .mat-pdf     { background: #9f1239; color: #fca5a5; }
+    .mat-form    { background: #7c3aed; color: #fff; }
+    .mat-youtube { background: #ff0000; color: #fff; }
+    .mat-web     { background: #f1f5f9; color: #1a1a1a; border: 1px solid #94a3b8; }
 
     /* ── Preset list rows ── */
     .preset-row {
@@ -486,6 +488,193 @@
     .manage-name-row input:focus { outline: none; border-color: #3b82f6; }
     .manage-hint { font-size: 11px; color: #475569; margin-top: 6px; }
     .danger-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid #334155; }
+
+    /* ── Roster spreadsheet ── */
+    .roster-table-wrap {
+      overflow: auto;
+      flex: 1;
+    }
+    .roster-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .roster-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #0f172a;
+      padding: 8px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #64748b;
+      border-bottom: 2px solid #334155;
+      white-space: nowrap;
+    }
+    .roster-table td {
+      padding: 3px 3px;
+      border-bottom: 1px solid #1e293b;
+      vertical-align: middle;
+    }
+    .roster-table tbody tr:hover td { background: rgba(255,255,255,0.025); }
+    .roster-cell-input {
+      width: 100%;
+      padding: 6px 7px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      color: #e2e8f0;
+      font-size: 13px;
+      font-family: inherit;
+      transition: border-color 0.1s, background 0.1s;
+    }
+    .roster-cell-input:focus {
+      outline: none;
+      background: #1e293b;
+      border-color: #3b82f6;
+    }
+    .roster-cell-check {
+      text-align: center;
+    }
+    .roster-cell-check input[type="checkbox"] {
+      width: 17px; height: 17px;
+      accent-color: #3b82f6;
+      cursor: pointer;
+      display: block;
+      margin: 0 auto;
+    }
+    .roster-gender-cell { display: flex; gap: 2px; }
+    .rgbtn {
+      flex: 1; padding: 5px 0;
+      border-radius: 4px; border: 1px solid #334155;
+      background: #0f172a; color: #475569;
+      font-size: 11px; font-weight: 700;
+      cursor: pointer; transition: all 0.1s;
+      text-align: center;
+    }
+    .rgbtn.m-on { background: #1e40af; border-color: #1e40af; color: #93c5fd; }
+    .rgbtn.f-on { background: #9d174d; border-color: #9d174d; color: #fbcfe8; }
+
+    /* ── Conflict picker ── */
+    .conflict-cell {
+      min-height: 30px;
+      padding: 4px 6px;
+      border-radius: 5px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      align-items: center;
+      transition: border-color 0.1s, background 0.1s;
+      min-width: 80px;
+    }
+    .conflict-cell:hover  { background: #1e293b; border-color: #334155; }
+    .conflict-cell.active { background: #1e293b; border-color: #3b82f6; }
+    .conflict-chip {
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(239,68,68,0.15);
+      color: #f87171;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .conflict-empty { color: #334155; font-size: 12px; }
+
+    .conflict-dropdown {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+      min-width: 190px;
+      max-height: 260px;
+      overflow-y: auto;
+      padding: 5px;
+    }
+    .conflict-opt {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #94a3b8;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+    }
+    .conflict-opt:hover { background: rgba(255,255,255,0.06); }
+    .conflict-opt.sel   { color: #e2e8f0; }
+    .conflict-opt-dot {
+      width: 18px; height: 18px; flex-shrink: 0;
+      border-radius: 5px;
+      border: 1.5px solid #475569;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; transition: all 0.1s;
+    }
+    .conflict-opt.sel .conflict-opt-dot { background: #dc2626; border-color: #dc2626; color: #fff; }
+
+    /* ── Word Wall ── */
+    .ww-word-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      background: #0f172a;
+      border-radius: 7px;
+      border: 1px solid #334155;
+      margin-bottom: 4px;
+    }
+    .ww-word-row:last-child { margin-bottom: 0; }
+    .ww-word-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #e2e8f0;
+      min-width: 90px;
+      flex-shrink: 0;
+    }
+    .ww-word-def {
+      font-size: 11px;
+      color: #475569;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ww-remove-btn {
+      background: none;
+      border: none;
+      color: #475569;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 0 2px;
+      flex-shrink: 0;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .ww-remove-btn:hover { color: #ef4444; }
+    .ww-add-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .ww-add-row input {
+      flex: 1;
+      padding: 8px 10px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 7px;
+      color: #e2e8f0;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .ww-add-row input:focus { outline: none; border-color: #3b82f6; }
+    .ww-add-btn-wrap { display: flex; gap: 4px; flex-shrink: 0; }
+    .ww-fetching { color: #475569; font-size: 11px; text-align: center; padding: 4px 0; }
   </style>
 </head>
 <body>
@@ -495,7 +684,10 @@
 
     <!-- Classes (compact top) -->
     <div class="card">
-      <div class="card-title">Classes</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title" style="margin-bottom:0">Classes</div>
+        <button class="btn btn-gray btn-sm" style="flex:none;" onclick="openRoster()">Roster</button>
+      </div>
       <div class="classes-row" id="classesTabs"></div>
     </div>
 
@@ -589,26 +781,77 @@
         <button class="btn btn-gray btn-sm" style="flex:none;" onclick="openPresetsModal()">Sets ▾</button>
       </div>
       <div id="materialsListEl"></div>
-      <button class="add-btn" onclick="toggleAddForm()">+ Add Material</button>
+      <button class="add-btn" id="matAddBtn" onclick="openAddMaterialForm()">+ Add Material</button>
       <div class="mat-add-form" id="matAddForm">
-        <input type="url" id="matUrl" placeholder="Paste URL (Slides, Doc, PDF, or any website)…" oninput="matAutoDetect()" onblur="matFetchTitle()">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;" id="matFormLabel">Add Material</div>
+        <input type="url" id="matUrl" placeholder="Paste URL…" oninput="matAutoDetect()" onblur="matFetchTitle()">
         <div class="mat-form-row">
           <select id="matType" style="flex:1;">
             <option value="slides">Google Slides</option>
             <option value="doc">Google Doc</option>
+            <option value="form">Google Form</option>
             <option value="pdf">PDF / Drive</option>
+            <option value="youtube">YouTube</option>
             <option value="web">Website</option>
           </select>
           <input type="text" id="matTitle" placeholder="Title (optional)" style="flex:2;">
         </div>
         <div class="mat-form-row">
-          <button class="btn btn-blue btn-sm" onclick="confirmAddMaterial()">Add</button>
+          <button class="btn btn-blue btn-sm" id="matConfirmBtn" onclick="confirmAddMaterial()">Add</button>
           <button class="btn btn-gray btn-sm" onclick="cancelAddForm()">Cancel</button>
         </div>
       </div>
     </div>
 
+    <!-- Word Wall -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title" style="margin-bottom:0">Word Wall</div>
+        <button class="btn btn-gray btn-sm" style="flex:none;" onclick="openWordSetsModal()">Sets ▾</button>
+      </div>
+      <div id="wwWordList"></div>
+      <div id="wwFetchStatus" class="ww-fetching" style="display:none;">Fetching definition…</div>
+      <div class="ww-add-row">
+        <input type="text" id="wwWordInput" placeholder="Add a word…"
+          onkeydown="if(event.key==='Enter')addWordWallWord()">
+        <div class="ww-add-btn-wrap">
+          <button class="btn btn-blue btn-sm" onclick="addWordWallWord()">Add</button>
+        </div>
+      </div>
+    </div>
+
   </div><!-- end sections -->
+
+  <!-- Roster Modal -->
+  <div class="overlay" id="rosterOverlay" onclick="rosterOverlayClick(event)">
+    <div class="modal" style="max-width:min(96vw,800px);max-height:90vh;display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <span class="modal-title" id="rosterModalTitle">Roster</span>
+        <span class="save-status" id="rosterSaveStatus" style="margin-right:8px;"></span>
+        <button class="modal-close" onclick="closeRoster()">✕</button>
+      </div>
+      <div style="flex:1;overflow:auto;display:flex;flex-direction:column;min-height:0;">
+        <div class="roster-table-wrap">
+          <table class="roster-table">
+            <thead>
+              <tr>
+                <th style="min-width:90px;">First</th>
+                <th style="min-width:90px;">Last</th>
+                <th style="min-width:65px;">Lexile</th>
+                <th style="min-width:60px;">Gender</th>
+                <th title="Anchor">A</th>
+                <th title="Distractor">D</th>
+                <th title="ENL">ENL</th>
+                <th title="Introvert">I</th>
+                <th style="min-width:120px;">Conflict</th>
+              </tr>
+            </thead>
+            <tbody id="rosterTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Material Sets Modal -->
   <div class="overlay" id="presetsOverlay" onclick="presetsOverlayClick(event)">
@@ -662,6 +905,24 @@
     </div>
   </div>
 
+  <!-- Word Sets Modal -->
+  <div class="overlay" id="wordSetsOverlay" onclick="wordSetsOverlayClick(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Word Lists</span>
+        <button class="modal-close" onclick="closeWordSetsModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+          <input type="text" id="wwSetNameInput" placeholder="Name this list…"
+            style="flex:1;padding:8px 10px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#e2e8f0;font-size:13px;font-family:inherit;">
+          <button class="btn btn-teal btn-sm" style="flex:none;white-space:nowrap;" onclick="saveWordList()">Save Current</button>
+        </div>
+        <div id="wordSetsList"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Manage Students Modal -->
   <div class="overlay" id="manageOverlay" onclick="manageOverlayClick(event)">
     <div class="modal">
@@ -687,6 +948,9 @@
     </div>
   </div>
 
+  <!-- Conflict picker dropdown (fixed, outside any overflow container) -->
+  <div id="conflictDropdown" class="conflict-dropdown" style="display:none;position:fixed;z-index:300;"></div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
@@ -711,7 +975,7 @@
 
     function parseStudentsClient(raw) {
       if (!raw) return [];
-      const base = { firstName:'', lastName:'', attendance:'present', picks:0 };
+      const base = { firstName:'', lastName:'', attendance:'present', picks:0, lexile:'', anchor:false, distractor:false, enl:false, introvert:false, gender:'', conflict:'' };
       try {
         const p = JSON.parse(raw);
         if (Array.isArray(p)) return p.map(s => {
@@ -828,6 +1092,7 @@
       startPauseBtn.textContent = timerRunning ? 'Pause' : 'Start';
       if (s.deckRemaining !== undefined) updateDeckBadge(s.deckRemaining, s.deckTotal);
       initRosters(s.rosters, s.activeRosterId);
+      if (s.wordWall) { wwWords = s.wordWall.words || []; renderWwWordList(); }
     });
 
     socket.on('timer:update', (t) => {
@@ -848,6 +1113,10 @@
       startPauseBtn.textContent = 'Start';
       updateTimerDisplay();
     });
+
+    // ── Word Wall state (declared early — referenced in state handler) ──
+    let wwWords      = [];
+    let allWordLists = [];
 
     // ── Rosters / Classes ──────────────────────────────────
     let rosters  = {};
@@ -1370,7 +1639,9 @@
     function detectType(url) {
       if (url.includes('docs.google.com/presentation')) return 'slides';
       if (url.includes('docs.google.com/document'))     return 'doc';
+      if (url.includes('docs.google.com/forms'))        return 'form';
       if (url.includes('drive.google.com/file') || /\.pdf($|\?)/.test(url)) return 'pdf';
+      if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
       return 'web';
     }
 
@@ -1388,8 +1659,17 @@
     function toMaterialEmbed(url, type) {
       if (type === 'slides') return toEmbedUrl(url);
       if (type === 'doc') {
-        const m = url.match(/\/document\/d\/([^/?#]+)/);
-        if (m) return `https://docs.google.com/document/d/${m[1]}/preview`;
+        const pubMatch = url.match(/\/document\/d\/e\/([^/?#]+)/);
+        if (pubMatch) return `https://docs.google.com/document/d/e/${pubMatch[1]}/pub?embedded=true`;
+        const docMatch = url.match(/\/document\/d\/([^/?#]+)/);
+        if (docMatch) return `https://docs.google.com/document/d/${docMatch[1]}/pub?embedded=true`;
+        return url;
+      }
+      if (type === 'form') {
+        const pubMatch = url.match(/\/forms\/d\/e\/([^/?#]+)/);
+        if (pubMatch) return `https://docs.google.com/forms/d/e/${pubMatch[1]}/viewform?embedded=true`;
+        const formMatch = url.match(/\/forms\/d\/([^/?#]+)/);
+        if (formMatch) return `https://docs.google.com/forms/d/${formMatch[1]}/viewform?embedded=true`;
         return url;
       }
       if (type === 'pdf') {
@@ -1397,7 +1677,19 @@
         if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
         return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
       }
-      return url; // 'web' and anything else: use URL as-is
+      if (type === 'youtube') {
+        // youtu.be/{id} or ?v={id} or /embed/{id}
+        const short = url.match(/youtu\.be\/([^?#]+)/);
+        if (short) return `https://www.youtube.com/embed/${short[1]}`;
+        const watch = url.match(/[?&]v=([^&]+)/);
+        if (watch) return `https://www.youtube.com/embed/${watch[1]}`;
+        if (url.includes('/embed/')) return url;
+        return url;
+      }
+      if (type === 'web') {
+        return `/api/proxy?url=${encodeURIComponent(url)}`;
+      }
+      return url;
     }
 
     function matAutoDetect() {
@@ -1442,19 +1734,46 @@
           <span class="mat-type-badge mat-${m.type}">${m.type.toUpperCase()}</span>
           <span class="mat-title">${escHtml(m.title || m.url)}</span>
           <div class="mat-btns">
-            <button class="mat-btn mat-push" onclick="pushMaterial(${i})">▶</button>
-            <button class="mat-btn mat-del"  onclick="removeMaterial(${i})">✕</button>
+            <button class="mat-btn mat-push" onclick="pushMaterial(${i})"   title="Show on display">▶</button>
+            <button class="mat-btn mat-del"  onclick="reloadMaterial(${i})" title="Reload" style="background:#1e293b;color:#94a3b8;">↺</button>
+            <button class="mat-btn mat-del"  onclick="editMaterial(${i})"   title="Edit"   style="background:#1e3a5f;color:#60a5fa;">✏</button>
+            <button class="mat-btn mat-del"  onclick="removeMaterial(${i})" title="Remove">✕</button>
           </div>
         </div>`).join('');
     }
 
-    function toggleAddForm() {
+    let editMatIdx = -1;
+
+    function openAddMaterialForm() {
+      editMatIdx = -1;
+      document.getElementById('matUrl').value   = '';
+      document.getElementById('matTitle').value = '';
+      document.getElementById('matType').value  = 'slides';
+      document.getElementById('matFormLabel').textContent  = 'Add Material';
+      document.getElementById('matConfirmBtn').textContent = 'Add';
       const form = document.getElementById('matAddForm');
-      form.classList.toggle('open');
-      if (form.classList.contains('open')) document.getElementById('matUrl').focus();
+      form.classList.add('open');
+      document.getElementById('matUrl').focus();
+    }
+
+    function editMaterial(i) {
+      const list = getMaterials();
+      const m = list[i];
+      if (!m) return;
+      editMatIdx = i;
+      document.getElementById('matUrl').value   = m.originalUrl || m.url;
+      document.getElementById('matTitle').value = (m.title && m.title !== m.url && m.title !== m.originalUrl) ? m.title : '';
+      document.getElementById('matType').value  = m.type || 'web';
+      document.getElementById('matFormLabel').textContent  = 'Edit Material';
+      document.getElementById('matConfirmBtn').textContent = 'Save';
+      const form = document.getElementById('matAddForm');
+      form.classList.add('open');
+      form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      document.getElementById('matTitle').focus();
     }
 
     function cancelAddForm() {
+      editMatIdx = -1;
       document.getElementById('matAddForm').classList.remove('open');
       document.getElementById('matUrl').value   = '';
       document.getElementById('matTitle').value = '';
@@ -1467,10 +1786,21 @@
       const title = document.getElementById('matTitle').value.trim() || url;
       const embed = toMaterialEmbed(url, type);
       const list  = getMaterials();
-      list.push({ id: uid(), type, title, url: embed });
+      if (editMatIdx >= 0) {
+        list[editMatIdx] = { ...list[editMatIdx], type, title, url: embed, originalUrl: url };
+        editMatIdx = -1;
+      } else {
+        list.push({ id: uid(), type, title, url: embed, originalUrl: url });
+      }
       saveMaterials(list);
       renderMaterials();
       cancelAddForm();
+    }
+
+    function reloadMaterial(i) {
+      const list = getMaterials();
+      if (!list[i]) return;
+      socket.emit('material:reload', list[i].url);
     }
 
     function removeMaterial(i) {
@@ -1551,6 +1881,353 @@
       const p = allPresets.find(x => x.id === id);
       if (!p || !confirm(`Delete set "${p.name}"?`)) return;
       socket.emit('presets:delete', id);
+    }
+
+    // ── Roster Modal (spreadsheet) ────────────────────────────
+    let rosterStudents  = [];
+    let rosterSaveTimer = null;
+    let conflictLabels  = {}; // fullName → chip label
+
+    // Returns array from conflict field (handles legacy string or array)
+    function parseConflict(raw) {
+      if (!raw) return [];
+      if (Array.isArray(raw)) return raw;
+      try { const p = JSON.parse(raw); if (Array.isArray(p)) return p; } catch {}
+      return [];
+    }
+
+    // Builds a map: fullName → shortest unique chip label within the roster
+    function buildConflictLabels(students) {
+      const labels = {};
+      const groups = {}; // firstName → [indices]
+      students.forEach((s, i) => {
+        const fn = (s.firstName || '').trim();
+        (groups[fn] = groups[fn] || []).push(i);
+      });
+      students.forEach((s, i) => {
+        const fn   = (s.firstName || '').trim();
+        const ln   = (s.lastName  || '').trim();
+        const full = fullNameClient(s);
+        const grp  = groups[fn];
+        if (grp.length <= 1) { labels[full] = fn || full; return; }
+        // Find min last-name prefix that distinguishes this student from all siblings
+        const siblings = grp.filter(j => j !== i).map(j => (students[j].lastName || '').trim());
+        let len;
+        for (len = 1; len <= ln.length; len++) {
+          if (!siblings.some(sl => sl.slice(0, len) === ln.slice(0, len))) break;
+        }
+        const suffix = ln.slice(0, Math.min(len, ln.length));
+        labels[full] = suffix ? `${fn} ${suffix}` : (fn || full);
+      });
+      return labels;
+    }
+
+    function openRoster() {
+      const r = rosters[activeId];
+      if (!r) return;
+      rosterStudents = parseStudentsClient(r.students).map(s => ({
+        lexile:'', anchor:false, distractor:false, enl:false, introvert:false, gender:'', conflict:[],
+        ...s,
+        conflict: parseConflict(s.conflict)
+      }));
+      conflictLabels = buildConflictLabels(rosterStudents);
+      document.getElementById('rosterModalTitle').textContent = `Roster — ${r.name}`;
+      document.getElementById('rosterSaveStatus').textContent = '';
+      renderRosterTable();
+      document.getElementById('rosterOverlay').classList.add('open');
+    }
+
+    function closeRoster() {
+      closeConflictPicker();
+      if (rosterSaveTimer) { clearTimeout(rosterSaveTimer); commitRosterSave(); }
+      document.getElementById('rosterOverlay').classList.remove('open');
+    }
+
+    function rosterOverlayClick(e) {
+      if (e.target === document.getElementById('rosterOverlay')) closeRoster();
+    }
+
+    function conflictChipsHtml(conflicts) {
+      if (!conflicts.length) return '<span class="conflict-empty">—</span>';
+      return conflicts.map(name =>
+        `<span class="conflict-chip">${escHtml(conflictLabels[name] || name.split(' ')[0])}</span>`
+      ).join('');
+    }
+
+    function renderRosterTable() {
+      const tbody = document.getElementById('rosterTableBody');
+      if (!rosterStudents.length) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:#475569;font-size:12px;">No students yet — add them via ✏</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rosterStudents.map((s, i) => {
+        const g        = (s.gender || '').toLowerCase();
+        const conflicts = parseConflict(s.conflict);
+        return `<tr>
+          <td><input class="roster-cell-input" value="${escAttr(s.firstName||'')}" placeholder="First" oninput="rosterCellChange(${i},'firstName',this.value)"></td>
+          <td><input class="roster-cell-input" value="${escAttr(s.lastName||'')}"  placeholder="Last"  oninput="rosterCellChange(${i},'lastName',this.value)"></td>
+          <td><input class="roster-cell-input" value="${escAttr(s.lexile||'')}"    placeholder="—"     oninput="rosterCellChange(${i},'lexile',this.value)" style="max-width:70px;"></td>
+          <td>
+            <div class="roster-gender-cell" id="rg_${i}" data-g="${escAttr(g)}">
+              <button class="rgbtn${g==='m' ? ' m-on' : ''}" onclick="rosterGenderToggle(${i},'m')">M</button>
+              <button class="rgbtn${g==='f' ? ' f-on' : ''}" onclick="rosterGenderToggle(${i},'f')">F</button>
+            </div>
+          </td>
+          <td class="roster-cell-check"><input type="checkbox" ${s.anchor     ? 'checked':''} onchange="rosterCellChange(${i},'anchor',this.checked)"></td>
+          <td class="roster-cell-check"><input type="checkbox" ${s.distractor ? 'checked':''} onchange="rosterCellChange(${i},'distractor',this.checked)"></td>
+          <td class="roster-cell-check"><input type="checkbox" ${s.enl        ? 'checked':''} onchange="rosterCellChange(${i},'enl',this.checked)"></td>
+          <td class="roster-cell-check"><input type="checkbox" ${s.introvert  ? 'checked':''} onchange="rosterCellChange(${i},'introvert',this.checked)"></td>
+          <td>
+            <div class="conflict-cell" id="cc_${i}" onclick="openConflictPicker(event,${i})">
+              ${conflictChipsHtml(conflicts)}
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function rosterCellChange(i, field, value) {
+      if (rosterStudents[i]) {
+        rosterStudents[i][field] = value;
+        // Rebuild labels if a name changed
+        if (field === 'firstName' || field === 'lastName') {
+          conflictLabels = buildConflictLabels(rosterStudents);
+          // Refresh all conflict chips
+          rosterStudents.forEach((_, j) => refreshConflictCell(j));
+        }
+      }
+      scheduleRosterSave();
+    }
+
+    function rosterGenderToggle(i, g) {
+      const wrap = document.getElementById(`rg_${i}`);
+      if (!wrap) return;
+      const newG = wrap.dataset.g === g ? '' : g;
+      wrap.dataset.g = newG;
+      const [btnM, btnF] = wrap.querySelectorAll('.rgbtn');
+      btnM.className = 'rgbtn' + (newG === 'm' ? ' m-on' : '');
+      btnF.className = 'rgbtn' + (newG === 'f' ? ' f-on' : '');
+      if (rosterStudents[i]) rosterStudents[i].gender = newG;
+      scheduleRosterSave();
+    }
+
+    // ── Conflict picker ───────────────────────────────────────
+    let conflictPickerIdx = -1;
+
+    function openConflictPicker(e, i) {
+      e.stopPropagation();
+      const dd = document.getElementById('conflictDropdown');
+
+      // Toggle off if same cell
+      if (conflictPickerIdx === i && dd.style.display !== 'none') {
+        closeConflictPicker(); return;
+      }
+
+      conflictPickerIdx = i;
+      document.querySelectorAll('.conflict-cell').forEach(c => c.classList.remove('active'));
+      document.getElementById(`cc_${i}`)?.classList.add('active');
+
+      const selected = parseConflict(rosterStudents[i]?.conflict);
+      const others   = rosterStudents.map((s, j) => ({ s, j })).filter(({ j }) => j !== i);
+
+      dd.innerHTML = others.length
+        ? others.map(({ s, j }) => {
+            const full = fullNameClient(s);
+            const sel  = selected.includes(full);
+            return `<div class="conflict-opt${sel ? ' sel' : ''}" data-name="${escAttr(full)}" onclick="toggleConflict(${i},'${escAttr(full)}')">
+              <div class="conflict-opt-dot">${sel ? '✓' : ''}</div>
+              ${escHtml(full)}
+            </div>`;
+          }).join('')
+        : `<div style="padding:8px 10px;font-size:12px;color:#475569;">No other students.</div>`;
+
+      // Measure then position
+      dd.style.visibility = 'hidden';
+      dd.style.display    = 'block';
+      const ddW = dd.offsetWidth;
+      const ddH = dd.offsetHeight;
+      dd.style.visibility = '';
+
+      const cell  = document.getElementById(`cc_${i}`);
+      const rect  = cell.getBoundingClientRect();
+      const below = window.innerHeight - rect.bottom - 8;
+      const top   = below >= ddH ? rect.bottom + 4 : Math.max(8, rect.top - ddH - 4);
+      const left  = Math.min(rect.left, window.innerWidth - ddW - 8);
+      dd.style.top  = Math.max(8, top)  + 'px';
+      dd.style.left = Math.max(8, left) + 'px';
+    }
+
+    function closeConflictPicker() {
+      conflictPickerIdx = -1;
+      document.getElementById('conflictDropdown').style.display = 'none';
+      document.querySelectorAll('.conflict-cell').forEach(c => c.classList.remove('active'));
+    }
+
+    function toggleConflict(i, name) {
+      if (!rosterStudents[i]) return;
+      const conflicts = parseConflict(rosterStudents[i].conflict);
+      const idx = conflicts.indexOf(name);
+      if (idx >= 0) conflicts.splice(idx, 1); else conflicts.push(name);
+      rosterStudents[i].conflict = conflicts;
+
+      // Update chip display
+      refreshConflictCell(i);
+
+      // Update just the toggled option in the dropdown (no full re-render = no flicker)
+      const opt = document.querySelector(`#conflictDropdown [data-name="${CSS.escape(name)}"]`);
+      if (opt) {
+        const sel = conflicts.includes(name);
+        opt.classList.toggle('sel', sel);
+        opt.querySelector('.conflict-opt-dot').textContent = sel ? '✓' : '';
+      }
+
+      scheduleRosterSave();
+    }
+
+    function refreshConflictCell(i) {
+      const cell = document.getElementById(`cc_${i}`);
+      if (cell) cell.innerHTML = conflictChipsHtml(parseConflict(rosterStudents[i]?.conflict));
+    }
+
+    // ── Roster save ───────────────────────────────────────────
+    function scheduleRosterSave() {
+      const status = document.getElementById('rosterSaveStatus');
+      if (status) { status.textContent = 'Saving…'; status.className = 'save-status'; }
+      clearTimeout(rosterSaveTimer);
+      rosterSaveTimer = setTimeout(commitRosterSave, 800);
+    }
+
+    function commitRosterSave() {
+      rosterSaveTimer = null;
+      if (!rosters[activeId]) return;
+      rosters[activeId].students = JSON.stringify(rosterStudents);
+      saveCurrentRoster();
+      const status = document.getElementById('rosterSaveStatus');
+      if (status) {
+        status.textContent = 'Saved';
+        status.className = 'save-status saved';
+        setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+      }
+    }
+
+    // Close conflict picker on outside click
+    document.addEventListener('click', e => {
+      if (conflictPickerIdx < 0) return;
+      const dd = document.getElementById('conflictDropdown');
+      if (!dd.contains(e.target) && !e.target.closest('.conflict-cell')) closeConflictPicker();
+    });
+
+    // ── Word Wall ─────────────────────────────────────────────
+    socket.on('wordwall:update', (ww) => {
+      wwWords = ww.words || [];
+      renderWwWordList();
+    });
+
+    socket.on('wordlists:all', (lists) => {
+      allWordLists = lists || [];
+      renderWordSetsList();
+    });
+
+    function renderWwWordList() {
+      const el = document.getElementById('wwWordList');
+      if (!el) return;
+      if (!wwWords.length) {
+        el.innerHTML = '<p style="color:#475569;font-size:12px;padding:2px 0 4px;">No words yet.</p>';
+        return;
+      }
+      el.innerHTML = wwWords.map((w, i) => `
+        <div class="ww-word-row">
+          <span class="ww-word-label">${escHtml(w.word)}</span>
+          <span class="ww-word-def" title="${escAttr(w.definition || '')}">${escHtml(w.definition || '—')}</span>
+          <button class="ww-remove-btn" onclick="removeWordWallWord(${i})" title="Remove">✕</button>
+        </div>
+      `).join('');
+    }
+
+    async function addWordWallWord() {
+      const input = document.getElementById('wwWordInput');
+      const word  = input.value.trim();
+      if (!word) return;
+      input.value = '';
+
+      const status = document.getElementById('wwFetchStatus');
+      status.style.display = '';
+
+      let definition = '', partOfSpeech = '';
+      try {
+        const res = await fetch(`/api/define?word=${encodeURIComponent(word)}`);
+        const data = await res.json();
+        definition  = data.definition  || '';
+        partOfSpeech = data.partOfSpeech || '';
+      } catch {}
+
+      status.style.display = 'none';
+      wwWords.push({ word, definition, partOfSpeech });
+      socket.emit('wordwall:set-words', { words: wwWords, listName: '' });
+    }
+
+    function removeWordWallWord(i) {
+      wwWords.splice(i, 1);
+      socket.emit('wordwall:set-words', { words: wwWords, listName: '' });
+    }
+
+    // ── Word Sets modal ────────────────────────────────────────
+    function openWordSetsModal() {
+      renderWordSetsList();
+      document.getElementById('wordSetsOverlay').classList.add('open');
+    }
+
+    function closeWordSetsModal() {
+      document.getElementById('wordSetsOverlay').classList.remove('open');
+    }
+
+    function wordSetsOverlayClick(e) {
+      if (e.target === document.getElementById('wordSetsOverlay')) closeWordSetsModal();
+    }
+
+    function renderWordSetsList() {
+      const el = document.getElementById('wordSetsList');
+      if (!el) return;
+      if (!allWordLists.length) {
+        el.innerHTML = '<p style="color:#475569;font-size:12px;text-align:center;padding:10px 0">No saved lists yet.</p>';
+        return;
+      }
+      el.innerHTML = allWordLists.map(l => {
+        let count = 0;
+        try { count = JSON.parse(l.words).length; } catch {}
+        return `<div class="preset-row">
+          <div class="preset-info">
+            <div class="preset-name">${escHtml(l.name)}</div>
+            <div class="preset-meta">${count} word${count !== 1 ? 's' : ''}</div>
+          </div>
+          <button class="btn btn-blue btn-sm" style="flex:none;" onclick="loadWordList('${escAttr(l.id)}')">Load</button>
+          <button class="btn btn-gray btn-sm" style="flex:none;" onclick="deleteWordList('${escAttr(l.id)}')">✕</button>
+        </div>`;
+      }).join('');
+    }
+
+    function saveWordList() {
+      const name = document.getElementById('wwSetNameInput').value.trim();
+      if (!name) { document.getElementById('wwSetNameInput').focus(); return; }
+      if (!wwWords.length) { alert('Add some words first.'); return; }
+      socket.emit('wordwall:save-list', { id: uid(), name, words: JSON.stringify(wwWords) });
+      document.getElementById('wwSetNameInput').value = '';
+    }
+
+    function loadWordList(id) {
+      const l = allWordLists.find(x => x.id === id);
+      if (!l) return;
+      let words = [];
+      try { words = JSON.parse(l.words); } catch {}
+      wwWords = words;
+      socket.emit('wordwall:set-words', { words, listName: l.name });
+      closeWordSetsModal();
+    }
+
+    function deleteWordList(id) {
+      const l = allWordLists.find(x => x.id === id);
+      if (!l || !confirm(`Delete list "${l.name}"?`)) return;
+      socket.emit('wordwall:delete-list', id);
     }
   </script>
 </body>
