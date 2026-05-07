@@ -112,6 +112,12 @@ async function initDB() {
     )
   `);
   await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS word_wall TEXT DEFAULT '[]'`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_config (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    )
+  `);
   const { rows } = await pool.query('SELECT COUNT(*) FROM rosters');
   if (parseInt(rows[0].count) === 0) {
     const id = Date.now().toString(36);
@@ -181,6 +187,196 @@ function shuffle(arr) {
   }
   return a;
 }
+
+// ── Spotify ────────────────────────────────────────────────
+const SPOTIFY_REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI
+  || (process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/auth/spotify/callback`
+    : 'https://whiteboardapp-production-744e.up.railway.app/auth/spotify/callback');
+
+let spotifyTokens      = null; // { accessToken, refreshToken, expiresAt }
+let spotifyPlayerState = null;
+let spotifyDeviceId    = null; // display Web Playback SDK device_id
+let spotifyPollInterval = null;
+
+async function loadSpotifyTokens() {
+  try {
+    const { rows } = await pool.query("SELECT value FROM app_config WHERE key='spotify_tokens'");
+    if (rows.length && rows[0].value) {
+      spotifyTokens = JSON.parse(rows[0].value);
+      console.log('Spotify tokens loaded from DB');
+    }
+  } catch (e) { console.error('loadSpotifyTokens', e); }
+}
+
+async function saveSpotifyTokens(tokens) {
+  spotifyTokens = tokens;
+  try {
+    await pool.query(
+      "INSERT INTO app_config (key,value) VALUES ('spotify_tokens',$1) ON CONFLICT (key) DO UPDATE SET value=$1",
+      [JSON.stringify(tokens)]
+    );
+  } catch (e) { console.error('saveSpotifyTokens', e); }
+}
+
+async function getSpotifyToken() {
+  if (!spotifyTokens) return null;
+  if (Date.now() >= (spotifyTokens.expiresAt - 60000)) {
+    try {
+      const r = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + Buffer.from(
+            `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
+          ).toString('base64'),
+        },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: spotifyTokens.refreshToken,
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!r.ok) throw new Error('refresh status ' + r.status);
+      const d = await r.json();
+      await saveSpotifyTokens({
+        accessToken:  d.access_token,
+        refreshToken: d.refresh_token || spotifyTokens.refreshToken,
+        expiresAt:    Date.now() + (d.expires_in * 1000),
+      });
+    } catch (e) { console.error('spotify token refresh', e); return null; }
+  }
+  return spotifyTokens.accessToken;
+}
+
+async function spotifyFetch(path, options = {}) {
+  const token = await getSpotifyToken();
+  if (!token) return null;
+  try {
+    const r = await fetch(`https://api.spotify.com/v1${path}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (r.status === 204 || r.status === 202) return {};
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+async function pollSpotify() {
+  try {
+    const data = await spotifyFetch('/me/player?additional_types=track');
+    if (data && data.item) {
+      const track = data.item;
+      spotifyPlayerState = {
+        isPlaying:    !!data.is_playing,
+        trackName:    track.name,
+        artistName:   (track.artists || []).map(a => a.name).join(', '),
+        albumName:    track.album?.name || '',
+        albumArt:     track.album?.images?.[0]?.url || '',
+        albumArtMed:  track.album?.images?.[1]?.url || track.album?.images?.[0]?.url || '',
+        albumArtSmall:track.album?.images?.[2]?.url || track.album?.images?.[0]?.url || '',
+        duration:     track.duration_ms || 0,
+        progress:     data.progress_ms  || 0,
+        volume:       data.device?.volume_percent ?? 50,
+        deviceId:     data.device?.id   || '',
+        deviceName:   data.device?.name || '',
+        uri:          track.uri,
+      };
+      io.emit('spotify:player', spotifyPlayerState);
+    } else if (data !== null && data !== undefined) {
+      spotifyPlayerState = null;
+      io.emit('spotify:player', null);
+    }
+  } catch { /* ignore */ }
+}
+
+function startSpotifyPoll() {
+  if (spotifyPollInterval) return;
+  spotifyPollInterval = setInterval(pollSpotify, 3000);
+}
+
+// ── Spotify OAuth routes ────────────────────────────────────
+app.get('/auth/spotify', (req, res) => {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  if (!clientId) return res.status(500).send('SPOTIFY_CLIENT_ID env var not set. Add it in Railway.');
+  const scope = [
+    'streaming',
+    'user-read-email',
+    'user-read-private',
+    'user-read-playback-state',
+    'user-modify-playback-state',
+    'user-read-currently-playing',
+    'playlist-read-private',
+    'playlist-read-collaborative',
+  ].join(' ');
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id:     clientId,
+    scope,
+    redirect_uri:  SPOTIFY_REDIRECT_URI,
+    state:         Math.random().toString(36).slice(2),
+  });
+  res.redirect(`https://accounts.spotify.com/authorize?${params}`);
+});
+
+app.get('/auth/spotify/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error || !code) return res.redirect('/controller?spotify=error');
+  try {
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + Buffer.from(
+          `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
+        ).toString('base64'),
+      },
+      body: new URLSearchParams({
+        grant_type:   'authorization_code',
+        code,
+        redirect_uri: SPOTIFY_REDIRECT_URI,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    await saveSpotifyTokens({
+      accessToken:  d.access_token,
+      refreshToken: d.refresh_token,
+      expiresAt:    Date.now() + (d.expires_in * 1000),
+    });
+    io.emit('spotify:connected', true);
+    startSpotifyPoll();
+    res.redirect('/controller?spotify=connected');
+  } catch (e) {
+    console.error('spotify callback error', e);
+    res.redirect('/controller?spotify=error');
+  }
+});
+
+app.get('/api/spotify/token', async (req, res) => {
+  const token = await getSpotifyToken();
+  if (!token) return res.status(401).json({ error: 'Not connected' });
+  res.json({ token });
+});
+
+app.get('/api/spotify/playlists', async (req, res) => {
+  const data = await spotifyFetch('/me/playlists?limit=50');
+  if (!data) return res.status(401).json({ error: 'Not connected' });
+  res.json(data);
+});
+
+app.get('/api/spotify/queue', async (req, res) => {
+  const data = await spotifyFetch('/me/player/queue');
+  if (!data) return res.status(401).json({ error: 'Not connected' });
+  res.json(data);
+});
 
 // ── Session state ─────────────────────────────────────────
 const state = {
@@ -468,6 +664,64 @@ io.on('connection', async (socket) => {
     } catch (e) { console.error('wordwall:delete-list', e); }
   });
 
+  // ── Spotify ──
+  socket.emit('spotify:connected', !!spotifyTokens);
+  if (spotifyPlayerState) socket.emit('spotify:player', spotifyPlayerState);
+
+  socket.on('spotify:play', async (payload) => {
+    const { uri, deviceId } = payload || {};
+    const body = {};
+    if (uri) {
+      if (uri.startsWith('spotify:track:')) body.uris = [uri];
+      else body.context_uri = uri;
+    }
+    const qp = (deviceId || spotifyDeviceId) ? `?device_id=${deviceId || spotifyDeviceId}` : '';
+    await spotifyFetch(`/me/player/play${qp}`, {
+      method: 'PUT',
+      body: Object.keys(body).length ? JSON.stringify(body) : undefined,
+    });
+    setTimeout(pollSpotify, 600);
+  });
+
+  socket.on('spotify:pause', async () => {
+    await spotifyFetch('/me/player/pause', { method: 'PUT' });
+    setTimeout(pollSpotify, 600);
+  });
+
+  socket.on('spotify:next', async () => {
+    await spotifyFetch('/me/player/next', { method: 'POST' });
+    setTimeout(pollSpotify, 900);
+  });
+
+  socket.on('spotify:prev', async () => {
+    await spotifyFetch('/me/player/previous', { method: 'POST' });
+    setTimeout(pollSpotify, 900);
+  });
+
+  socket.on('spotify:volume', async (vol) => {
+    await spotifyFetch(`/me/player/volume?volume_percent=${Math.round(vol)}`, { method: 'PUT' });
+  });
+
+  socket.on('spotify:seek', async (posMs) => {
+    await spotifyFetch(`/me/player/seek?position_ms=${Math.round(posMs)}`, { method: 'PUT' });
+    setTimeout(pollSpotify, 400);
+  });
+
+  socket.on('spotify:transfer', async (deviceId) => {
+    spotifyDeviceId = deviceId;
+    await spotifyFetch('/me/player', {
+      method: 'PUT',
+      body: JSON.stringify({ device_ids: [deviceId], play: false }),
+    });
+    setTimeout(pollSpotify, 1200);
+  });
+
+  socket.on('spotify:device-ready', (deviceId) => {
+    spotifyDeviceId = deviceId;
+    io.emit('spotify:device-id', deviceId);
+    console.log('Spotify display device registered:', deviceId);
+  });
+
   // ── Force Pick ──
   socket.on('pick:force', async (name) => {
     try {
@@ -489,6 +743,10 @@ io.on('connection', async (socket) => {
 // ── Start ─────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 initDB()
+  .then(() => loadSpotifyTokens())
+  .then(() => {
+    if (spotifyTokens) startSpotifyPoll();
+  })
   .then(() => server.listen(PORT, '0.0.0.0', () => {
     console.log(`\nClassroom app running:`);
     console.log(`  Controller: http://localhost:${PORT}/controller`);

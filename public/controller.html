@@ -675,6 +675,107 @@
     .ww-add-row input:focus { outline: none; border-color: #3b82f6; }
     .ww-add-btn-wrap { display: flex; gap: 4px; flex-shrink: 0; }
     .ww-fetching { color: #475569; font-size: 11px; text-align: center; padding: 4px 0; }
+
+    /* ── Spotify ── */
+    .sp-progress-wrap {
+      height: 5px;
+      background: #1e293b;
+      border-radius: 3px;
+      margin: 6px 0 3px;
+      cursor: pointer;
+      position: relative;
+    }
+    .sp-progress-bar {
+      height: 100%;
+      background: #1db954;
+      border-radius: 3px;
+      width: 0%;
+      transition: width 1s linear;
+      pointer-events: none;
+    }
+    .sp-time-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .sp-time {
+      font-size: 10px;
+      color: #475569;
+      font-variant-numeric: tabular-nums;
+    }
+    .sp-transport {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .sp-tbtn {
+      width: 38px; height: 38px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0; line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sp-tbtn:active { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+    .sp-tbtn.sp-play {
+      width: 46px; height: 46px;
+      background: #1db954; border-color: #1db954; color: #fff; font-size: 18px;
+    }
+    .sp-tbtn.sp-play:active { background: #1ed760; border-color: #1ed760; }
+    .sp-vol-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .sp-vol-icon { font-size: 14px; color: #475569; flex-shrink: 0; }
+    .sp-vol-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: #334155;
+      outline: none;
+      cursor: pointer;
+    }
+    .sp-vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #1db954;
+      cursor: pointer;
+    }
+    .sp-vol-label {
+      font-size: 10px; color: #475569; width: 30px; text-align: right; flex-shrink: 0;
+    }
+    .sp-playlist-row {
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #1e293b;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .sp-playlist-row:last-child { border-bottom: none; }
+    .sp-playlist-art {
+      width: 38px; height: 38px; border-radius: 5px; object-fit: cover; flex-shrink: 0;
+      background: #1e293b;
+    }
+    .sp-playlist-info { flex: 1; min-width: 0; }
+    .sp-playlist-name { font-size: 13px; font-weight: 600; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sp-playlist-meta { font-size: 10px; color: #475569; margin-top: 1px; }
+    .sp-queue-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 0; border-bottom: 1px solid #1e293b;
+    }
+    .sp-queue-item:last-child { border-bottom: none; }
+    .sp-queue-art { width: 30px; height: 30px; border-radius: 4px; object-fit: cover; flex-shrink: 0; background: #1e293b; }
+    .sp-queue-name { font-size: 12px; font-weight: 600; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sp-queue-artist { font-size: 10px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -820,6 +921,67 @@
       </div>
     </div>
 
+    <!-- Spotify -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title" style="margin-bottom:0;">Spotify</div>
+        <div id="spCtrlStatus" style="font-size:10px;color:#475569;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;"></div>
+      </div>
+
+      <!-- Not-connected state -->
+      <div id="spCtrlConnectWrap">
+        <button class="btn btn-gray" style="width:100%;background:#1db954;border:none;color:#fff;" onclick="connectSpotify()">Connect Spotify</button>
+        <div id="spCtrlConnectMsg" style="font-size:11px;text-align:center;margin-top:6px;min-height:14px;"></div>
+      </div>
+
+      <!-- Connected player -->
+      <div id="spCtrlPlayerWrap" style="display:none;">
+        <!-- Now playing row -->
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+          <div style="flex-shrink:0;width:54px;height:54px;border-radius:7px;overflow:hidden;background:#1e293b;">
+            <img id="spCtrlArt" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;">
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div id="spCtrlTrack"  style="font-size:13px;font-weight:700;color:#f8fafc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
+            <div id="spCtrlArtist" style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;">—</div>
+            <div id="spCtrlDevice" style="font-size:10px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;"></div>
+          </div>
+        </div>
+        <!-- Progress bar -->
+        <div class="sp-progress-wrap" id="spCtrlProgWrap" onclick="spCtrlSeek(event)">
+          <div class="sp-progress-bar" id="spCtrlProgBar"></div>
+        </div>
+        <div class="sp-time-row">
+          <span class="sp-time" id="spCtrlTimePos">0:00</span>
+          <span class="sp-time" id="spCtrlTimeDur">0:00</span>
+        </div>
+        <!-- Transport -->
+        <div class="sp-transport">
+          <button class="sp-tbtn" onclick="socket.emit('spotify:prev')" title="Previous">⏮</button>
+          <button class="sp-tbtn sp-play" id="spCtrlPlayBtn" onclick="spCtrlTogglePlay()">▶</button>
+          <button class="sp-tbtn" onclick="socket.emit('spotify:next')" title="Next">⏭</button>
+        </div>
+        <!-- Volume -->
+        <div class="sp-vol-row">
+          <span class="sp-vol-icon">🔈</span>
+          <input type="range" class="sp-vol-slider" id="spVolSlider" min="0" max="100" value="50"
+            oninput="document.getElementById('spVolLabel').textContent=this.value+'%'"
+            onchange="socket.emit('spotify:volume',parseInt(this.value))">
+          <span class="sp-vol-label" id="spVolLabel">50%</span>
+        </div>
+        <!-- Actions row -->
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <button class="btn btn-teal btn-sm" style="flex:1;" onclick="spTransferToDisplay()">→ Display</button>
+          <button class="btn btn-gray btn-sm" style="flex:1;" onclick="openSpPlaylists()">Playlists</button>
+        </div>
+        <!-- Queue toggle -->
+        <button class="btn btn-gray btn-sm" style="width:100%;margin-bottom:0;" id="spQueueToggleBtn" onclick="spToggleQueue()">Queue ▾</button>
+        <div id="spQueueSection" style="display:none;border-top:1px solid #1e293b;padding-top:8px;margin-top:8px;">
+          <div id="spQueueList"></div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- end sections -->
 
   <!-- Roster Modal -->
@@ -944,6 +1106,19 @@
       <div class="modal-footer">
         <button class="btn btn-gray" onclick="closeManage()">Cancel</button>
         <button class="btn btn-blue" onclick="saveManage()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spotify Playlists Modal -->
+  <div class="overlay" id="spPlaylistsOverlay" onclick="spPlaylistsOverlayClick(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Your Playlists</span>
+        <button class="modal-close" onclick="closeSpPlaylists()">✕</button>
+      </div>
+      <div class="modal-body" id="spPlaylistsBody">
+        <p style="color:#475569;font-size:12px;text-align:center;padding:10px 0;">Loading…</p>
       </div>
     </div>
   </div>
@@ -2229,6 +2404,193 @@
       if (!l || !confirm(`Delete list "${l.name}"?`)) return;
       socket.emit('wordwall:delete-list', id);
     }
+
+    // ── Spotify ────────────────────────────────────────────────
+    let spIsConnected    = false;
+    let spCtrlPlaying    = false;
+    let spCtrlDuration   = 0;
+    let spCtrlProgress   = 0;
+    let spCtrlProgTimer  = null;
+    let spDisplayDeviceId = null;
+    let spQueueOpen      = false;
+
+    socket.on('spotify:connected', (connected) => {
+      spIsConnected = connected;
+      document.getElementById('spCtrlConnectWrap').style.display  = connected ? 'none' : '';
+      document.getElementById('spCtrlPlayerWrap').style.display   = connected ? ''     : 'none';
+      document.getElementById('spCtrlStatus').textContent = connected ? '● Connected' : '';
+      if (connected) document.getElementById('spCtrlStatus').style.color = '#22c55e';
+    });
+
+    socket.on('spotify:device-id', (did) => {
+      spDisplayDeviceId = did;
+    });
+
+    socket.on('spotify:player', (state) => {
+      if (!state) {
+        clearInterval(spCtrlProgTimer);
+        document.getElementById('spCtrlTrack').textContent  = '—';
+        document.getElementById('spCtrlArtist').textContent = '—';
+        document.getElementById('spCtrlDevice').textContent = '';
+        document.getElementById('spCtrlArt').style.display  = 'none';
+        document.getElementById('spCtrlPlayBtn').textContent = '▶';
+        return;
+      }
+      const art = document.getElementById('spCtrlArt');
+      if (state.albumArtSmall || state.albumArtMed || state.albumArt) {
+        art.src = state.albumArtSmall || state.albumArtMed || state.albumArt;
+        art.style.display = '';
+      } else {
+        art.style.display = 'none';
+      }
+      document.getElementById('spCtrlTrack').textContent   = state.trackName  || '—';
+      document.getElementById('spCtrlArtist').textContent  = state.artistName || '—';
+      document.getElementById('spCtrlDevice').textContent  = state.deviceName ? `▶ ${state.deviceName}` : '';
+      document.getElementById('spCtrlPlayBtn').textContent = state.isPlaying ? '⏸' : '▶';
+      if (state.volume != null) {
+        document.getElementById('spVolSlider').value = state.volume;
+        document.getElementById('spVolLabel').textContent = state.volume + '%';
+      }
+      spCtrlPlaying  = state.isPlaying;
+      spCtrlDuration = state.duration || 0;
+      spCtrlProgress = state.progress || 0;
+      updateSpCtrlProgressUI();
+      clearInterval(spCtrlProgTimer);
+      if (spCtrlPlaying && spCtrlDuration > 0) {
+        spCtrlProgTimer = setInterval(() => {
+          spCtrlProgress = Math.min(spCtrlDuration, spCtrlProgress + 1000);
+          updateSpCtrlProgressUI();
+        }, 1000);
+      }
+    });
+
+    function updateSpCtrlProgressUI() {
+      const pct = spCtrlDuration > 0 ? (spCtrlProgress / spCtrlDuration * 100) : 0;
+      document.getElementById('spCtrlProgBar').style.width = pct + '%';
+      document.getElementById('spCtrlTimePos').textContent = fmtSpMs(spCtrlProgress);
+      document.getElementById('spCtrlTimeDur').textContent = fmtSpMs(spCtrlDuration);
+    }
+
+    function fmtSpMs(ms) {
+      const s = Math.floor((ms || 0) / 1000);
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }
+
+    function spCtrlTogglePlay() {
+      if (spCtrlPlaying) socket.emit('spotify:pause');
+      else socket.emit('spotify:play', {});
+    }
+
+    function spCtrlSeek(e) {
+      if (!spCtrlDuration) return;
+      const wrap = document.getElementById('spCtrlProgWrap');
+      const rect = wrap.getBoundingClientRect();
+      const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      spCtrlProgress = Math.round(pct * spCtrlDuration);
+      updateSpCtrlProgressUI();
+      socket.emit('spotify:seek', spCtrlProgress);
+    }
+
+    function connectSpotify() {
+      window.open('/auth/spotify', '_blank', 'width=600,height=700');
+    }
+
+    function spTransferToDisplay() {
+      if (!spDisplayDeviceId) {
+        alert('Display not ready. Open the display page first and wait a moment.');
+        return;
+      }
+      socket.emit('spotify:transfer', spDisplayDeviceId);
+    }
+
+    let spQueueLoaded = false;
+    function spToggleQueue() {
+      spQueueOpen = !spQueueOpen;
+      document.getElementById('spQueueSection').style.display   = spQueueOpen ? '' : 'none';
+      document.getElementById('spQueueToggleBtn').textContent = spQueueOpen ? 'Queue ▴' : 'Queue ▾';
+      if (spQueueOpen && !spQueueLoaded) loadSpCtrlQueue();
+    }
+
+    async function loadSpCtrlQueue() {
+      const el = document.getElementById('spQueueList');
+      el.innerHTML = '<p style="color:#475569;font-size:12px;">Loading…</p>';
+      try {
+        const res = await fetch('/api/spotify/queue');
+        if (!res.ok) { el.innerHTML = '<p style="color:#475569;font-size:12px;">Unavailable</p>'; return; }
+        const data = await res.json();
+        const items = (data.queue || []).slice(0, 6);
+        spQueueLoaded = true;
+        if (!items.length) { el.innerHTML = '<p style="color:#475569;font-size:12px;">Queue is empty</p>'; return; }
+        el.innerHTML = items.map(t => `
+          <div class="sp-queue-item">
+            <img class="sp-queue-art" src="${escHtml(t.album?.images?.[2]?.url || t.album?.images?.[0]?.url || '')}" alt="">
+            <div style="flex:1;min-width:0;">
+              <div class="sp-queue-name">${escHtml(t.name || '')}</div>
+              <div class="sp-queue-artist">${escHtml((t.artists||[]).map(a=>a.name).join(', '))}</div>
+            </div>
+          </div>
+        `).join('');
+      } catch { el.innerHTML = '<p style="color:#ef4444;font-size:12px;">Failed to load</p>'; }
+    }
+
+    async function openSpPlaylists() {
+      const body = document.getElementById('spPlaylistsBody');
+      body.innerHTML = '<p style="color:#475569;font-size:12px;text-align:center;padding:12px 0;">Loading…</p>';
+      document.getElementById('spPlaylistsOverlay').classList.add('open');
+      try {
+        const res = await fetch('/api/spotify/playlists');
+        if (!res.ok) throw new Error('not connected');
+        const data = await res.json();
+        const items = (data.items || []).filter(p => p && p.name);
+        if (!items.length) {
+          body.innerHTML = '<p style="color:#475569;font-size:12px;text-align:center;padding:12px 0;">No playlists found</p>';
+          return;
+        }
+        body.innerHTML = items.map(p => {
+          const imgSrc = p.images?.[0]?.url || '';
+          return `<div class="sp-playlist-row" onclick="playSpPlaylist('${escAttr(p.uri)}')">
+            ${imgSrc ? `<img class="sp-playlist-art" src="${escHtml(imgSrc)}" alt="">` : `<div class="sp-playlist-art"></div>`}
+            <div class="sp-playlist-info">
+              <div class="sp-playlist-name">${escHtml(p.name)}</div>
+              <div class="sp-playlist-meta">${p.tracks?.total || 0} tracks</div>
+            </div>
+            <button class="btn btn-teal btn-sm" style="flex:none;" onclick="event.stopPropagation();playSpPlaylist('${escAttr(p.uri)}')">▶</button>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        body.innerHTML = '<p style="color:#ef4444;font-size:12px;text-align:center;padding:12px 0;">Failed to load. Make sure Spotify is connected.</p>';
+      }
+    }
+
+    function playSpPlaylist(uri) {
+      socket.emit('spotify:play', { uri });
+      closeSpPlaylists();
+    }
+
+    function closeSpPlaylists() {
+      document.getElementById('spPlaylistsOverlay').classList.remove('open');
+    }
+
+    function spPlaylistsOverlayClick(e) {
+      if (e.target === document.getElementById('spPlaylistsOverlay')) closeSpPlaylists();
+    }
+
+    // Check OAuth callback result on page load
+    (function() {
+      const p = new URLSearchParams(location.search);
+      const msg = document.getElementById('spCtrlConnectMsg');
+      if (!msg) return;
+      if (p.get('spotify') === 'connected') {
+        msg.textContent = '✓ Spotify connected!';
+        msg.style.color = '#22c55e';
+        // Clean up URL
+        history.replaceState({}, '', '/controller');
+      } else if (p.get('spotify') === 'error') {
+        msg.textContent = 'Auth failed — try again';
+        msg.style.color = '#ef4444';
+        history.replaceState({}, '', '/controller');
+      }
+    })();
   </script>
 </body>
 </html>

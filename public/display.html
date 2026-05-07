@@ -852,6 +852,48 @@
       opacity: 0.8;
     }
 
+    /* ── Spotify widget ── */
+    .sp-disp-art {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #1e293b;
+      margin-bottom: 8px;
+    }
+    .sp-disp-art img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .sp-disp-prog-wrap {
+      height: 3px; background: #1e293b; border-radius: 2px; margin-bottom: 8px;
+    }
+    .sp-disp-prog {
+      height: 100%; background: #1db954; border-radius: 2px;
+      width: 0%; transition: width 1s linear;
+    }
+    .sp-disp-btns {
+      display: flex; justify-content: center; align-items: center; gap: 12px;
+    }
+    .sp-disp-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0; line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sp-disp-btn:hover { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+    .sp-disp-btn.sp-disp-play {
+      width: 44px; height: 44px; font-size: 18px;
+      background: #1db954; border-color: #1db954; color: #fff;
+    }
+    .sp-disp-btn.sp-disp-play:hover { background: #1ed760; }
+
     /* ── Timer done overlay ── */
     .done-overlay {
       position: fixed;
@@ -1109,6 +1151,38 @@
   </div>
 </div>
 
+<!-- Spotify Widget -->
+<div class="widget" id="spotifyWidget">
+  <div class="widget-handle" id="spotifyHandle">
+    <div class="grip">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <div class="widget-label">Spotify</div>
+  </div>
+  <!-- Not-connected / idle -->
+  <div id="spDisp0" class="widget-body" style="padding:10px 14px;text-align:center;">
+    <div style="font-size:22px;margin-bottom:4px;opacity:0.25;">♪</div>
+    <div style="font-size:10px;font-weight:600;color:#334155;letter-spacing:0.08em;text-transform:uppercase;">Not connected</div>
+  </div>
+  <!-- Player -->
+  <div id="spDisp1" style="display:none;padding:10px 10px 12px;">
+    <div class="sp-disp-art">
+      <img id="spDispArt" src="" alt="">
+    </div>
+    <div id="spDispTrack"  style="font-size:13px;font-weight:700;color:#f8fafc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;"></div>
+    <div id="spDispArtist" style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px;"></div>
+    <div class="sp-disp-prog-wrap">
+      <div class="sp-disp-prog" id="spDispProg"></div>
+    </div>
+    <div class="sp-disp-btns">
+      <button class="sp-disp-btn" onclick="spDispPrev()" title="Previous">⏮</button>
+      <button class="sp-disp-btn sp-disp-play" id="spDispPlayBtn" onclick="spDispTogglePlay()">▶</button>
+      <button class="sp-disp-btn" onclick="spDispNext()" title="Next">⏭</button>
+    </div>
+  </div>
+</div>
+
 <!-- Attendance Modal -->
 <div class="att-overlay" id="attOverlay">
   <div class="att-modal">
@@ -1254,6 +1328,8 @@
     makeDraggable(mw, document.getElementById('matsHandle'),       'mats',     Math.round((window.innerWidth - mw.offsetWidth) / 2), 16);
     makeDraggable(dw, document.getElementById('clockHandle'),      'clock',    window.innerWidth - dw.offsetWidth - 16, window.innerHeight - dw.offsetHeight - 16);
     makeDraggable(ww, document.getElementById('wordWallHandle'),   'wordwall', window.innerWidth - ww.offsetWidth - 16, Math.round((window.innerHeight - ww.offsetHeight) / 2));
+    const sw = document.getElementById('spotifyWidget');
+    makeDraggable(sw, document.getElementById('spotifyHandle'),    'spotify',  16, 16);
     tickClock();
   });
 
@@ -2137,6 +2213,108 @@
     try { words = JSON.parse(l.words); } catch {}
     socket.emit('wordwall:set-words', { words, listName: l.name });
     closeWwLoadModal();
+  }
+
+  // ── Spotify ────────────────────────────────────────────────
+  let spConnected  = false;
+  let spPlaying    = false;
+  let spDuration   = 0;
+  let spProgress   = 0;
+  let spProgTimer  = null;
+  let spSDKPlayer  = null;
+  let spSDKDeviceId = null;
+
+  socket.on('spotify:connected', (connected) => {
+    spConnected = connected;
+    if (connected) {
+      if (!spSDKPlayer) tryInitSpotifySDK();
+    } else {
+      document.getElementById('spDisp0').style.display = '';
+      document.getElementById('spDisp1').style.display = 'none';
+    }
+  });
+
+  socket.on('spotify:player', (state) => {
+    if (!state) {
+      document.getElementById('spDisp0').style.display = '';
+      document.getElementById('spDisp1').style.display = 'none';
+      clearInterval(spProgTimer);
+      return;
+    }
+    document.getElementById('spDisp0').style.display = 'none';
+    document.getElementById('spDisp1').style.display = '';
+
+    const img = document.getElementById('spDispArt');
+    img.src = state.albumArt || state.albumArtMed || '';
+
+    document.getElementById('spDispTrack').textContent  = state.trackName  || '';
+    document.getElementById('spDispArtist').textContent = state.artistName || '';
+    document.getElementById('spDispPlayBtn').textContent = state.isPlaying ? '⏸' : '▶';
+
+    spPlaying  = state.isPlaying;
+    spDuration = state.duration || 0;
+    spProgress = state.progress || 0;
+    clearInterval(spProgTimer);
+    updateSpDispProg();
+    if (spPlaying && spDuration > 0) {
+      spProgTimer = setInterval(() => {
+        spProgress = Math.min(spDuration, spProgress + 1000);
+        updateSpDispProg();
+      }, 1000);
+    }
+  });
+
+  function updateSpDispProg() {
+    const pct = spDuration > 0 ? (spProgress / spDuration * 100) : 0;
+    const bar = document.getElementById('spDispProg');
+    if (bar) bar.style.width = pct + '%';
+  }
+
+  function spDispTogglePlay() {
+    if (spPlaying) socket.emit('spotify:pause');
+    else           socket.emit('spotify:play', {});
+  }
+  function spDispPrev() { socket.emit('spotify:prev'); }
+  function spDispNext() { socket.emit('spotify:next'); }
+
+  async function tryInitSpotifySDK() {
+    try {
+      const res = await fetch('/api/spotify/token');
+      if (!res.ok) return;
+      const { token } = await res.json();
+      if (!token) return;
+
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        spSDKPlayer = new Spotify.Player({
+          name: 'Classroom Display',
+          getOAuthToken: async (cb) => {
+            try {
+              const r = await fetch('/api/spotify/token');
+              if (r.ok) { const d = await r.json(); cb(d.token); }
+            } catch { cb(token); }
+          },
+          volume: 0.8,
+        });
+        spSDKPlayer.addListener('ready', ({ device_id }) => {
+          spSDKDeviceId = device_id;
+          socket.emit('spotify:device-ready', device_id);
+          console.log('[Spotify] Display device ready:', device_id);
+        });
+        spSDKPlayer.addListener('not_ready', ({ device_id }) => {
+          console.log('[Spotify] Device went offline:', device_id);
+        });
+        spSDKPlayer.addListener('initialization_error', ({ message }) => console.error('[Spotify] Init error:', message));
+        spSDKPlayer.addListener('authentication_error', ({ message }) => console.error('[Spotify] Auth error:', message));
+        spSDKPlayer.addListener('account_error', () => console.warn('[Spotify] Premium required for Web Playback SDK'));
+        spSDKPlayer.connect();
+      };
+
+      if (!document.querySelector('script[src*="spotify-player"]')) {
+        const s = document.createElement('script');
+        s.src = 'https://sdk.scdn.co/spotify-player.js';
+        document.head.appendChild(s);
+      }
+    } catch (e) { console.error('[Spotify] SDK init failed:', e); }
   }
 </script>
 </body>
