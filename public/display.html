@@ -1086,7 +1086,7 @@
         <span class="group-step-val" id="groupCountVal">—</span>
         <button class="group-step-btn" onclick="adjustGroupParam('count',1)">+</button>
       </div>
-      <button class="group-shuffle-btn" onclick="generateGroups()">↺ Shuffle</button>
+      <button class="group-shuffle-btn" onclick="generateGroups()">Make Groups</button>
     </div>
     <div class="group-grid" id="groupGrid"></div>
   </div>
@@ -1881,10 +1881,16 @@
     if (!r) return;
     const students = parseRosterStudents(r.students).filter(s => (s.attendance || 'present') !== 'absent');
     if (!students.length) return;
-    groupSize  = 4;
-    groupCount = Math.max(1, Math.round(students.length / groupSize));
+    // Only reset size/count if no groups exist yet
+    if (!currentGroups.length) {
+      groupSize  = 4;
+      groupCount = Math.max(1, Math.round(students.length / groupSize));
+    }
+    document.getElementById('groupSizeVal').textContent  = groupSize;
+    document.getElementById('groupCountVal').textContent = groupCount;
     document.getElementById('groupSub').textContent = r.name + ' · ' + students.length + ' students';
-    generateGroups();
+    // Show existing groups or empty prompt — do NOT auto-generate
+    renderGroupGrid();
     document.getElementById('groupOverlay').classList.add('open');
   }
 
@@ -1901,7 +1907,9 @@
     } else {
       groupCount = Math.max(1, groupCount + delta);
     }
-    generateGroups();
+    // Just update the displays — don't regenerate until Make Groups is pressed
+    document.getElementById('groupSizeVal').textContent  = groupSize;
+    document.getElementById('groupCountVal').textContent = groupCount;
   }
 
   function generateGroups() {
@@ -1975,6 +1983,9 @@
       }
     }
 
+    // Shuffle the order within each group so anchors aren't visibly first
+    groups.forEach((g, i) => { groups[i] = shuffleArr(g); });
+
     currentGroups = groups;
 
     // Update controls
@@ -1983,16 +1994,20 @@
     const r2 = allRosters[activeRosterId];
     document.getElementById('groupSub').textContent = (r2?.name || '') + ' · ' + students.length + ' students';
 
-    // Render cards
+    renderGroupGrid();
+  }
+
+  function renderGroupGrid() {
     const grid = document.getElementById('groupGrid');
-    grid.innerHTML = groups.map((group, i) => `
+    if (!currentGroups.length) {
+      grid.innerHTML = '<div class="mat-empty" style="grid-column:1/-1;padding:24px 0;font-size:13px;">Set size and groups above, then press Make Groups.</div>';
+      return;
+    }
+    grid.innerHTML = currentGroups.map((group, i) => `
       <div class="group-card">
         <div class="group-card-title">Group ${i + 1}</div>
         ${group.map(s => `
-          <div class="group-student${s.anchor ? ' is-anchor' : ''}">
-            ${s.anchor ? '<span class="group-anchor-icon">⚓</span>' : ''}
-            ${fullNameDisplay(s)}
-          </div>
+          <div class="group-student">${fullNameDisplay(s)}</div>
         `).join('')}
       </div>
     `).join('');
