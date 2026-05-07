@@ -753,6 +753,105 @@
       padding: 0 24px 24px;
     }
 
+    /* ── Group modal ── */
+    .group-settings-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e293b;
+      flex-wrap: wrap;
+    }
+    .group-settings-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .group-stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .group-step-btn {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.1s;
+      line-height: 1;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .group-step-btn:hover { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+    .group-step-val {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f8fafc;
+      min-width: 28px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .group-shuffle-btn {
+      margin-left: auto;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .group-shuffle-btn:hover { background: #1d4ed8; }
+    .group-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 10px;
+      padding: 14px 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .group-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .group-card-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #475569;
+      margin-bottom: 8px;
+    }
+    .group-student {
+      padding: 4px 0;
+      font-size: 14px;
+      color: #e2e8f0;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .group-student.is-anchor {
+      font-weight: 800;
+      color: #fbbf24;
+    }
+    .group-anchor-icon {
+      font-size: 10px;
+      opacity: 0.8;
+    }
+
     /* ── Timer done overlay ── */
     .done-overlay {
       position: fixed;
@@ -869,6 +968,10 @@
       <button class="pbtn-pick purple" onclick="pickRandom()">Pick</button>
       <button class="pbtn-pick gray"   onclick="clearPick()">Clear</button>
     </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="pbtn-pick" style="flex:1;background:#0d9488;color:#fff;" onclick="openGroupModal()">Group</button>
+      <button class="pbtn-pick gray" style="flex:1;opacity:0.35;cursor:not-allowed;" disabled>Cast</button>
+    </div>
   </div>
 </div>
 
@@ -957,6 +1060,35 @@
     <div class="att-footer">
       <button class="att-save-btn" onclick="closeWwLoadModal()">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- Group Modal -->
+<div class="att-overlay" id="groupOverlay" onclick="if(event.target===this)closeGroupModal()">
+  <div class="att-modal" style="max-width:min(680px,96vw);max-height:88vh;display:flex;flex-direction:column;">
+    <div class="att-header">
+      <div>
+        <div class="att-title">Groups</div>
+        <div class="att-sub" id="groupSub"></div>
+      </div>
+      <button class="att-close" onclick="closeGroupModal()">✕</button>
+    </div>
+    <div class="group-settings-row">
+      <span class="group-settings-label">Per group</span>
+      <div class="group-stepper">
+        <button class="group-step-btn" onclick="adjustGroupParam('size',-1)">−</button>
+        <span class="group-step-val" id="groupSizeVal">4</span>
+        <button class="group-step-btn" onclick="adjustGroupParam('size',1)">+</button>
+      </div>
+      <span class="group-settings-label" style="margin-left:8px;"># Groups</span>
+      <div class="group-stepper">
+        <button class="group-step-btn" onclick="adjustGroupParam('count',-1)">−</button>
+        <span class="group-step-val" id="groupCountVal">—</span>
+        <button class="group-step-btn" onclick="adjustGroupParam('count',1)">+</button>
+      </div>
+      <button class="group-shuffle-btn" onclick="generateGroups()">↺ Shuffle</button>
+    </div>
+    <div class="group-grid" id="groupGrid"></div>
   </div>
 </div>
 
@@ -1710,6 +1842,160 @@
     displayMaterialsOverride = null;
     renderMaterialsWidget();
     closeDisplayPresets();
+  }
+
+  // ── Group Maker ────────────────────────────────────────────
+  let groupSize  = 4;
+  let groupCount = 0;
+  let currentGroups = [];
+
+  function shuffleArr(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function parseConflictSet(s) {
+    const raw = s.conflict;
+    if (!raw) return new Set();
+    if (Array.isArray(raw)) return new Set(raw);
+    try { const p = JSON.parse(raw); if (Array.isArray(p)) return new Set(p); } catch {}
+    return new Set();
+  }
+
+  function groupHasConflict(group, student) {
+    const sName      = fullNameDisplay(student);
+    const sConflicts = parseConflictSet(student);
+    for (const m of group) {
+      if (sConflicts.has(fullNameDisplay(m))) return true;
+      if (parseConflictSet(m).has(sName))    return true;
+    }
+    return false;
+  }
+
+  function openGroupModal() {
+    const r = allRosters[activeRosterId];
+    if (!r) return;
+    const students = parseRosterStudents(r.students).filter(s => (s.attendance || 'present') !== 'absent');
+    if (!students.length) return;
+    groupSize  = 4;
+    groupCount = Math.max(1, Math.round(students.length / groupSize));
+    document.getElementById('groupSub').textContent = r.name + ' · ' + students.length + ' students';
+    generateGroups();
+    document.getElementById('groupOverlay').classList.add('open');
+  }
+
+  function closeGroupModal() {
+    document.getElementById('groupOverlay').classList.remove('open');
+  }
+
+  function adjustGroupParam(param, delta) {
+    const r = allRosters[activeRosterId];
+    const total = r ? parseRosterStudents(r.students).filter(s => (s.attendance||'present') !== 'absent').length : 0;
+    if (param === 'size') {
+      groupSize = Math.max(2, groupSize + delta);
+      groupCount = Math.max(1, Math.round(total / groupSize));
+    } else {
+      groupCount = Math.max(1, groupCount + delta);
+    }
+    generateGroups();
+  }
+
+  function generateGroups() {
+    const r = allRosters[activeRosterId];
+    if (!r) return;
+    const students = parseRosterStudents(r.students).filter(s => (s.attendance || 'present') !== 'absent');
+    if (!students.length) return;
+
+    // Clamp groupCount to sane range
+    groupCount = Math.min(Math.floor(students.length / 2) || 1, Math.max(1, groupCount));
+
+    const anchors = shuffleArr(students.filter(s => s.anchor));
+    const others  = shuffleArr(students.filter(s => !s.anchor));
+
+    // Init groups, seed one anchor each (extras go back into the pool)
+    const groups = Array.from({ length: groupCount }, () => []);
+    anchors.forEach((a, i) => {
+      if (i < groupCount) groups[i].push(a);
+      else others.push(a); // extra anchors treated as regular students
+    });
+
+    // Place remaining students, respecting conflicts, prefer smaller groups
+    const pool = shuffleArr(others);
+    const maxPasses = pool.length * groupCount + pool.length;
+    let pass = 0;
+
+    while (pool.length > 0 && pass < maxPasses) {
+      pass++;
+      const student = pool[0];
+      const sorted  = [...groups.keys()].sort((a, b) => groups[a].length - groups[b].length);
+      let placed = false;
+      for (const gi of sorted) {
+        if (!groupHasConflict(groups[gi], student)) {
+          groups[gi].push(student);
+          pool.shift();
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) pool.push(pool.shift()); // rotate and retry
+    }
+    // Force-place anything still stuck (conflict can't be satisfied)
+    while (pool.length > 0) {
+      const smallest = groups.reduce((best, g, i) => g.length < groups[best].length ? i : best, 0);
+      groups[smallest].push(pool.shift());
+    }
+
+    // Merge any group of 1 into the nearest valid group to avoid lone students
+    for (let i = groups.length - 1; i >= 0; i--) {
+      if (groups[i].length === 1) {
+        const lone = groups[i][0];
+        let target = -1;
+        // Prefer no-conflict, smallest group
+        for (let j = 0; j < groups.length; j++) {
+          if (j === i) continue;
+          if (!groupHasConflict(groups[j], lone)) {
+            if (target === -1 || groups[j].length < groups[target].length) target = j;
+          }
+        }
+        if (target === -1) { // no conflict-safe option, just pick smallest
+          for (let j = 0; j < groups.length; j++) {
+            if (j === i) continue;
+            if (target === -1 || groups[j].length < groups[target].length) target = j;
+          }
+        }
+        if (target !== -1) {
+          groups[target].push(lone);
+          groups.splice(i, 1);
+          groupCount = groups.length;
+        }
+      }
+    }
+
+    currentGroups = groups;
+
+    // Update controls
+    document.getElementById('groupSizeVal').textContent  = groupSize;
+    document.getElementById('groupCountVal').textContent = groups.length;
+    const r2 = allRosters[activeRosterId];
+    document.getElementById('groupSub').textContent = (r2?.name || '') + ' · ' + students.length + ' students';
+
+    // Render cards
+    const grid = document.getElementById('groupGrid');
+    grid.innerHTML = groups.map((group, i) => `
+      <div class="group-card">
+        <div class="group-card-title">Group ${i + 1}</div>
+        ${group.map(s => `
+          <div class="group-student${s.anchor ? ' is-anchor' : ''}">
+            ${s.anchor ? '<span class="group-anchor-icon">⚓</span>' : ''}
+            ${fullNameDisplay(s)}
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
   }
 
   // ── Word Wall ──────────────────────────────────────────────
