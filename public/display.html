@@ -686,6 +686,25 @@
     }
     .clock-show-btn:hover { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
 
+    /* ── Handle bar small button ── */
+    .handle-btn {
+      margin-left: auto;
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid rgba(51,65,85,0.8);
+      background: rgba(15,23,42,0.6);
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .handle-btn:hover { background: rgba(30,58,95,0.9); border-color: #3b82f6; color: #93c5fd; }
+
     /* ── Word Wall widget ── */
     .ww-word-btn {
       width: 100%;
@@ -778,15 +797,16 @@
       <span></span><span></span><span></span>
     </div>
     <div class="widget-label">Class</div>
+    <button class="handle-btn" onclick="openAttendance()" title="Attendance">✓ Att</button>
   </div>
-  <div class="widget-body">
-    <div class="class-name-big" id="classNameBig">—</div>
+  <div class="widget-body" style="padding-top:10px;padding-bottom:10px;">
     <div class="class-nav">
       <button class="cnav-btn" id="classPrevBtn" onclick="prevClass()">‹</button>
-      <div class="class-pos" id="classPos">— / —</div>
+      <div class="class-name-big" id="classNameBig"
+        style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;padding:0;margin:0;font-size:18px;">—</div>
       <button class="cnav-btn" id="classNextBtn" onclick="nextClass()">›</button>
     </div>
-    <button class="att-open-btn" onclick="openAttendance()">Attendance</button>
+    <div class="class-pos" id="classPos" style="display:none;">— / —</div>
   </div>
 </div>
 
@@ -840,8 +860,8 @@
     <div class="widget-label">Students</div>
   </div>
   <div class="widget-body">
-    <div class="pick-display">
-      <div class="pick-sub" id="pickSub" style="visibility:hidden">Called On</div>
+    <div class="pick-display" style="min-height:52px;">
+      <div id="pickSub" style="display:none;"></div>
       <div class="pick-name" id="pickName"></div>
     </div>
     <div class="deck-info" id="deckInfo"></div>
@@ -860,6 +880,7 @@
       <span></span><span></span><span></span>
     </div>
     <div class="widget-label">Materials</div>
+    <button class="handle-btn" onclick="openDisplayPresets()" title="Load Set">📂</button>
   </div>
   <div class="widget-body">
     <div id="matsBody">
@@ -871,7 +892,6 @@
       <button class="abtn" onclick="zoomMat(0.1)"  style="font-size:16px;line-height:1;">+</button>
       <button class="abtn" onclick="zoomMat(0)"    style="font-size:10px;font-weight:700;">↺</button>
     </div>
-    <button class="att-open-btn" style="margin-top:6px;" onclick="openDisplayPresets()">📂 Load Set</button>
   </div>
 </div>
 
@@ -895,19 +915,17 @@
 </div>
 
 <!-- Word Wall Widget -->
-<div class="widget" id="wordWallWidget" style="width:230px;">
+<div class="widget" id="wordWallWidget">
   <div class="widget-handle" id="wordWallHandle">
     <div class="grip">
       <span></span><span></span><span></span>
       <span></span><span></span><span></span>
     </div>
     <div class="widget-label">Word Wall</div>
+    <button class="handle-btn" onclick="openWwLoadModal()" title="Load List">📂</button>
   </div>
-  <div class="widget-body" style="padding:10px;max-height:300px;overflow-y:auto;" id="wwBody">
+  <div class="widget-body" style="padding:10px;max-height:222px;overflow-y:auto;" id="wwBody">
     <div class="mat-empty">No words loaded</div>
-  </div>
-  <div style="padding:0 10px 10px;">
-    <button class="att-open-btn" style="margin-top:0;" onclick="openWwLoadModal()">📂 Load List</button>
   </div>
 </div>
 
