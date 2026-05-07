@@ -111,6 +111,7 @@ async function initDB() {
       words TEXT DEFAULT '[]'
     )
   `);
+  await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS word_wall TEXT DEFAULT '[]'`);
   const { rows } = await pool.query('SELECT COUNT(*) FROM rosters');
   if (parseInt(rows[0].count) === 0) {
     const id = Date.now().toString(36);
@@ -134,7 +135,7 @@ async function getAllPresets() {
 async function getAllRosters() {
   const { rows } = await pool.query('SELECT * FROM rosters ORDER BY sort_order, name');
   const out = {};
-  rows.forEach(r => { out[r.id] = { name: r.name, students: r.students, slidesUrl: r.slides_url, grades: r.grades || '{}', materials: r.materials || '[]' }; });
+  rows.forEach(r => { out[r.id] = { name: r.name, students: r.students, slidesUrl: r.slides_url, grades: r.grades || '{}', materials: r.materials || '[]', wordWall: r.word_wall || '[]' }; });
   return out;
 }
 
@@ -234,6 +235,13 @@ io.on('connection', async (socket) => {
     state.activeRosterId   = Object.keys(rosters)[0] || null;
     state.activeRosterName = state.activeRosterId ? (rosters[state.activeRosterId]?.name || '') : '';
     if (state.activeRosterId && pickDeck.length === 0) await buildDeck(state.activeRosterId);
+  }
+  // Restore word wall from the active roster's DB row (survives server restarts)
+  if (state.activeRosterId && rosters[state.activeRosterId]) {
+    try {
+      const ww = JSON.parse(rosters[state.activeRosterId].wordWall || '[]');
+      state.wordWall = { words: ww, listName: '' };
+    } catch {}
   }
   socket.emit('state', { ...state, rosters, deckRemaining: pickDeck.length, deckTotal });
   socket.emit('presets:all', await getAllPresets());
@@ -370,6 +378,13 @@ io.on('connection', async (socket) => {
     try {
       const rosters = await getAllRosters();
       state.activeRosterName = rosters[id]?.name || '';
+      if (changed) {
+        try {
+          const ww = JSON.parse(rosters[id]?.wordWall || '[]');
+          state.wordWall = { words: ww, listName: '' };
+          io.emit('wordwall:update', state.wordWall);
+        } catch {}
+      }
     } catch {}
     if (changed) await buildDeck(id);
     io.emit('roster:activated', { id, name: state.activeRosterName });
@@ -424,9 +439,15 @@ io.on('connection', async (socket) => {
   });
 
   // ── Word Wall ──
-  socket.on('wordwall:set-words', (payload) => {
+  socket.on('wordwall:set-words', async (payload) => {
     state.wordWall = { words: payload.words || [], listName: payload.listName || '' };
     io.emit('wordwall:update', state.wordWall);
+    if (state.activeRosterId) {
+      try {
+        await pool.query('UPDATE rosters SET word_wall=$1 WHERE id=$2',
+          [JSON.stringify(payload.words || []), state.activeRosterId]);
+      } catch (e) { console.error('wordwall persist', e); }
+    }
   });
 
   socket.on('wordwall:save-list', async ({ id, name, words }) => {

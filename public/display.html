@@ -1089,6 +1089,23 @@
       <button class="group-shuffle-btn" onclick="generateGroups()">Make Groups</button>
     </div>
     <div class="group-grid" id="groupGrid"></div>
+    <div class="att-footer" style="border-top:1px solid #1e293b;">
+      <button class="att-save-btn" onclick="doneGroups()" style="flex:1;">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Groups Widget (shown after Done) -->
+<div class="widget" id="groupsWidget" style="display:none;">
+  <div class="widget-handle" id="groupsHandle">
+    <div class="grip">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <div class="widget-label">Groups</div>
+    <button class="handle-btn" onclick="closeGroupsWidget()" title="Close">✕</button>
+  </div>
+  <div class="widget-body" style="padding:10px 14px;max-height:340px;overflow-y:auto;" id="groupsWidgetBody">
   </div>
 </div>
 
@@ -1896,6 +1913,38 @@
 
   function closeGroupModal() {
     document.getElementById('groupOverlay').classList.remove('open');
+  }
+
+  let groupsWidgetReady = false;
+
+  function doneGroups() {
+    closeGroupModal();
+    if (!currentGroups.length) return;
+    const wid = document.getElementById('groupsWidget');
+    wid.style.display = '';
+    if (!groupsWidgetReady) {
+      groupsWidgetReady = true;
+      makeDraggable(wid, document.getElementById('groupsHandle'), 'groups',
+        Math.round((window.innerWidth - 218) / 2),
+        Math.round((window.innerHeight - wid.offsetHeight) / 2) || 80);
+    }
+    renderGroupsWidget();
+  }
+
+  function closeGroupsWidget() {
+    document.getElementById('groupsWidget').style.display = 'none';
+  }
+
+  function renderGroupsWidget() {
+    const body = document.getElementById('groupsWidgetBody');
+    if (!currentGroups.length) { body.innerHTML = ''; return; }
+    body.innerHTML = currentGroups.map((group, i) => `
+      <div style="margin-bottom:${i < currentGroups.length - 1 ? '10px' : '0'};">
+        <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#475569;margin-bottom:3px;">Group ${i + 1}</div>
+        ${group.map(s => `<div style="font-size:13px;color:#e2e8f0;padding:1px 0;">${fullNameDisplay(s)}</div>`).join('')}
+      </div>
+      ${i < currentGroups.length - 1 ? '<div style="height:1px;background:#1e293b;margin-bottom:10px;"></div>' : ''}
+    `).join('');
   }
 
   function adjustGroupParam(param, delta) {
