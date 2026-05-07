@@ -894,6 +894,94 @@
     }
     .sp-disp-btn.sp-disp-play:hover { background: #1ed760; }
 
+    /* ── Settings button & panel ── */
+    #settingsBtn {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 50;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid rgba(51,65,85,0.5);
+      background: rgba(15,23,42,0.65);
+      color: #334155;
+      font-size: 15px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      line-height: 1;
+    }
+    #settingsBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
+    #settingsBtn.active { color: #94a3b8; border-color: #64748b; background: rgba(15,23,42,0.95); }
+
+    #settingsPanel {
+      position: fixed;
+      bottom: 54px;
+      right: 16px;
+      z-index: 90;
+      width: 200px;
+      background: rgba(8,15,30,0.97);
+      border: 1px solid rgba(51,65,85,0.6);
+      border-radius: 14px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.75);
+      display: none;
+      overflow: hidden;
+    }
+    #settingsPanel.open { display: block; }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    .settings-row.drag-over { background: rgba(59,130,246,0.12); border-radius: 6px; }
+    .settings-row.dragging  { opacity: 0.45; }
+
+    .settings-grip {
+      color: #2d3e55;
+      font-size: 14px;
+      cursor: grab;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .settings-grip:active { cursor: grabbing; }
+
+    .settings-name {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: 0.02em;
+    }
+
+    .settings-toggle {
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid #1e293b;
+      background: transparent;
+      color: #334155;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      letter-spacing: 0.04em;
+    }
+    .settings-toggle.is-on {
+      border-color: rgba(34,197,94,0.35);
+      background: rgba(34,197,94,0.1);
+      color: #4ade80;
+    }
+
     /* ── Timer done overlay ── */
     .done-overlay {
       position: fixed;
@@ -1219,6 +1307,18 @@
   </div>
 </div>
 
+<!-- Settings button -->
+<button id="settingsBtn" onclick="toggleSettings()" title="Widget settings">⚙</button>
+
+<!-- Settings panel -->
+<div id="settingsPanel">
+  <div style="padding:9px 12px 7px;border-bottom:1px solid rgba(51,65,85,0.35);display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#475569;">Widgets</div>
+    <div style="font-size:9px;color:#2d3e55;font-weight:600;">drag to reorder</div>
+  </div>
+  <div id="settingsList" style="padding:4px 0 6px;"></div>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
@@ -1330,6 +1430,7 @@
     makeDraggable(ww, document.getElementById('wordWallHandle'),   'wordwall', window.innerWidth - ww.offsetWidth - 16, Math.round((window.innerHeight - ww.offsetHeight) / 2));
     const sw = document.getElementById('spotifyWidget');
     makeDraggable(sw, document.getElementById('spotifyHandle'),    'spotify',  16, 16);
+    applyWidgetVisibility();
     tickClock();
   });
 
@@ -1997,6 +2098,7 @@
     closeGroupModal();
     if (!currentGroups.length) return;
     const wid = document.getElementById('groupsWidget');
+    if (loadWVis()['groups'] === false) { renderGroupsWidget(); return; } // settings hidden
     wid.style.display = '';
     if (!groupsWidgetReady) {
       groupsWidgetReady = true;
@@ -2214,6 +2316,139 @@
     socket.emit('wordwall:set-words', { words, listName: l.name });
     closeWwLoadModal();
   }
+
+  // ── Settings panel ────────────────────────────────────────
+  const WIDGET_DEFS = [
+    { key: 'timer',    label: 'Timer',     id: 'timerWidget'    },
+    { key: 'picker',   label: 'Students',  id: 'pickerWidget'   },
+    { key: 'class',    label: 'Class',     id: 'classWidget'    },
+    { key: 'mats',     label: 'Materials', id: 'matsWidget'     },
+    { key: 'clock',    label: 'Clock',     id: 'clockWidget'    },
+    { key: 'wordwall', label: 'Word Wall', id: 'wordWallWidget' },
+    { key: 'groups',   label: 'Groups',    id: 'groupsWidget'   },
+    { key: 'spotify',  label: 'Spotify',   id: 'spotifyWidget'  },
+  ];
+
+  const VIS_KEY   = 'croom_widget_vis_v1';
+  const ORDER_KEY = 'croom_widget_order_v1';
+
+  function loadWVis()    { try { return JSON.parse(localStorage.getItem(VIS_KEY))   || {}; } catch { return {}; } }
+  function saveWVis(v)   { localStorage.setItem(VIS_KEY,   JSON.stringify(v)); }
+  function loadWOrder()  { try { return JSON.parse(localStorage.getItem(ORDER_KEY)) || []; } catch { return []; } }
+  function saveWOrder(o) { localStorage.setItem(ORDER_KEY, JSON.stringify(o)); }
+
+  function getOrderedDefs() {
+    const order = loadWOrder();
+    const keyed = Object.fromEntries(WIDGET_DEFS.map(d => [d.key, d]));
+    const known = order.filter(k => keyed[k]).map(k => keyed[k]);
+    const rest  = WIDGET_DEFS.filter(d => !order.includes(d.key));
+    return [...known, ...rest];
+  }
+
+  let settingsOpen = false;
+  let dragSrcKey   = null;
+
+  function toggleSettings() {
+    settingsOpen = !settingsOpen;
+    const panel = document.getElementById('settingsPanel');
+    const btn   = document.getElementById('settingsBtn');
+    panel.classList.toggle('open', settingsOpen);
+    btn.classList.toggle('active', settingsOpen);
+    if (settingsOpen) renderSettingsList();
+  }
+
+  function renderSettingsList() {
+    const vis  = loadWVis();
+    const list = document.getElementById('settingsList');
+    list.innerHTML = '';
+    getOrderedDefs().forEach(def => {
+      const on  = vis[def.key] !== false;
+      const row = document.createElement('div');
+      row.className    = 'settings-row';
+      row.draggable    = true;
+      row.dataset.key  = def.key;
+      row.innerHTML = `
+        <span class="settings-grip">⠿</span>
+        <span class="settings-name">${def.label}</span>
+        <button class="settings-toggle${on ? ' is-on' : ''}"
+          onclick="toggleWidgetVis('${def.key}')">${on ? 'On' : 'Off'}</button>
+      `;
+
+      row.addEventListener('dragstart', e => {
+        dragSrcKey = def.key;
+        e.dataTransfer.effectAllowed = 'move';
+        requestAnimationFrame(() => row.classList.add('dragging'));
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('dragging');
+        dragSrcKey = null;
+      });
+      row.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        row.classList.add('drag-over');
+      });
+      row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+      row.addEventListener('drop', e => {
+        e.preventDefault();
+        row.classList.remove('drag-over');
+        if (!dragSrcKey || dragSrcKey === def.key) return;
+        const order = getOrderedDefs().map(d => d.key);
+        const from  = order.indexOf(dragSrcKey);
+        const to    = order.indexOf(def.key);
+        order.splice(from, 1);
+        order.splice(to, 0, dragSrcKey);
+        saveWOrder(order);
+        renderSettingsList();
+      });
+
+      list.appendChild(row);
+    });
+  }
+
+  function toggleWidgetVis(key) {
+    const vis = loadWVis();
+    const def = WIDGET_DEFS.find(d => d.key === key);
+    const el  = document.getElementById(def.id);
+    if (vis[key] === false) {
+      // Turn ON
+      vis[key] = true;
+      if (key === 'groups') {
+        // Groups only shows if there are groups to display
+        el.style.display = currentGroups.length ? '' : 'none';
+      } else {
+        el.style.display = '';
+      }
+    } else {
+      // Turn OFF — save current inline display so we can restore correctly
+      vis[key] = false;
+      el.style.display = 'none';
+    }
+    saveWVis(vis);
+    renderSettingsList();
+  }
+
+  function applyWidgetVisibility() {
+    const vis = loadWVis();
+    WIDGET_DEFS.forEach(def => {
+      if (vis[def.key] === false) {
+        const el = document.getElementById(def.id);
+        if (el) el.style.display = 'none';
+      }
+    });
+  }
+
+  // Close panel when clicking outside
+  document.addEventListener('click', e => {
+    if (!settingsOpen) return;
+    const panel = document.getElementById('settingsPanel');
+    const btn   = document.getElementById('settingsBtn');
+    if (!panel.contains(e.target) && !btn.contains(e.target)) {
+      settingsOpen = false;
+      panel.classList.remove('open');
+      btn.classList.remove('active');
+    }
+  });
 
   // ── Spotify ────────────────────────────────────────────────
   let spConnected  = false;
