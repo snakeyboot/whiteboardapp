@@ -770,6 +770,31 @@
     .ww-word-btn:hover  { background: #334155; border-color: #475569; }
     .ww-word-btn:active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
 
+    /* ── Word wall vertical resize handle ── */
+    .resize-handle-vert {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 44px;
+      height: 14px;
+      cursor: ns-resize;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .resize-handle-vert::after {
+      content: '';
+      width: 28px;
+      height: 3px;
+      border-radius: 2px;
+      background: #334155;
+      transition: background 0.15s;
+    }
+    .widget:hover .resize-handle-vert::after { background: #475569; }
+
     /* ── Word def modal ── */
     .ww-def-word {
       font-size: 64px;
@@ -1210,7 +1235,7 @@
 
 <!-- Word Wall Definition Modal -->
 <div class="att-overlay" id="wwDefOverlay" onclick="if(event.target===this)closeWwDef()">
-  <div class="att-modal" style="max-width:min(1600px,94vw);">
+  <div class="att-modal" style="width:min(860px,94vw);">
     <div class="att-header">
       <div style="flex:1;">
         <div class="ww-def-word" id="wwDefWord"></div>
@@ -1519,6 +1544,12 @@
     const mw = document.getElementById('matsWidget');
     const dw = document.getElementById('clockWidget');
     const ww = document.getElementById('wordWallWidget');
+
+    // Word wall uses direct (noTransform) sizing so height can be controlled independently
+    ww.dataset.noTransform = 'true';
+    const savedWwH = parseInt(localStorage.getItem(WW_H_KEY)) || 268;
+    document.getElementById('wwBody').style.height = savedWwH + 'px';
+
     const cy = Math.round((window.innerHeight - tw.offsetHeight) / 2);
     makeDraggable(tw, document.getElementById('timerHandle'),      'timer',    16, cy);
     makeDraggable(pw, document.getElementById('pickerHandle'),     'picker',   window.innerWidth - pw.offsetWidth - 16, cy);
@@ -1531,6 +1562,7 @@
     tickClock();           // populate clock content before measuring heights
     applyWidgetVisibility();
     addResizeHandles();
+    addWwVertResize();     // vertical height drag handle for word wall
     WIDGET_DEFS.forEach(d => reapplyBodyScale(d.key));
   });
 
@@ -2409,11 +2441,11 @@
 
   // Canvas used for text-width measurement (reused across calls)
   const _wwMeasureCanvas = document.createElement('canvas');
-  function getWordFontSize(word) {
+  function getWordFontSize(word, maxW) {
     const ctx  = _wwMeasureCanvas.getContext('2d');
     const base = 24;
-    // Button text area ≈ widget body width (218 - 16 body pad) - button h-padding (24)
-    const maxW = 178;
+    // body padding 8*2=16, button h-padding 12*2=24 → subtract 40 from widget width
+    if (!maxW) maxW = NATURAL_W - 40; // fallback for 218px natural width
     ctx.font = `700 ${base}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
     const textW = ctx.measureText(word).width;
     if (textW <= maxW) return base;
@@ -2428,8 +2460,11 @@
       reapplyBodyScale('wordwall');
       return;
     }
+    // Use actual current widget width for accurate font measurement
+    const widgetW  = loadWScales()['wordwall'] || NATURAL_W;
+    const textMaxW = Math.max(60, widgetW - 40);
     body.innerHTML = wwWords.map((w, i) => {
-      const fs = getWordFontSize(w.word);
+      const fs = getWordFontSize(w.word, textMaxW);
       return `<button class="ww-word-btn" style="font-size:${fs}px" onclick="openWwDef(${i})">${w.word}</button>`;
     }).join('');
     reapplyBodyScale('wordwall');
@@ -2627,6 +2662,9 @@
   const MAX_W     = 480;
   const SCALE_KEY = 'croom_widget_scales_v1';
   const LOCK_KEY  = 'croom_lock_sizes_v1';
+  const WW_H_KEY  = 'croom_ww_height_v1';
+  const WW_MIN_H  = 60;
+  const WW_MAX_H  = 900;
 
   function loadWScales() { try { return JSON.parse(localStorage.getItem(SCALE_KEY)) || {}; } catch { return {}; } }
   function saveWScales(s) { localStorage.setItem(SCALE_KEY, JSON.stringify(s)); }
@@ -2710,6 +2748,7 @@
   }
 
   let resizeDrag = null;
+  let wwVDrag    = null;
 
   function addResizeHandles() {
     WIDGET_DEFS.forEach(def => {
@@ -2745,6 +2784,50 @@
     setWidgetWidth(resizeDrag.key, newW);
   }, { passive: false });
   document.addEventListener('touchend', () => { resizeDrag = null; });
+
+  function addWwVertResize() {
+    const el     = document.getElementById('wordWallWidget');
+    const bodyEl = document.getElementById('wwBody');
+    if (!el || !bodyEl) return;
+
+    const vh = document.createElement('div');
+    vh.className = 'resize-handle-vert';
+    el.appendChild(vh);
+
+    function startVDrag(clientY) {
+      wwVDrag = { startY: clientY, startH: parseInt(bodyEl.style.height) || bodyEl.offsetHeight || 268 };
+    }
+    function doVMove(clientY) {
+      if (!wwVDrag) return;
+      const newH = Math.max(WW_MIN_H, Math.min(WW_MAX_H, wwVDrag.startH + clientY - wwVDrag.startY));
+      bodyEl.style.height = newH + 'px';
+      const handleH = el.querySelector('.widget-handle')?.offsetHeight || 0;
+      el.style.height = (handleH + newH) + 'px';
+    }
+    function endVDrag() {
+      if (!wwVDrag) return;
+      localStorage.setItem(WW_H_KEY, parseInt(bodyEl.style.height) || 268);
+      wwVDrag = null;
+    }
+
+    vh.addEventListener('mousedown', e => {
+      e.stopPropagation(); e.preventDefault();
+      startVDrag(e.clientY);
+    });
+    vh.addEventListener('touchstart', e => {
+      e.stopPropagation(); e.preventDefault();
+      startVDrag(e.touches[0].clientY);
+    }, { passive: false });
+
+    document.addEventListener('mousemove',  e => doVMove(e.clientY));
+    document.addEventListener('mouseup',    endVDrag);
+    document.addEventListener('touchmove',  e => {
+      if (!wwVDrag) return;
+      e.preventDefault();
+      doVMove(e.touches[0].clientY);
+    }, { passive: false });
+    document.addEventListener('touchend', endVDrag);
+  }
 
   // ── Spotify ────────────────────────────────────────────────
   let spConnected  = false;
