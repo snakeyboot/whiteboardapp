@@ -1492,12 +1492,13 @@
       e.preventDefault();
       startDrag(e.clientX, e.clientY);
     });
+    // No e.preventDefault() on touchstart — buttons must still fire click events.
+    // body is overflow:hidden so no scroll to worry about.
     el.addEventListener('touchstart', e => {
       if (e.target.closest('.widget-handle, .resize-handle')) return;
       if (isInteractiveTarget(e.target)) return;
-      e.preventDefault();
       startDrag(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: false });
+    }, { passive: true });
 
     document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
     document.addEventListener('touchmove', e => {
@@ -2261,7 +2262,7 @@
           ${currentGroups.map((group, i) => `
             <div style="flex:1;min-width:0;padding:0 10px;${i > 0 ? 'border-left:1px solid #1e293b;' : ''}">
               <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#475569;margin-bottom:5px;text-align:center;">Group ${i + 1}</div>
-              ${group.map(s => `<div style="font-size:16px;color:#e2e8f0;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;">${fullNameDisplay(s)}</div>`).join('')}
+              ${group.map(s => `<div style="font-size:24px;color:#e2e8f0;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;">${fullNameDisplay(s)}</div>`).join('')}
             </div>
           `).join('')}
         </div>`;
