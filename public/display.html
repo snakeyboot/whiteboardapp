@@ -475,8 +475,9 @@
       z-index: 100;
       background: rgba(0,0,0,0.78);
       backdrop-filter: blur(6px);
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
+      padding-top: 5vh;
     }
 
     .att-overlay.open { display: flex; }
@@ -2191,6 +2192,29 @@
   }
 
   let groupsWidgetReady = false;
+  let groupsHorizontal  = false;
+  let groupsPreHorizW   = null;
+
+  function toggleGroupsLayout() {
+    if (!currentGroups.length) return;
+    groupsHorizontal = !groupsHorizontal;
+    const wid = document.getElementById('groupsWidget');
+    if (groupsHorizontal) {
+      wid.dataset.noTransform = 'true';
+      groupsPreHorizW = loadWScales()['groups'] || NATURAL_W;
+      const targetW = Math.min(currentGroups.length * 180, window.innerWidth - 40);
+      renderGroupsWidget();
+      const scales = loadWScales(); scales['groups'] = targetW; saveWScales(scales);
+      applyBodyScale('groups', targetW);
+    } else {
+      delete wid.dataset.noTransform;
+      renderGroupsWidget();
+      const restoreW = groupsPreHorizW || NATURAL_W;
+      const scales = loadWScales(); scales['groups'] = restoreW; saveWScales(scales);
+      applyBodyScale('groups', restoreW);
+      groupsPreHorizW = null;
+    }
+  }
 
   function doneGroups() {
     closeGroupModal();
@@ -2205,6 +2229,20 @@
       makeDraggable(wid, document.getElementById('groupsHandle'), 'groups',
         Math.round((window.innerWidth - (loadWScales()['groups'] || NATURAL_W)) / 2),
         Math.round((window.innerHeight - wid.offsetHeight) / 2) || 80);
+      // Double-tap / double-click → toggle horizontal layout
+      let lastGroupsTap = 0;
+      wid.addEventListener('touchend', e => {
+        if (e.target.closest('.widget-handle, .resize-handle')) return;
+        if (isInteractiveTarget(e.target)) return;
+        const now = Date.now();
+        if (now - lastGroupsTap < 350) { toggleGroupsLayout(); lastGroupsTap = 0; }
+        else lastGroupsTap = now;
+      });
+      wid.addEventListener('dblclick', e => {
+        if (e.target.closest('.widget-handle, .resize-handle')) return;
+        if (isInteractiveTarget(e.target)) return;
+        toggleGroupsLayout();
+      });
     }
   }
 
@@ -2215,13 +2253,28 @@
   function renderGroupsWidget() {
     const body = document.getElementById('groupsWidgetBody');
     if (!currentGroups.length) { body.innerHTML = ''; return; }
-    body.innerHTML = currentGroups.map((group, i) => `
-      <div style="margin-bottom:${i < currentGroups.length - 1 ? '10px' : '0'};">
-        <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#475569;margin-bottom:3px;">Group ${i + 1}</div>
-        ${group.map(s => `<div style="font-size:18px;color:#e2e8f0;padding:2px 0;">${fullNameDisplay(s)}</div>`).join('')}
-      </div>
-      ${i < currentGroups.length - 1 ? '<div style="height:1px;background:#1e293b;margin-bottom:10px;"></div>' : ''}
-    `).join('');
+
+    if (groupsHorizontal) {
+      // One row — each group as a vertical column
+      body.innerHTML = `
+        <div style="display:flex;flex-direction:row;align-items:flex-start;gap:0;">
+          ${currentGroups.map((group, i) => `
+            <div style="flex:1;min-width:0;padding:0 10px;${i > 0 ? 'border-left:1px solid #1e293b;' : ''}">
+              <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#475569;margin-bottom:5px;text-align:center;">Group ${i + 1}</div>
+              ${group.map(s => `<div style="font-size:16px;color:#e2e8f0;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;">${fullNameDisplay(s)}</div>`).join('')}
+            </div>
+          `).join('')}
+        </div>`;
+    } else {
+      // Vertical stacked layout
+      body.innerHTML = currentGroups.map((group, i) => `
+        <div style="margin-bottom:${i < currentGroups.length - 1 ? '10px' : '0'};">
+          <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#475569;margin-bottom:3px;">Group ${i + 1}</div>
+          ${group.map(s => `<div style="font-size:24px;color:#e2e8f0;padding:2px 0;">${fullNameDisplay(s)}</div>`).join('')}
+        </div>
+        ${i < currentGroups.length - 1 ? '<div style="height:1px;background:#1e293b;margin-bottom:10px;"></div>' : ''}
+      `).join('');
+    }
   }
 
   function adjustGroupParam(param, delta) {
@@ -2572,7 +2625,21 @@
     const bodyEl = el.querySelector('.widget-body');
     if (!bodyEl) return;
 
-    // Pin body at natural width & reset transform so we measure true height
+    const handleEl = el.querySelector('.widget-handle');
+    const handleH  = handleEl ? handleEl.offsetHeight : 0;
+
+    if (el.dataset.noTransform) {
+      // Reflow mode: body fills the target width directly, no scale transform
+      bodyEl.style.transform = '';
+      bodyEl.style.width     = targetWidth + 'px';
+      const h = bodyEl.offsetHeight;
+      if (h === 0) return;
+      el.style.width  = targetWidth + 'px';
+      el.style.height = (handleH + h) + 'px';
+      return;
+    }
+
+    // Transform-scale mode (default)
     bodyEl.style.width     = NATURAL_W + 'px';
     bodyEl.style.transform = '';
 
@@ -2582,9 +2649,6 @@
 
     bodyEl.style.transformOrigin = 'top left';
     bodyEl.style.transform       = `scale(${scale})`;
-
-    const handleEl = el.querySelector('.widget-handle');
-    const handleH  = handleEl ? handleEl.offsetHeight : 0;
 
     el.style.width  = targetWidth + 'px';
     el.style.height = (handleH + Math.round(naturalBodyH * scale)) + 'px';
