@@ -751,16 +751,18 @@
     /* ── Word Wall widget ── */
     .ww-word-btn {
       width: 100%;
-      padding: 10px 12px;
+      padding: 8px 12px;
       margin-bottom: 4px;
       border-radius: 9px;
       border: 1px solid #334155;
       background: #1e293b;
       color: #e2e8f0;
-      font-size: 14px;
+      font-size: 24px;
       font-weight: 700;
       cursor: pointer;
-      text-align: left;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
       transition: all 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
@@ -770,31 +772,31 @@
 
     /* ── Word def modal ── */
     .ww-def-word {
-      font-size: 46px;
+      font-size: 64px;
       font-weight: 800;
       color: #f8fafc;
-      padding: 20px 24px 4px;
+      padding: 20px 28px 4px;
       line-height: 1.1;
     }
     .ww-def-pos {
-      font-size: 16px;
+      font-size: 22px;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: #3b82f6;
-      padding: 0 24px 16px;
+      padding: 0 28px 18px;
     }
     .ww-def-text {
-      font-size: 26px;
+      font-size: 38px;
       color: #cbd5e1;
-      line-height: 1.6;
-      padding: 0 24px 28px;
+      line-height: 1.55;
+      padding: 0 28px 32px;
     }
     .ww-no-def {
-      font-size: 20px;
+      font-size: 30px;
       color: #475569;
       font-style: italic;
-      padding: 0 24px 28px;
+      padding: 0 28px 32px;
     }
 
     /* ── Group modal ── */
@@ -1201,7 +1203,7 @@
     <div class="widget-label">Word Wall</div>
     <button class="handle-btn" onclick="openWwLoadModal()" title="Load List">📂</button>
   </div>
-  <div class="widget-body" style="padding:10px;max-height:222px;overflow-y:auto;" id="wwBody">
+  <div class="widget-body" style="padding:8px;height:268px;overflow-y:auto;" id="wwBody">
     <div class="mat-empty">No words loaded</div>
   </div>
 </div>
@@ -2199,16 +2201,14 @@
   function toggleGroupsLayout() {
     if (!currentGroups.length) return;
     groupsHorizontal = !groupsHorizontal;
-    const wid = document.getElementById('groupsWidget');
+    const wid = document.getElementById('groupsWidget'); // noTransform always set
     if (groupsHorizontal) {
-      wid.dataset.noTransform = 'true';
       groupsPreHorizW = loadWScales()['groups'] || NATURAL_W;
       const targetW = Math.min(currentGroups.length * 180, window.innerWidth - 40);
       renderGroupsWidget();
       const scales = loadWScales(); scales['groups'] = targetW; saveWScales(scales);
       applyBodyScale('groups', targetW);
     } else {
-      delete wid.dataset.noTransform;
       renderGroupsWidget();
       const restoreW = groupsPreHorizW || NATURAL_W;
       const scales = loadWScales(); scales['groups'] = restoreW; saveWScales(scales);
@@ -2227,6 +2227,7 @@
     reapplyBodyScale('groups');
     if (!groupsWidgetReady) {
       groupsWidgetReady = true;
+      wid.dataset.noTransform = 'true'; // groups always renders at natural size, no CSS scale
       makeDraggable(wid, document.getElementById('groupsHandle'), 'groups',
         Math.round((window.innerWidth - (loadWScales()['groups'] || NATURAL_W)) / 2),
         Math.round((window.innerHeight - wid.offsetHeight) / 2) || 80);
@@ -2271,7 +2272,7 @@
       body.innerHTML = currentGroups.map((group, i) => `
         <div style="margin-bottom:${i < currentGroups.length - 1 ? '10px' : '0'};">
           <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#475569;margin-bottom:3px;">Group ${i + 1}</div>
-          ${group.map(s => `<div style="font-size:24px;color:#e2e8f0;padding:2px 0;">${fullNameDisplay(s)}</div>`).join('')}
+          ${group.map(s => `<div style="font-size:24px;color:#e2e8f0;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fullNameDisplay(s)}</div>`).join('')}
         </div>
         ${i < currentGroups.length - 1 ? '<div style="height:1px;background:#1e293b;margin-bottom:10px;"></div>' : ''}
       `).join('');
@@ -2406,6 +2407,19 @@
     allWordLists = lists || [];
   });
 
+  // Canvas used for text-width measurement (reused across calls)
+  const _wwMeasureCanvas = document.createElement('canvas');
+  function getWordFontSize(word) {
+    const ctx  = _wwMeasureCanvas.getContext('2d');
+    const base = 24;
+    // Button text area ≈ widget body width (218 - 16 body pad) - button h-padding (24)
+    const maxW = 178;
+    ctx.font = `700 ${base}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+    const textW = ctx.measureText(word).width;
+    if (textW <= maxW) return base;
+    return Math.max(11, Math.floor(base * maxW / textW));
+  }
+
   function renderWwWidget() {
     const body = document.getElementById('wwBody');
     if (!body) return;
@@ -2414,9 +2428,10 @@
       reapplyBodyScale('wordwall');
       return;
     }
-    body.innerHTML = wwWords.map((w, i) =>
-      `<button class="ww-word-btn" onclick="openWwDef(${i})">${w.word}</button>`
-    ).join('');
+    body.innerHTML = wwWords.map((w, i) => {
+      const fs = getWordFontSize(w.word);
+      return `<button class="ww-word-btn" style="font-size:${fs}px" onclick="openWwDef(${i})">${w.word}</button>`;
+    }).join('');
     reapplyBodyScale('wordwall');
   }
 
@@ -2648,10 +2663,20 @@
     if (naturalBodyH === 0) return; // widget is hidden — skip; will reapply when shown
     const scale = targetWidth / NATURAL_W;
 
+    el.style.width = targetWidth + 'px';
+
+    // At scale ≈ 1 skip the transform entirely — applying scale(1) creates a new
+    // block formatting context which suppresses margin collapsing and causes the
+    // measured pre-transform height to differ from post-transform height (picker bug).
+    if (Math.abs(scale - 1) < 0.005) {
+      bodyEl.style.transform = '';
+      bodyEl.style.transformOrigin = '';
+      el.style.height = '';   // let the widget size to its content naturally
+      return;
+    }
+
     bodyEl.style.transformOrigin = 'top left';
     bodyEl.style.transform       = `scale(${scale})`;
-
-    el.style.width  = targetWidth + 'px';
     el.style.height = (handleH + Math.round(naturalBodyH * scale)) + 'px';
   }
 
