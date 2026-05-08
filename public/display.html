@@ -925,12 +925,12 @@
 
     /* ── Spotify widget ── */
     .sp-disp-art {
-      width: 100%;
-      aspect-ratio: 1;
-      border-radius: 8px;
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      border-radius: 6px;
       overflow: hidden;
       background: #1e293b;
-      margin-bottom: 8px;
     }
     .sp-disp-art img {
       width: 100%; height: 100%; object-fit: cover; display: block;
@@ -1143,11 +1143,10 @@
       <button class="abtn" onclick="addTime(10)">+10s</button>
       <button class="abtn" onclick="addTime(30)">+30s</button>
       <button class="abtn" onclick="addTime(60)">+1m</button>
+      <button class="abtn" onclick="clearDisplayTimer()" style="flex:0 0 auto;padding:7px 9px;" title="Clear timer">C</button>
     </div>
-    <div class="timer-ctrl-row">
-      <button class="tbtn-start" id="dispStartBtn" onclick="tapTimer()">▶ Start</button>
-      <button class="tbtn-clear" onclick="clearDisplayTimer()">Clear</button>
-    </div>
+    <!-- dispStartBtn kept hidden so JS state updates don't error -->
+    <button id="dispStartBtn" style="display:none;" onclick="tapTimer()"></button>
   </div>
 </div>
 
@@ -1328,19 +1327,37 @@
       <div style="font-size:10px;font-weight:600;color:#334155;letter-spacing:0.08em;text-transform:uppercase;">Not connected</div>
     </div>
     <!-- Player -->
-    <div id="spDisp1" style="display:none;padding:10px 10px 12px;">
-      <div class="sp-disp-art">
-        <img id="spDispArt" src="" alt="">
+    <div id="spDisp1" style="display:none;padding:8px 10px 10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+        <div class="sp-disp-art">
+          <img id="spDispArt" src="" alt="">
+        </div>
+        <div style="min-width:0;flex:1;">
+          <div id="spDispTrack"  style="font-size:12px;font-weight:700;color:#f8fafc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;"></div>
+          <div id="spDispArtist" style="font-size:10px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+        </div>
       </div>
-      <div id="spDispTrack"  style="font-size:13px;font-weight:700;color:#f8fafc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;"></div>
-      <div id="spDispArtist" style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px;"></div>
       <div class="sp-disp-prog-wrap">
         <div class="sp-disp-prog" id="spDispProg"></div>
       </div>
       <div class="sp-disp-btns">
-        <button class="sp-disp-btn" onclick="spDispPrev()" title="Previous">⏮</button>
-        <button class="sp-disp-btn sp-disp-play" id="spDispPlayBtn" onclick="spDispTogglePlay()">▶</button>
-        <button class="sp-disp-btn" onclick="spDispNext()" title="Next">⏭</button>
+        <button class="sp-disp-btn" onclick="spDispPrev()" title="Previous">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <rect x="0" y="0" width="2.5" height="12" rx="1"/>
+            <path d="M11 1L3.5 6L11 11z"/>
+          </svg>
+        </button>
+        <button class="sp-disp-btn sp-disp-play" id="spDispPlayBtn" onclick="spDispTogglePlay()">
+          <svg id="spPlayIcon" width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
+            <path d="M0 0L10 6L0 12z"/>
+          </svg>
+        </button>
+        <button class="sp-disp-btn" onclick="spDispNext()" title="Next">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <rect x="9.5" y="0" width="2.5" height="12" rx="1"/>
+            <path d="M1 1L8.5 6L1 11z"/>
+          </svg>
+        </button>
       </div>
     </div>
   </div>
@@ -1756,9 +1773,9 @@
     scaleTimerFont(text);
     timerNum.classList.remove('warning','urgent');
     timerNum.classList.add('entry');
-    timerHint.textContent = 'Press Start';
+    timerHint.textContent = 'Tap to start';
     const btn = document.getElementById('dispStartBtn');
-    btn.textContent = '▶ Start'; btn.classList.remove('running');
+    if (btn) { btn.textContent = '▶ Start'; btn.classList.remove('running'); }
   }
 
   function dispNumpadBackspace() {
@@ -3036,7 +3053,10 @@
 
     document.getElementById('spDispTrack').textContent  = state.trackName  || '';
     document.getElementById('spDispArtist').textContent = state.artistName || '';
-    document.getElementById('spDispPlayBtn').textContent = state.isPlaying ? '⏸' : '▶';
+    const spIcon = document.getElementById('spPlayIcon');
+    if (spIcon) spIcon.innerHTML = state.isPlaying
+      ? '<rect x="0" y="0" width="3.5" height="12" rx="1"/><rect x="6.5" y="0" width="3.5" height="12" rx="1"/>'
+      : '<path d="M0 0L10 6L0 12z"/>';
 
     spPlaying  = state.isPlaying;
     spDuration = state.duration || 0;
