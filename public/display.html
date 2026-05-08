@@ -1532,7 +1532,8 @@
       const dx = clientX - sx, dy = clientY - sy;
       if (!moved && Math.hypot(dx, dy) < 5) return;
       if (!moved) { moved = true; el.classList.add('dragging'); }
-      placeWidget(el, ox + dx, oy + dy);
+      const { x: snapX, y: snapY } = getSnapPosition(el, ox + dx, oy + dy);
+      placeWidget(el, snapX, snapY);
     }
 
     function onEnd() {
@@ -1892,6 +1893,8 @@
     if (doneOverlayTimer) clearTimeout(doneOverlayTimer);
     doneOverlayTimer = setTimeout(stopDone, 10000);
     playAlarm();
+    // Pause Spotify when the timer goes off
+    if (spPlaying) socket.emit('spotify:pause');
   });
 
   // ── Picker ──────────────────────────────────────────────────
@@ -2344,9 +2347,11 @@
       bodyEl.style.height   = bodyH + 'px';
 
       if (innerEl) {
+        // Clear any explicit width so inner fills the body naturally — avoids
+        // content-box overflow that shifts the transform-origin off-screen.
+        innerEl.style.width          = '';
         innerEl.style.transform      = '';
-        innerEl.style.transformOrigin = 'top center';
-        innerEl.style.width = targetWidth + 'px';
+        innerEl.style.transformOrigin = 'top left';
         const naturalH = innerEl.offsetHeight;
         if (naturalH > 0) {
           const s = Math.max(0.25, Math.min(2.5, bodyH / naturalH));
@@ -2356,6 +2361,7 @@
         }
       }
       el.style.height = totalH + 'px';
+      reclampWidget(el);
     }
   }
 
@@ -2372,8 +2378,7 @@
       applyGroupsLayout(targetW);
     } else {
       renderGroupsWidget();
-      const restoreW = groupsPreHorizW || NATURAL_W;
-      const scales = loadWScales(); scales['groups'] = restoreW; saveWScales(scales);
+      const restoreW = parseInt(localStorage.getItem(GROUPS_V_W_KEY)) || groupsPreHorizW || NATURAL_W;
       applyGroupsLayout(restoreW);
       groupsPreHorizW = null;
     }
@@ -2389,7 +2394,9 @@
     reapplyBodyScale('groups');
     if (!groupsWidgetReady) {
       groupsWidgetReady = true;
-      const savedW = loadWScales()['groups'] || NATURAL_W;
+      const savedW = groupsHorizontal
+        ? (loadWScales()['groups'] || NATURAL_W)
+        : (parseInt(localStorage.getItem(GROUPS_V_W_KEY)) || NATURAL_W);
       makeDraggable(wid, document.getElementById('groupsHandle'), 'groups',
         Math.round((window.innerWidth - savedW) / 2),
         Math.max(0, Math.round((window.innerHeight - wid.offsetHeight) / 2)));
@@ -2715,17 +2722,17 @@
       el.style.left = '0px';
       el.style.top  = y + 'px';
       savePos(def.key, 0, y);
-      y += el.offsetHeight;
+      y += el.offsetHeight + SNAP_GAP;
     });
 
-    // Stack right side flush to right edge, top to bottom with no gap
+    // Stack right side flush to right edge, top to bottom with 1px gaps
     y = 0;
     right.forEach(({ el, def }) => {
       const x = window.innerWidth - el.offsetWidth;
       el.style.left = x + 'px';
       el.style.top  = y + 'px';
       savePos(def.key, x, y);
-      y += el.offsetHeight;
+      y += el.offsetHeight + SNAP_GAP;
     });
   }
 
@@ -2835,6 +2842,9 @@
   const WW_MIN_H     = 60;
   const WW_MAX_H     = 900;
   const GROUPS_H_KEY = 'croom_groups_height_v1';
+  const GROUPS_V_W_KEY = 'croom_groups_vw_v1';  // vertical-mode width (separate from horizontal)
+  const SNAP_THRESHOLD = 20; // px within which widget edges snap to each other
+  const SNAP_GAP       = 1;  // px gap between snapped widgets
 
   function loadWScales() { try { return JSON.parse(localStorage.getItem(SCALE_KEY)) || {}; } catch { return {}; } }
   function saveWScales(s) { localStorage.setItem(SCALE_KEY, JSON.stringify(s)); }
@@ -2846,6 +2856,42 @@
   function reclampWidget(el) {
     if (!el.style.left) return; // not yet placed by makeDraggable — skip
     placeWidget(el, parseInt(el.style.left) || 0, parseInt(el.style.top) || 0);
+  }
+
+  // Returns {x, y} with edges snapped to nearby widget edges or screen bounds.
+  // Finds the closest snap target in each axis independently.
+  function getSnapPosition(dragEl, x, y) {
+    const dw = dragEl.offsetWidth, dh = dragEl.offsetHeight;
+    let snapX = x, snapY = y, minDx = SNAP_THRESHOLD, minDy = SNAP_THRESHOLD;
+
+    WIDGET_DEFS.forEach(def => {
+      const other = document.getElementById(def.id);
+      if (!other || other === dragEl || other.style.display === 'none' || !other.style.left) return;
+      const ox = parseInt(other.style.left), oy = parseInt(other.style.top);
+      const ow = other.offsetWidth,          oh = other.offsetHeight;
+      let d;
+      // My right → other's left (with gap)
+      d = Math.abs(x + dw + SNAP_GAP - ox);
+      if (d < minDx) { minDx = d; snapX = ox - dw - SNAP_GAP; }
+      // My left → other's right (with gap)
+      d = Math.abs(x - ox - ow - SNAP_GAP);
+      if (d < minDx) { minDx = d; snapX = ox + ow + SNAP_GAP; }
+      // My bottom → other's top (with gap)
+      d = Math.abs(y + dh + SNAP_GAP - oy);
+      if (d < minDy) { minDy = d; snapY = oy - dh - SNAP_GAP; }
+      // My top → other's bottom (with gap)
+      d = Math.abs(y - oy - oh - SNAP_GAP);
+      if (d < minDy) { minDy = d; snapY = oy + oh + SNAP_GAP; }
+    });
+
+    // Screen edges (flush, no gap)
+    let d;
+    d = Math.abs(x);                          if (d < minDx) { minDx = d; snapX = 0; }
+    d = Math.abs(x + dw - window.innerWidth); if (d < minDx) { minDx = d; snapX = window.innerWidth  - dw; }
+    d = Math.abs(y);                          if (d < minDy) { minDy = d; snapY = 0; }
+    d = Math.abs(y + dh - window.innerHeight);if (d < minDy) {            snapY = window.innerHeight - dh; }
+
+    return { x: snapX, y: snapY };
   }
 
   function applyBodyScale(key, targetWidth) {
@@ -2904,6 +2950,14 @@
   }
 
   function reapplyBodyScale(key) {
+    if (key === 'groups') {
+      // Groups uses separate width storage for vertical vs horizontal mode
+      const w = groupsHorizontal
+        ? (loadWScales()['groups'] || NATURAL_W)
+        : (parseInt(localStorage.getItem(GROUPS_V_W_KEY)) || NATURAL_W);
+      applyGroupsLayout(w);
+      return;
+    }
     const scales = loadWScales();
     applyBodyScale(key, scales[key] || NATURAL_W);
   }
@@ -2913,11 +2967,17 @@
     // Groups is always sized independently — lock never propagates to or from it
     if (loadWLock() && key !== 'groups') {
       WIDGET_DEFS.filter(d => d.key !== 'groups').forEach(d => { applyBodyScale(d.key, w); scales[d.key] = w; });
+      saveWScales(scales);
+    } else if (key === 'groups') {
+      // Persist to the correct store based on current layout mode
+      if (groupsHorizontal) { scales['groups'] = w; saveWScales(scales); }
+      else                  { localStorage.setItem(GROUPS_V_W_KEY, w); }
+      applyGroupsLayout(w);
     } else {
       applyBodyScale(key, w);
       scales[key] = w;
+      saveWScales(scales);
     }
-    saveWScales(scales);
   }
 
   function toggleLockSizes() {
