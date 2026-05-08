@@ -966,10 +966,9 @@
     .sp-disp-btn.sp-disp-play:hover { background: #1ed760; }
 
     /* ── Settings button ── */
-    #settingsBtn {
+    #settingsBtn, #snapBtn {
       position: fixed;
       bottom: 16px;
-      right: 16px;
       z-index: 50;
       width: 30px;
       height: 30px;
@@ -987,7 +986,9 @@
       padding: 0;
       line-height: 1;
     }
-    #settingsBtn:hover  { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
+    #settingsBtn { right: 16px; }
+    #snapBtn     { right: 54px; }
+    #settingsBtn:hover, #snapBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
     #settingsBtn.active { color: #94a3b8; border-color: #64748b; background: rgba(15,23,42,0.95); }
 
     #settingsPanel {
@@ -1380,6 +1381,14 @@
     </div>
   </div>
 </div>
+
+<!-- Snap-to-sides button -->
+<button id="snapBtn" onclick="snapWidgets()" title="Snap widgets to sides">
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
+    <rect x="0.5" y="1" width="3" height="11" rx="1"/>
+    <rect x="9.5" y="1" width="3" height="11" rx="1"/>
+  </svg>
+</button>
 
 <!-- Settings button -->
 <button id="settingsBtn" onclick="toggleSettings()" title="Widget settings">⚙</button>
@@ -2663,6 +2672,44 @@
     panel.classList.toggle('open', settingsOpen);
     btn.classList.toggle('active', settingsOpen);
     if (settingsOpen) renderSettingsList();
+  }
+
+  // Snap every visible widget to its nearest screen edge, then stack them
+  // flush to the top on each side with no gaps between them.
+  function snapWidgets() {
+    const left = [], right = [];
+
+    WIDGET_DEFS.forEach(def => {
+      const el = document.getElementById(def.id);
+      // Skip hidden or not-yet-placed widgets
+      if (!el || el.style.display === 'none' || !el.style.left) return;
+      // Determine nearest side by widget centre X
+      const cx = parseInt(el.style.left) + el.offsetWidth / 2;
+      (cx < window.innerWidth / 2 ? left : right).push({ el, def });
+    });
+
+    // Preserve relative top-to-bottom order on each side
+    left.sort( (a, b) => (parseInt(a.el.style.top) || 0) - (parseInt(b.el.style.top) || 0));
+    right.sort((a, b) => (parseInt(a.el.style.top) || 0) - (parseInt(b.el.style.top) || 0));
+
+    // Stack left side flush to left edge, top to bottom with no gap
+    let y = 0;
+    left.forEach(({ el, def }) => {
+      el.style.left = '0px';
+      el.style.top  = y + 'px';
+      savePos(def.key, 0, y);
+      y += el.offsetHeight;
+    });
+
+    // Stack right side flush to right edge, top to bottom with no gap
+    y = 0;
+    right.forEach(({ el, def }) => {
+      const x = window.innerWidth - el.offsetWidth;
+      el.style.left = x + 'px';
+      el.style.top  = y + 'px';
+      savePos(def.key, x, y);
+      y += el.offsetHeight;
+    });
   }
 
   function renderSettingsList() {
