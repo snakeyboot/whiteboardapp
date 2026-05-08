@@ -1207,7 +1207,7 @@
 
 <!-- Word Wall Definition Modal -->
 <div class="att-overlay" id="wwDefOverlay" onclick="if(event.target===this)closeWwDef()">
-  <div class="att-modal" style="max-width:min(800px,92vw);">
+  <div class="att-modal" style="max-width:min(1600px,94vw);">
     <div class="att-header">
       <div style="flex:1;">
         <div class="ww-def-word" id="wwDefWord"></div>
@@ -1524,10 +1524,10 @@
     makeDraggable(ww, document.getElementById('wordWallHandle'),   'wordwall', window.innerWidth - ww.offsetWidth - 16, Math.round((window.innerHeight - ww.offsetHeight) / 2));
     const sw = document.getElementById('spotifyWidget');
     makeDraggable(sw, document.getElementById('spotifyHandle'),    'spotify',  16, 16);
+    tickClock();           // populate clock content before measuring heights
     applyWidgetVisibility();
     addResizeHandles();
     WIDGET_DEFS.forEach(d => reapplyBodyScale(d.key));
-    tickClock();
   });
 
   // ── Clock ──────────────────────────────────────────────────
