@@ -1775,8 +1775,10 @@
 
   function updateDeckInfo(remaining, total) {
     const el = document.getElementById('deckInfo');
-    if (!total) { el.textContent = ''; return; }
-    el.textContent = remaining === 0 ? 'All called — reshuffling next' : `${remaining} of ${total} remaining`;
+    if (!total) { el.textContent = ''; }
+    else { el.textContent = remaining === 0 ? 'All called — reshuffling next' : `${remaining} of ${total} remaining`; }
+    // Deck info adds/removes a line of text — re-measure and re-clamp the widget
+    reapplyBodyScale('picker');
   }
 
   socket.on('state', s => {
@@ -2273,6 +2275,7 @@
       }
       const h = bodyEl.offsetHeight;
       el.style.height = h > 0 ? (handleH + h) + 'px' : '';
+      reclampWidget(el);
 
     } else {
       // ── Vertical: fixed height = slide area, scale content to fill ──
@@ -2748,6 +2751,13 @@
   function loadWLock()    { try { return JSON.parse(localStorage.getItem(LOCK_KEY)); } catch { return false; } }
   function saveWLock(v)   { localStorage.setItem(LOCK_KEY, JSON.stringify(v)); }
 
+  // After applyBodyScale sets a widget's height, re-clamp its position so that a
+  // height increase never silently pushes the widget below the viewport.
+  function reclampWidget(el) {
+    if (!el.style.left) return; // not yet placed by makeDraggable — skip
+    placeWidget(el, parseInt(el.style.left) || 0, parseInt(el.style.top) || 0);
+  }
+
   function applyBodyScale(key, targetWidth) {
     // Groups has its own dedicated layout function
     if (key === 'groups') { applyGroupsLayout(targetWidth); return; }
@@ -2770,6 +2780,7 @@
       if (h === 0) return;
       el.style.width  = targetWidth + 'px';
       el.style.height = (handleH + h) + 'px';
+      reclampWidget(el);
       return;
     }
 
@@ -2790,6 +2801,7 @@
       bodyEl.style.transform = '';
       bodyEl.style.transformOrigin = '';
       el.style.height = (handleH + naturalBodyH) + 'px';
+      reclampWidget(el);
       return;
     }
 
@@ -2798,6 +2810,7 @@
     // Use getBoundingClientRect to get the ACTUAL rendered height after the transform.
     // This accounts for BFC-induced margin changes that simple (naturalH × scale) misses.
     el.style.height = (handleH + Math.round(bodyEl.getBoundingClientRect().height)) + 'px';
+    reclampWidget(el);
   }
 
   function reapplyBodyScale(key) {
