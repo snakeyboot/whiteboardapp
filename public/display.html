@@ -1455,11 +1455,16 @@
 
   // Returns true if target lives inside a scrollable ancestor (within widgetEl).
   // Used so drags originating inside a scrollable body don't hijack widget movement.
+  // Exception: if target IS the scrollable element itself (e.g. clicking its padding gap),
+  // we allow drag — only descendants of a scrollable area are blocked.
   function isScrollableArea(target, widgetEl) {
     let el = target;
     while (el && el !== widgetEl) {
       const ov = window.getComputedStyle(el).overflowY;
-      if ((ov === 'auto' || ov === 'scroll') && el.scrollHeight > el.clientHeight) return true;
+      if ((ov === 'auto' || ov === 'scroll') && el.scrollHeight > el.clientHeight) {
+        if (el !== target) return true; // descendant of scrollable — block
+        // target IS the scrollable element (its padding gap) — allow through
+      }
       el = el.parentElement;
     }
     return false;
@@ -1487,10 +1492,10 @@
     const saved = loadPos()[key];
     placeWidget(el, saved ? saved.x : defaultX, saved ? saved.y : defaultY);
 
-    let active = false, ox, oy, sx, sy, moved;
+    let active = false, twoFinger = false, ox, oy, sx, sy, moved;
 
-    function startDrag(clientX, clientY) {
-      active = true; moved = false;
+    function startDrag(clientX, clientY, isTwoFinger) {
+      active = true; moved = false; twoFinger = !!isTwoFinger;
       sx = clientX; sy = clientY;
       ox = parseInt(el.style.left) || 0;
       oy = parseInt(el.style.top)  || 0;
@@ -1506,7 +1511,7 @@
 
     function onEnd() {
       if (!active) return;
-      active = false;
+      active = false; twoFinger = false;
       el.classList.remove('dragging');
       if (moved) {
         savePos(key, parseInt(el.style.left), parseInt(el.style.top));
@@ -1533,9 +1538,23 @@
       if (!isInteractiveTarget(e.target)) e.preventDefault();
       startDrag(e.clientX, e.clientY);
     });
-    // passive:true keeps button click synthesis alive on touch devices.
-    // Scrollable children are skipped so they can scroll normally.
+
+    // ── Two-finger drag (non-passive so we can preventDefault pinch-zoom) ──────
+    // Both fingers moving together shifts the midpoint → moves the widget.
+    // Bypasses the scrollable-area check so it works over word wall, etc.
     el.addEventListener('touchstart', e => {
+      if (e.touches.length < 2) return;
+      if (e.target.closest('.widget-handle, .resize-handle, .resize-handle-vert')) return;
+      e.preventDefault();
+      const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      startDrag(mx, my, true);
+    }, { passive: false });
+
+    // ── Single-finger drag (passive:true preserves scroll & button clicks) ─────
+    // Scrollable children are skipped so they can still scroll normally.
+    el.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
       if (e.target.closest('.widget-handle, .resize-handle, .resize-handle-vert')) return;
       if (isScrollableArea(e.target, el)) return;
       startDrag(e.touches[0].clientX, e.touches[0].clientY);
@@ -1545,7 +1564,14 @@
     document.addEventListener('touchmove', e => {
       if (!active) return;
       e.preventDefault();
-      onMove(e.touches[0].clientX, e.touches[0].clientY);
+      if (twoFinger) {
+        if (e.touches.length < 2) return; // lifted a finger — wait for touchend
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        onMove(mx, my);
+      } else {
+        onMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
     }, { passive: false });
     document.addEventListener('mouseup',  onEnd);
     document.addEventListener('touchend', onEnd);
