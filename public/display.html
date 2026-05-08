@@ -74,6 +74,13 @@
       cursor: nwse-resize;
       z-index: 5;
       -webkit-tap-highlight-color: transparent;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .edit-mode .resize-handle {
+      opacity: 1;
+      pointer-events: auto;
     }
     .resize-handle::after {
       content: '';
@@ -82,12 +89,10 @@
       right: 5px;
       width: 7px;
       height: 7px;
-      border-right: 2px solid #334155;
-      border-bottom: 2px solid #334155;
+      border-right: 2px solid #475569;
+      border-bottom: 2px solid #475569;
       border-radius: 0 0 13px 0;
-      transition: border-color 0.15s;
     }
-    .widget:hover .resize-handle::after { border-color: #475569; }
 
     .widget.dragging { box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
 
@@ -99,6 +104,22 @@
       cursor: grab;
       border-bottom: 1px solid rgba(51,65,85,0.5);
       border-radius: 16px 16px 0 0;
+      /* Hidden by default — revealed in edit mode */
+      overflow: hidden;
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: max-height 0.3s ease, opacity 0.22s ease, padding 0.3s ease;
+    }
+
+    .edit-mode .widget-handle {
+      max-height: 50px;
+      padding-top: 10px;
+      padding-bottom: 9px;
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .widget-handle:active { cursor: grabbing; }
@@ -753,13 +774,14 @@
 
     /* ── Word def modal ── */
     .ww-def-word {
-      font-size: 24px;
+      font-size: 46px;
       font-weight: 800;
       color: #f8fafc;
       padding: 20px 24px 4px;
+      line-height: 1.1;
     }
     .ww-def-pos {
-      font-size: 11px;
+      font-size: 16px;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -767,16 +789,16 @@
       padding: 0 24px 16px;
     }
     .ww-def-text {
-      font-size: 16px;
+      font-size: 26px;
       color: #cbd5e1;
-      line-height: 1.65;
-      padding: 0 24px 24px;
+      line-height: 1.6;
+      padding: 0 24px 28px;
     }
     .ww-no-def {
-      font-size: 14px;
+      font-size: 20px;
       color: #475569;
       font-style: italic;
-      padding: 0 24px 24px;
+      padding: 0 24px 28px;
     }
 
     /* ── Group modal ── */
@@ -920,11 +942,10 @@
     }
     .sp-disp-btn.sp-disp-play:hover { background: #1ed760; }
 
-    /* ── Settings button & panel ── */
-    #settingsBtn {
+    /* ── Settings & Edit buttons ── */
+    #settingsBtn, #editBtn {
       position: fixed;
       bottom: 16px;
-      right: 16px;
       z-index: 50;
       width: 30px;
       height: 30px;
@@ -932,7 +953,6 @@
       border: 1px solid rgba(51,65,85,0.5);
       background: rgba(15,23,42,0.65);
       color: #334155;
-      font-size: 15px;
       cursor: pointer;
       backdrop-filter: blur(8px);
       transition: color 0.2s, border-color 0.2s, background 0.2s;
@@ -942,8 +962,15 @@
       padding: 0;
       line-height: 1;
     }
-    #settingsBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
+    #settingsBtn { right: 16px; font-size: 15px; }
+    #editBtn     { right: 54px; font-size: 14px; }
+    #settingsBtn:hover, #editBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
     #settingsBtn.active { color: #94a3b8; border-color: #64748b; background: rgba(15,23,42,0.95); }
+    #editBtn.active {
+      color: #60a5fa;
+      border-color: rgba(59,130,246,0.45);
+      background: rgba(15,23,42,0.95);
+    }
 
     #settingsPanel {
       position: fixed;
@@ -1190,15 +1217,15 @@
 
 <!-- Word Wall Definition Modal -->
 <div class="att-overlay" id="wwDefOverlay" onclick="if(event.target===this)closeWwDef()">
-  <div class="att-modal" style="max-width:min(480px,92vw);">
+  <div class="att-modal" style="max-width:min(620px,92vw);">
     <div class="att-header">
       <div style="flex:1;">
-        <div class="ww-def-word" id="wwDefWord" style="padding:0;font-size:22px;font-weight:800;color:#f8fafc;"></div>
-        <div class="att-sub" id="wwDefPos" style="color:#3b82f6;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;font-size:11px;margin-top:2px;"></div>
+        <div class="ww-def-word" id="wwDefWord"></div>
+        <div class="ww-def-pos" id="wwDefPos"></div>
       </div>
       <button class="att-close" onclick="closeWwDef()">✕</button>
     </div>
-    <div id="wwDefText" style="padding:16px 20px 20px;font-size:16px;color:#cbd5e1;line-height:1.65;"></div>
+    <div class="ww-def-text" id="wwDefText"></div>
   </div>
 </div>
 
@@ -1336,8 +1363,9 @@
   </div>
 </div>
 
-<!-- Settings button -->
-<button id="settingsBtn" onclick="toggleSettings()" title="Widget settings">⚙</button>
+<!-- Edit / Settings buttons -->
+<button id="editBtn"     onclick="toggleEditMode()" title="Edit layout">✎</button>
+<button id="settingsBtn" onclick="toggleSettings()"  title="Widget settings">⚙</button>
 
 <!-- Settings panel -->
 <div id="settingsPanel">
@@ -2312,13 +2340,11 @@
     document.getElementById('wwDefPos').textContent  = w.partOfSpeech || '';
     const textEl = document.getElementById('wwDefText');
     if (w.definition) {
-      textEl.textContent = w.definition;
-      textEl.style.fontStyle = 'normal';
-      textEl.style.color = '#cbd5e1';
+      textEl.textContent   = w.definition;
+      textEl.className     = 'ww-def-text';
     } else {
-      textEl.textContent = 'No definition available.';
-      textEl.style.fontStyle = 'italic';
-      textEl.style.color = '#475569';
+      textEl.textContent   = 'No definition available.';
+      textEl.className     = 'ww-no-def';
     }
     document.getElementById('wwDefOverlay').classList.add('open');
   }
@@ -2492,6 +2518,17 @@
       btn.classList.remove('active');
     }
   });
+
+  // ── Edit mode ─────────────────────────────────────────────
+  let editMode = false;
+
+  function toggleEditMode() {
+    editMode = !editMode;
+    document.body.classList.toggle('edit-mode', editMode);
+    document.getElementById('editBtn').classList.toggle('active', editMode);
+    // Re-measure widget heights after handle bars finish animating (300ms)
+    setTimeout(() => WIDGET_DEFS.forEach(d => reapplyBodyScale(d.key)), 320);
+  }
 
   // ── Resize system ─────────────────────────────────────────
   const NATURAL_W = 218;
