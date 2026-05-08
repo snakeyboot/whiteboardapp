@@ -74,13 +74,6 @@
       cursor: nwse-resize;
       z-index: 5;
       -webkit-tap-highlight-color: transparent;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
-    }
-    .edit-mode .resize-handle {
-      opacity: 1;
-      pointer-events: auto;
     }
     .resize-handle::after {
       content: '';
@@ -89,10 +82,12 @@
       right: 5px;
       width: 7px;
       height: 7px;
-      border-right: 2px solid #475569;
-      border-bottom: 2px solid #475569;
+      border-right: 2px solid #334155;
+      border-bottom: 2px solid #334155;
       border-radius: 0 0 13px 0;
+      transition: border-color 0.15s;
     }
+    .widget:hover .resize-handle::after { border-color: #475569; }
 
     .widget.dragging { box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
 
@@ -104,7 +99,7 @@
       cursor: grab;
       border-bottom: 1px solid rgba(51,65,85,0.5);
       border-radius: 16px 16px 0 0;
-      /* Hidden by default — revealed in edit mode */
+      /* Hidden by default — revealed on tap of top edge */
       overflow: hidden;
       max-height: 0;
       padding-top: 0;
@@ -114,7 +109,7 @@
       transition: max-height 0.3s ease, opacity 0.22s ease, padding 0.3s ease;
     }
 
-    .edit-mode .widget-handle {
+    .handle-shown .widget-handle {
       max-height: 50px;
       padding-top: 10px;
       padding-bottom: 9px;
@@ -942,10 +937,11 @@
     }
     .sp-disp-btn.sp-disp-play:hover { background: #1ed760; }
 
-    /* ── Settings & Edit buttons ── */
-    #settingsBtn, #editBtn {
+    /* ── Settings button ── */
+    #settingsBtn {
       position: fixed;
       bottom: 16px;
+      right: 16px;
       z-index: 50;
       width: 30px;
       height: 30px;
@@ -953,6 +949,7 @@
       border: 1px solid rgba(51,65,85,0.5);
       background: rgba(15,23,42,0.65);
       color: #334155;
+      font-size: 15px;
       cursor: pointer;
       backdrop-filter: blur(8px);
       transition: color 0.2s, border-color 0.2s, background 0.2s;
@@ -962,15 +959,8 @@
       padding: 0;
       line-height: 1;
     }
-    #settingsBtn { right: 16px; font-size: 15px; }
-    #editBtn     { right: 54px; font-size: 14px; }
-    #settingsBtn:hover, #editBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
+    #settingsBtn:hover  { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
     #settingsBtn.active { color: #94a3b8; border-color: #64748b; background: rgba(15,23,42,0.95); }
-    #editBtn.active {
-      color: #60a5fa;
-      border-color: rgba(59,130,246,0.45);
-      background: rgba(15,23,42,0.95);
-    }
 
     #settingsPanel {
       position: fixed;
@@ -1217,7 +1207,7 @@
 
 <!-- Word Wall Definition Modal -->
 <div class="att-overlay" id="wwDefOverlay" onclick="if(event.target===this)closeWwDef()">
-  <div class="att-modal" style="max-width:min(620px,92vw);">
+  <div class="att-modal" style="max-width:min(800px,92vw);">
     <div class="att-header">
       <div style="flex:1;">
         <div class="ww-def-word" id="wwDefWord"></div>
@@ -1363,9 +1353,8 @@
   </div>
 </div>
 
-<!-- Edit / Settings buttons -->
-<button id="editBtn"     onclick="toggleEditMode()" title="Edit layout">✎</button>
-<button id="settingsBtn" onclick="toggleSettings()"  title="Widget settings">⚙</button>
+<!-- Settings button -->
+<button id="settingsBtn" onclick="toggleSettings()" title="Widget settings">⚙</button>
 
 <!-- Settings panel -->
 <div id="settingsPanel">
@@ -1431,48 +1420,92 @@
     el.style.top  = clamp(y, 0, my) + 'px';
   }
 
+  // Returns true if the touch/click target is an interactive element
+  function isInteractiveTarget(target) {
+    return !!target.closest('button, input, select, textarea, a');
+  }
+
+  // Per-widget handle-bar show timers
+  const handleTimers = {};
+
+  function showWidgetHandle(key) {
+    const def = WIDGET_DEFS.find(d => d.key === key);
+    if (!def) return;
+    const el = document.getElementById(def.id);
+    if (!el) return;
+    clearTimeout(handleTimers[key]);
+    el.classList.add('handle-shown');
+    setTimeout(() => reapplyBodyScale(key), 320);
+    // Auto-hide after 4 s of inactivity
+    handleTimers[key] = setTimeout(() => {
+      el.classList.remove('handle-shown');
+      setTimeout(() => reapplyBodyScale(key), 320);
+    }, 4000);
+  }
+
   function makeDraggable(el, handle, key, defaultX, defaultY) {
     const saved = loadPos()[key];
     placeWidget(el, saved ? saved.x : defaultX, saved ? saved.y : defaultY);
 
-    let active = false, ox, oy, sx, sy;
+    let active = false, ox, oy, sx, sy, moved;
 
-    handle.addEventListener('mousedown', e => {
-      e.preventDefault();
-      active = true; sx = e.clientX; sy = e.clientY;
+    function startDrag(clientX, clientY) {
+      active = true; moved = false;
+      sx = clientX; sy = clientY;
       ox = parseInt(el.style.left) || 0;
       oy = parseInt(el.style.top)  || 0;
-      el.classList.add('dragging');
-    });
+    }
 
-    handle.addEventListener('touchstart', e => {
-      e.preventDefault();
-      active = true; sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-      ox = parseInt(el.style.left) || 0;
-      oy = parseInt(el.style.top)  || 0;
-      el.classList.add('dragging');
-    }, { passive: false });
-
-    document.addEventListener('mousemove', e => {
+    function onMove(clientX, clientY) {
       if (!active) return;
-      placeWidget(el, ox + e.clientX - sx, oy + e.clientY - sy);
-    });
+      const dx = clientX - sx, dy = clientY - sy;
+      if (!moved && Math.hypot(dx, dy) < 5) return;
+      if (!moved) { moved = true; el.classList.add('dragging'); }
+      placeWidget(el, ox + dx, oy + dy);
+    }
 
-    document.addEventListener('touchmove', e => {
-      if (!active) return;
-      e.preventDefault();
-      placeWidget(el, ox + e.touches[0].clientX - sx, oy + e.touches[0].clientY - sy);
-    }, { passive: false });
-
-    function end() {
+    function onEnd() {
       if (!active) return;
       active = false;
       el.classList.remove('dragging');
-      savePos(key, parseInt(el.style.left), parseInt(el.style.top));
+      if (moved) {
+        savePos(key, parseInt(el.style.left), parseInt(el.style.top));
+      } else {
+        // Tap — if within top ~18 px of the widget, reveal the handle bar
+        const rect = el.getBoundingClientRect();
+        if (sy - rect.top < 18) showWidgetHandle(key);
+      }
+      moved = false;
     }
 
-    document.addEventListener('mouseup',  end);
-    document.addEventListener('touchend', end);
+    // Drag from the handle bar (when visible)
+    handle.addEventListener('mousedown', e => { e.preventDefault(); startDrag(e.clientX, e.clientY); });
+    handle.addEventListener('touchstart', e => {
+      e.preventDefault(); startDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+
+    // Drag from any blank/edge area on the widget body
+    el.addEventListener('mousedown', e => {
+      if (e.target.closest('.widget-handle, .resize-handle')) return;
+      if (isInteractiveTarget(e.target)) return;
+      e.preventDefault();
+      startDrag(e.clientX, e.clientY);
+    });
+    el.addEventListener('touchstart', e => {
+      if (e.target.closest('.widget-handle, .resize-handle')) return;
+      if (isInteractiveTarget(e.target)) return;
+      e.preventDefault();
+      startDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+
+    document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+    document.addEventListener('touchmove', e => {
+      if (!active) return;
+      e.preventDefault();
+      onMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+    document.addEventListener('mouseup',  onEnd);
+    document.addEventListener('touchend', onEnd);
   }
 
   window.addEventListener('load', () => {
@@ -2185,7 +2218,7 @@
     body.innerHTML = currentGroups.map((group, i) => `
       <div style="margin-bottom:${i < currentGroups.length - 1 ? '10px' : '0'};">
         <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#475569;margin-bottom:3px;">Group ${i + 1}</div>
-        ${group.map(s => `<div style="font-size:13px;color:#e2e8f0;padding:1px 0;">${fullNameDisplay(s)}</div>`).join('')}
+        ${group.map(s => `<div style="font-size:18px;color:#e2e8f0;padding:2px 0;">${fullNameDisplay(s)}</div>`).join('')}
       </div>
       ${i < currentGroups.length - 1 ? '<div style="height:1px;background:#1e293b;margin-bottom:10px;"></div>' : ''}
     `).join('');
@@ -2518,17 +2551,6 @@
       btn.classList.remove('active');
     }
   });
-
-  // ── Edit mode ─────────────────────────────────────────────
-  let editMode = false;
-
-  function toggleEditMode() {
-    editMode = !editMode;
-    document.body.classList.toggle('edit-mode', editMode);
-    document.getElementById('editBtn').classList.toggle('active', editMode);
-    // Re-measure widget heights after handle bars finish animating (300ms)
-    setTimeout(() => WIDGET_DEFS.forEach(d => reapplyBodyScale(d.key)), 320);
-  }
 
   // ── Resize system ─────────────────────────────────────────
   const NATURAL_W = 218;
