@@ -1578,6 +1578,9 @@
     addResizeHandles();
     addWwVertResize();     // vertical height drag handle for word wall
     WIDGET_DEFS.forEach(d => reapplyBodyScale(d.key));
+    // One RAF deferred re-pass: browser finishes its first layout cycle first,
+    // so offsetHeight / getBoundingClientRect values are fully settled.
+    requestAnimationFrame(() => WIDGET_DEFS.forEach(d => reapplyBodyScale(d.key)));
   });
 
   // ── Clock ──────────────────────────────────────────────────
@@ -2780,13 +2783,13 @@
 
     el.style.width = targetWidth + 'px';
 
-    // At scale ≈ 1 skip the transform entirely — applying scale(1) creates a new
-    // block formatting context which suppresses margin collapsing and causes the
-    // measured pre-transform height to differ from post-transform height (picker bug).
+    // At scale ≈ 1 skip the transform entirely — applying scale(1) creates a new BFC
+    // which can alter the body's effective height.  naturalBodyH was measured with no
+    // transform so it is the correct value; set the widget height explicitly with it.
     if (Math.abs(scale - 1) < 0.005) {
       bodyEl.style.transform = '';
       bodyEl.style.transformOrigin = '';
-      el.style.height = '';   // let the widget size to its content naturally
+      el.style.height = (handleH + naturalBodyH) + 'px';
       return;
     }
 
