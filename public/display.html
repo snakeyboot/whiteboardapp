@@ -1550,9 +1550,14 @@
       moved = false;
     }
 
-    // Drag from the handle bar (when visible)
-    handle.addEventListener('mousedown', e => { e.preventDefault(); startDrag(e.clientX, e.clientY); });
+    // Drag from the handle bar (when visible).
+    // Skip interactive targets (handle-btn buttons, etc.) so their clicks still fire.
+    handle.addEventListener('mousedown', e => {
+      if (isInteractiveTarget(e.target)) return;
+      e.preventDefault(); startDrag(e.clientX, e.clientY);
+    });
     handle.addEventListener('touchstart', e => {
+      if (isInteractiveTarget(e.target)) return; // let button taps synthesise a click
       e.preventDefault(); startDrag(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: false });
 
