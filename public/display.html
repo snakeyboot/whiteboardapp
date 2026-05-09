@@ -2025,7 +2025,7 @@
       iframe.allow = 'autoplay; fullscreen; clipboard-read; clipboard-write';
       // For proxied pages: sandbox blocks top-navigation frame-busting redirects
       // while still allowing scripts and same-origin storage access.
-      if (eu.startsWith('/api/proxy')) {
+      if (eu.startsWith('/api/proxy') || eu.startsWith('/api/reader')) {
         iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads');
       }
       iframe.src = eu;

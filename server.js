@@ -3,6 +3,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const { Pool } = require('pg');
+const { Readability } = require('@mozilla/readability');
+const { JSDOM } = require('jsdom');
 
 const app = express();
 const server = http.createServer(app);
@@ -49,6 +51,68 @@ app.get('/api/proxy', async (req, res) => {
     }
   } catch (e) {
     res.status(502).send(`<!DOCTYPE html><html><body style="background:#111;color:#475569;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;font-size:14px;flex-direction:column;gap:8px;"><span style="font-size:28px;">⚠</span><span>Could not load page</span></body></html>`);
+  }
+});
+
+app.get('/api/reader', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).send('');
+  try {
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      signal: AbortSignal.timeout(12000),
+      redirect: 'follow',
+    });
+    const html = await r.text();
+    const dom  = new JSDOM(html, { url });
+    const article = new Readability(dom.window.document).parse();
+    if (!article) throw new Error('No article content found');
+    const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    res.setHeader('content-type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${esc(article.title)}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:#0f172a;color:#cbd5e1;font-family:Georgia,'Times New Roman',serif;font-size:19px;line-height:1.75;padding:52px 24px 80px}
+    .wrap{max-width:680px;margin:0 auto}
+    h1.art-title{font-size:30px;font-weight:700;color:#f1f5f9;line-height:1.3;margin-bottom:10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+    .art-byline{font-size:13px;color:#475569;margin-bottom:36px;font-family:-apple-system,sans-serif}
+    .art-src{font-size:11px;color:#334155;margin-bottom:36px;font-family:monospace;word-break:break-all}
+    .art-body h1,.art-body h2,.art-body h3,.art-body h4{color:#e2e8f0;margin:32px 0 12px;line-height:1.3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+    .art-body h1{font-size:24px}.art-body h2{font-size:22px}.art-body h3{font-size:20px}.art-body h4{font-size:18px}
+    .art-body p{margin-bottom:20px}
+    .art-body a{color:#60a5fa;text-decoration:underline}
+    .art-body img{max-width:100%;height:auto;border-radius:8px;margin:20px 0;display:block}
+    .art-body figure{margin:20px 0}.art-body figcaption{font-size:13px;color:#64748b;margin-top:6px;font-family:sans-serif}
+    .art-body blockquote{border-left:3px solid #334155;padding:4px 0 4px 18px;color:#94a3b8;margin:24px 0;font-style:italic}
+    .art-body ul,.art-body ol{margin:0 0 20px 28px}.art-body li{margin-bottom:6px}
+    .art-body pre{background:#0a0f1e;border:1px solid #1e293b;border-radius:8px;padding:16px;overflow-x:auto;margin:20px 0}
+    .art-body code{font-family:'Courier New',monospace;font-size:15px;background:#0a0f1e;padding:2px 6px;border-radius:4px}
+    .art-body pre code{background:none;padding:0}
+    .art-body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:16px}
+    .art-body th,.art-body td{border:1px solid #1e293b;padding:9px 13px;text-align:left}
+    .art-body th{background:#1e293b;color:#e2e8f0;font-family:sans-serif}
+    .art-body hr{border:none;border-top:1px solid #1e293b;margin:32px 0}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="art-title">${esc(article.title)}</h1>
+    ${article.byline ? `<div class="art-byline">${esc(article.byline)}</div>` : ''}
+    <div class="art-body">${article.content}</div>
+  </div>
+</body>
+</html>`);
+  } catch (e) {
+    res.status(502).send(`<!DOCTYPE html><html><body style="background:#0f172a;color:#475569;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;font-size:14px;flex-direction:column;gap:8px;"><span style="font-size:28px;">⚠</span><span>Could not extract article content</span><span style="font-size:11px;margin-top:4px">${e.message}</span></body></html>`);
   }
 });
 

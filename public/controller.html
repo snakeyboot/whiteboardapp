@@ -335,6 +335,7 @@
     .mat-form    { background: #7c3aed; color: #fff; }
     .mat-youtube { background: #ff0000; color: #fff; }
     .mat-web     { background: #f1f5f9; color: #1a1a1a; border: 1px solid #94a3b8; }
+    .mat-reader  { background: #0f172a; color: #60a5fa; border: 1px solid #334155; }
 
     /* ── Preset list rows ── */
     .preset-row {
@@ -894,6 +895,7 @@
             <option value="pdf">PDF / Drive</option>
             <option value="youtube">YouTube</option>
             <option value="web">Website</option>
+            <option value="reader">Reader Mode</option>
           </select>
           <input type="text" id="matTitle" placeholder="Title (optional)" style="flex:2;">
         </div>
@@ -1863,6 +1865,9 @@
       }
       if (type === 'web') {
         return `/api/proxy?url=${encodeURIComponent(url)}`;
+      }
+      if (type === 'reader') {
+        return `/api/reader?url=${encodeURIComponent(url)}`;
       }
       return url;
     }
