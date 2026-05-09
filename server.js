@@ -26,7 +26,7 @@ app.get('/api/proxy', async (req, res) => {
       redirect: 'follow',
     });
     const contentType = r.headers.get('content-type') || 'text/html';
-    const skip = new Set(['x-frame-options','content-security-policy','x-xss-protection','transfer-encoding','connection','keep-alive']);
+    const skip = new Set(['x-frame-options','content-security-policy','x-xss-protection','transfer-encoding','connection','keep-alive','content-encoding','content-length']);
     r.headers.forEach((v, k) => { if (!skip.has(k.toLowerCase())) { try { res.setHeader(k, v); } catch (_) {} } });
     res.setHeader('content-type', contentType);
     if (contentType.includes('text/html')) {
