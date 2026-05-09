@@ -34,7 +34,15 @@ app.get('/api/proxy', async (req, res) => {
       // Inject <base> so relative URLs resolve against the original origin
       const base = target.href.replace(/\/[^/]*$/, '/');
       const baseTag = `<base href="${base}">`;
-      if (!html.includes('<base')) html = html.replace(/<head[^>]*>/i, m => m + baseTag);
+      // Inject anti-frame-busting script: override window.top/parent/frameElement
+      // so JS frame-detection checks (window !== window.top) evaluate as false.
+      const antiFrameBust = `<script>(function(){try{var d=Object.defineProperty,w=window;d(w,'top',{get:function(){return w},configurable:true});d(w,'parent',{get:function(){return w},configurable:true});d(w,'frameElement',{get:function(){return null},configurable:true});}catch(e){}}());<\/script>`;
+      const headInjection = (html.includes('<base') ? '' : baseTag) + antiFrameBust;
+      if (/<head[^>]*>/i.test(html)) {
+        html = html.replace(/<head[^>]*>/i, m => m + headInjection);
+      } else {
+        html = headInjection + html;
+      }
       res.send(html);
     } else {
       res.send(Buffer.from(await r.arrayBuffer()));

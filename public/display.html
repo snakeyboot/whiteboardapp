@@ -2022,6 +2022,12 @@
       ph.style.display = 'none';
       const iframe = document.createElement('iframe');
       iframe.allowFullscreen = true;
+      iframe.allow = 'autoplay; fullscreen; clipboard-read; clipboard-write';
+      // For proxied pages: sandbox blocks top-navigation frame-busting redirects
+      // while still allowing scripts and same-origin storage access.
+      if (eu.startsWith('/api/proxy')) {
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads');
+      }
       iframe.src = eu;
       document.getElementById('slidesInner').appendChild(iframe);
       iframeMap[rawUrl] = iframe;
