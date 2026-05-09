@@ -70,6 +70,17 @@ app.get('/api/reader', async (req, res) => {
     const dom  = new JSDOM(html, { url });
     const article = new Readability(dom.window.document).parse();
     if (!article) throw new Error('No article content found');
+
+    // Rewrite links so clicking them loads the linked page in reader mode
+    const contentDom = new JSDOM(`<!DOCTYPE html><html><body>${article.content}</body></html>`);
+    contentDom.window.document.querySelectorAll('a[href]').forEach(a => {
+      const href = a.getAttribute('href');
+      if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+        a.setAttribute('href', `/api/reader?url=${encodeURIComponent(href)}`);
+      }
+    });
+    const rewrittenContent = contentDom.window.document.body.innerHTML;
+
     const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.send(`<!DOCTYPE html>
@@ -84,8 +95,10 @@ app.get('/api/reader', async (req, res) => {
     body{background:#0f172a;color:#cbd5e1;font-family:Georgia,'Times New Roman',serif;font-size:19px;line-height:1.75;padding:52px 24px 80px}
     .wrap{max-width:680px;margin:0 auto}
     h1.art-title{font-size:30px;font-weight:700;color:#f1f5f9;line-height:1.3;margin-bottom:10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-    .art-byline{font-size:13px;color:#475569;margin-bottom:36px;font-family:-apple-system,sans-serif}
-    .art-src{font-size:11px;color:#334155;margin-bottom:36px;font-family:monospace;word-break:break-all}
+    .art-byline{font-size:13px;color:#475569;margin-bottom:4px;font-family:-apple-system,sans-serif}
+    .art-src{font-size:11px;color:#334155;margin-bottom:32px;font-family:monospace;word-break:break-all}
+    .art-back{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#475569;font-family:sans-serif;text-decoration:none;margin-bottom:28px;padding:4px 0;cursor:pointer}
+    .art-back:hover{color:#94a3b8}
     .art-body h1,.art-body h2,.art-body h3,.art-body h4{color:#e2e8f0;margin:32px 0 12px;line-height:1.3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
     .art-body h1{font-size:24px}.art-body h2{font-size:22px}.art-body h3{font-size:20px}.art-body h4{font-size:18px}
     .art-body p{margin-bottom:20px}
@@ -105,9 +118,11 @@ app.get('/api/reader', async (req, res) => {
 </head>
 <body>
   <div class="wrap">
+    <a class="art-back" onclick="history.length>1&&history.back()" href="javascript:void(0)">&#8592; Back</a>
     <h1 class="art-title">${esc(article.title)}</h1>
     ${article.byline ? `<div class="art-byline">${esc(article.byline)}</div>` : ''}
-    <div class="art-body">${article.content}</div>
+    <div class="art-src">${esc(url)}</div>
+    <div class="art-body">${rewrittenContent}</div>
   </div>
 </body>
 </html>`);
