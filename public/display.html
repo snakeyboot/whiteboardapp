@@ -2559,9 +2559,9 @@
 
     // Init groups, seed one anchor each (extras go back into the pool)
     const groups = Array.from({ length: groupCount }, () => []);
+    // Distribute anchors evenly across groups (round-robin so extras spread out)
     anchors.forEach((a, i) => {
-      if (i < groupCount) groups[i].push(a);
-      else others.push(a); // extra anchors treated as regular students
+      groups[i % groupCount].push(a);
     });
 
     // Place remaining students, respecting conflicts, prefer smaller groups
