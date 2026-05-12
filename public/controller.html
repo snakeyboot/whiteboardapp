@@ -2400,7 +2400,7 @@
           <span style="flex:1;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(name)}</span>
           <button class="fg-badge${grp > 0 ? ' set' : ''}"
                   style="${color ? `background:${color};` : ''}"
-                  onclick="fgCycle(${JSON.stringify(name)})">
+                  onclick="fgCycle(${escHtml(JSON.stringify(name))})">
             ${grp > 0 ? grp : '—'}
           </button>
         </div>`;
