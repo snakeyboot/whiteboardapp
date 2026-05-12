@@ -930,13 +930,6 @@
     }
     .fg-revealing .group-student { opacity: 0; }
     .fg-revealed  { animation: fgNameIn 0.22s ease forwards; }
-    .fg-forced-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
-      background: #1d4ed8; color: #bfdbfe;
-      border-radius: 5px; padding: 2px 7px; margin-left: 6px;
-      vertical-align: middle;
-    }
 
     /* ── Spotify widget ── */
     .sp-disp-art {
@@ -1302,7 +1295,6 @@
         <span class="group-step-val" id="groupCountVal">—</span>
         <button class="group-step-btn" onclick="adjustGroupParam('count',1)">+</button>
       </div>
-      <span id="fgReadyBadge" class="fg-forced-badge" style="display:none;">FORCED</span>
       <button class="group-shuffle-btn" onclick="generateGroups()">Make Groups</button>
     </div>
     <div class="group-grid" id="groupGrid"></div>
@@ -1867,7 +1859,6 @@
     updateDeckInfo(s.deckRemaining, s.deckTotal);
     renderMaterialsWidget();
     if (s.wordWall) { wwWords = s.wordWall.words || []; renderWwWidget(); }
-    updateFgBadge();
   });
 
   socket.on('deck:update', ({ remaining, total }) => updateDeckInfo(remaining, total));
@@ -1884,7 +1875,6 @@
     displayMaterialsOverride = null;
     updateClassWidget();
     renderMaterialsWidget();
-    updateFgBadge();
   });
 
   socket.on('pick:stats', ({ rosterId, students }) => {
@@ -2293,19 +2283,12 @@
 
   socket.on('groups:forced:all', (map) => {
     forcedGroupsMap = map || {};
-    updateFgBadge();
   });
 
   socket.on('groups:forced:update', ({ rosterId, groups }) => {
     if (groups) forcedGroupsMap[rosterId] = groups;
     else delete forcedGroupsMap[rosterId];
-    updateFgBadge();
   });
-
-  function updateFgBadge() {
-    const badge = document.getElementById('fgReadyBadge');
-    if (badge) badge.style.display = forcedGroupsMap[activeRosterId] ? '' : 'none';
-  }
 
   function shuffleArr(arr) {
     const a = [...arr];
@@ -2348,7 +2331,6 @@
     document.getElementById('groupCountVal').textContent = groupCount;
     document.getElementById('groupSub').textContent = r.name + ' · ' + students.length + ' students';
     // Show existing groups or empty prompt — do NOT auto-generate
-    updateFgBadge();
     renderGroupGrid();
     document.getElementById('groupOverlay').classList.add('open');
   }
