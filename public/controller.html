@@ -312,6 +312,30 @@
     .gb-input:focus { outline: none; border-color: #3b82f6; background: #0f172a; color: #e2e8f0; }
     .gb-empty { text-align: center; padding: 20px; color: #475569; font-size: 12px; }
 
+    /* ── Forced Groups ── */
+    .fg-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 0; border-bottom: 1px solid #1e293b; font-size: 13px;
+    }
+    .fg-row:last-child { border-bottom: none; }
+    .fg-badge {
+      min-width: 28px; height: 24px; border-radius: 6px;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      border: 1px solid #334155; background: #1e293b; color: #475569;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background 0.12s, color 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .fg-badge.set { color: #fff; border-color: transparent; }
+    .fg-stepper { display:flex; align-items:center; gap:4px; }
+    .fg-step-btn {
+      width:26px; height:26px; border-radius:6px; border:1px solid #334155;
+      background:#1e293b; color:#94a3b8; font-size:15px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .fg-step-btn:active { background:#2d3f55; }
+    .fg-count-val { font-size:14px; font-weight:700; color:#e2e8f0; min-width:18px; text-align:center; }
+
     /* ── Materials ── */
     .material-row {
       display: flex;
@@ -855,6 +879,24 @@
 
     </div><!-- end side-row -->
 
+    <!-- Forced Groups -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="card-title" style="margin-bottom:0;">Groups</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <div class="fg-stepper">
+            <button class="fg-step-btn" onclick="fgAdjCount(-1)">−</button>
+            <span class="fg-count-val" id="fgCountVal">4</span>
+            <button class="fg-step-btn" onclick="fgAdjCount(1)">+</button>
+          </div>
+          <button class="btn btn-gray btn-sm" onclick="clearForcedGroups()" style="padding:4px 8px;">Clear</button>
+          <button class="btn btn-blue btn-sm" id="fgSendBtn" onclick="sendForcedGroups()" style="padding:4px 8px;">Send</button>
+        </div>
+      </div>
+      <div id="fgStatus" style="font-size:11px;color:#475569;margin-bottom:8px;min-height:14px;"></div>
+      <div id="fgStudentList"></div>
+    </div>
+
     <!-- Gradebook -->
     <div class="card">
       <div class="gb-header-row">
@@ -1270,6 +1312,7 @@
       if (s.deckRemaining !== undefined) updateDeckBadge(s.deckRemaining, s.deckTotal);
       initRosters(s.rosters, s.activeRosterId);
       if (s.wordWall) { wwWords = s.wordWall.words || []; renderWwWordList(); }
+      renderForcedGroupsCard();
     });
 
     socket.on('timer:update', (t) => {
@@ -1382,8 +1425,8 @@
       activeId = data[prev] ? prev : Object.keys(data)[0];
       renderClassTabs();
       loadGradebook(activeId);
-
       renderMaterials();
+      renderForcedGroupsCard();
     });
 
     socket.on('roster:activated', ({ id }) => {
@@ -1391,8 +1434,8 @@
         activeId = id;
         renderClassTabs();
         loadGradebook(id);
-  
         renderMaterials();
+        fgLoadFromServer(id);
       }
     });
 
@@ -2298,6 +2341,118 @@
     });
 
     // ── Word Wall ─────────────────────────────────────────────
+    // ── Forced Groups ─────────────────────────────────────────
+    let fgAssign = {};      // studentName → groupNum (1-based; absent = unassigned)
+    let fgCount  = 4;       // current number of groups shown in stepper
+    let serverFG = {};      // forced groups received from server: rosterId → groups
+
+    const FG_COLORS = ['#3b82f6','#22c55e','#f97316','#a855f7','#ec4899','#14b8a6','#eab308','#ef4444'];
+
+    socket.on('groups:forced:all', (map) => {
+      serverFG = map || {};
+      fgLoadFromServer(activeId);
+    });
+
+    socket.on('groups:forced:update', ({ rosterId, groups }) => {
+      if (groups) serverFG[rosterId] = groups;
+      else delete serverFG[rosterId];
+      if (rosterId === activeId) fgLoadFromServer(rosterId);
+    });
+
+    function fgLoadFromServer(rosterId) {
+      fgAssign = {};
+      const fg = serverFG[rosterId];
+      if (fg) {
+        let maxG = 0;
+        fg.forEach((grp, i) => { grp.forEach(name => { fgAssign[name] = i + 1; }); maxG = Math.max(maxG, i + 1); });
+        fgCount = Math.max(fgCount, maxG);
+      }
+      renderForcedGroupsCard();
+    }
+
+    function fgAdjCount(delta) {
+      fgCount = Math.max(2, fgCount + delta);
+      // Clamp any assignments that exceed the new count
+      Object.keys(fgAssign).forEach(n => { if (fgAssign[n] > fgCount) delete fgAssign[n]; });
+      renderForcedGroupsCard();
+    }
+
+    function renderForcedGroupsCard() {
+      document.getElementById('fgCountVal').textContent = fgCount;
+      const r = rosters[activeId];
+      const listEl   = document.getElementById('fgStudentList');
+      const statusEl = document.getElementById('fgStatus');
+      if (!r) { listEl.innerHTML = ''; statusEl.textContent = ''; return; }
+
+      const students = parseStudentsClient(r.students).filter(s => (s.attendance || 'present') !== 'absent');
+      if (!students.length) { listEl.innerHTML = '<p style="color:#475569;font-size:12px;">No present students.</p>'; return; }
+
+      const assigned = Object.values(fgAssign).filter(v => v > 0).length;
+      statusEl.textContent = assigned
+        ? `${assigned} / ${students.length} assigned — tap badge to cycle group`
+        : 'Tap the badge next to a student to assign their group.';
+
+      listEl.innerHTML = students.map(s => {
+        const name  = fullNameClient(s);
+        const grp   = fgAssign[name] || 0;
+        const color = grp > 0 ? FG_COLORS[(grp - 1) % FG_COLORS.length] : null;
+        return `<div class="fg-row">
+          <span style="flex:1;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(name)}</span>
+          <button class="fg-badge${grp > 0 ? ' set' : ''}"
+                  style="${color ? `background:${color};` : ''}"
+                  onclick="fgCycle(${JSON.stringify(name)})">
+            ${grp > 0 ? grp : '—'}
+          </button>
+        </div>`;
+      }).join('');
+    }
+
+    function fgCycle(name) {
+      const cur  = fgAssign[name] || 0;
+      const next = cur >= fgCount ? 0 : cur + 1;
+      if (next === 0) delete fgAssign[name];
+      else fgAssign[name] = next;
+      renderForcedGroupsCard();
+    }
+
+    function sendForcedGroups() {
+      if (!activeId) return;
+      const r = rosters[activeId];
+      if (!r) return;
+      const students = parseStudentsClient(r.students).filter(s => (s.attendance || 'present') !== 'absent');
+
+      // Build ordered array of groups
+      const buckets = {};
+      students.forEach(s => {
+        const name = fullNameClient(s);
+        const grp  = fgAssign[name];
+        if (grp > 0) { (buckets[grp] = buckets[grp] || []).push(name); }
+      });
+
+      const groups = Object.keys(buckets).sort((a, b) => a - b).map(k => buckets[k]);
+      if (!groups.length) { alert('Assign students to groups first.'); return; }
+
+      // Any unassigned students get their own extra group
+      const unassigned = students.filter(s => !fgAssign[fullNameClient(s)]).map(s => fullNameClient(s));
+      if (unassigned.length) groups.push(unassigned);
+
+      socket.emit('groups:forced:save', { rosterId: activeId, groups });
+      serverFG[activeId] = groups;
+
+      const btn = document.getElementById('fgSendBtn');
+      const orig = btn.textContent;
+      btn.textContent = 'Sent ✓';
+      btn.disabled = true;
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
+    }
+
+    function clearForcedGroups() {
+      fgAssign = {};
+      socket.emit('groups:forced:clear', { rosterId: activeId });
+      delete serverFG[activeId];
+      renderForcedGroupsCard();
+    }
+
     socket.on('wordwall:update', (ww) => {
       wwWords = ww.words || [];
       renderWwWordList();

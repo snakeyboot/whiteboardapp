@@ -473,6 +473,7 @@ const state = {
   activeRosterId: null,
   activeRosterName: '',
   wordWall: { words: [], listName: '' },
+  forcedGroups: {}, // rosterId → [[name,…],…] | deleted key = none
 };
 
 // Deck — shuffled list ensuring no repeats until everyone is called
@@ -752,6 +753,19 @@ io.on('connection', async (socket) => {
   });
 
   // ── Spotify ──
+  // ── Forced Groups ──
+  socket.emit('groups:forced:all', state.forcedGroups);
+
+  socket.on('groups:forced:save', ({ rosterId, groups }) => {
+    state.forcedGroups[rosterId] = groups;
+    io.emit('groups:forced:update', { rosterId, groups });
+  });
+
+  socket.on('groups:forced:clear', ({ rosterId }) => {
+    delete state.forcedGroups[rosterId];
+    io.emit('groups:forced:update', { rosterId, groups: null });
+  });
+
   socket.emit('spotify:connected', !!spotifyTokens);
   if (spotifyPlayerState) socket.emit('spotify:player', spotifyPlayerState);
 
