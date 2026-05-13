@@ -2426,6 +2426,8 @@
   function doneGroups() {
     closeGroupModal();
     if (!currentGroups.length) return;
+    // Broadcast final groups so the controller can copy them
+    socket.emit('groups:result', currentGroups.map(g => g.map(s => fullNameDisplay(s))));
     const wid = document.getElementById('groupsWidget');
     if (loadWVis()['groups'] === false) { renderGroupsWidget(); return; } // settings hidden
     wid.style.display = '';

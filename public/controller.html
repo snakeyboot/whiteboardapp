@@ -893,6 +893,9 @@
           <button class="btn btn-blue btn-sm" id="fgSendBtn" onclick="sendForcedGroups()" style="padding:4px 8px;">Send</button>
         </div>
       </div>
+      <div id="fgResultRow" style="display:none;margin-bottom:8px;">
+        <button class="btn btn-gray btn-sm" id="fgCopyBtn" onclick="copyGroupsToClipboard()" style="width:100%;">Copy Groups for Sheets</button>
+      </div>
       <div id="fgStatus" style="font-size:11px;color:#475569;margin-bottom:8px;min-height:14px;"></div>
       <div id="fgStudentList"></div>
     </div>
@@ -2347,6 +2350,38 @@
     let serverFG = {};      // forced groups received from server: rosterId → groups
 
     const FG_COLORS = ['#3b82f6','#22c55e','#f97316','#a855f7','#ec4899','#14b8a6','#eab308','#ef4444'];
+
+    let lastGroupResult = null;
+
+    socket.on('groups:result', (groups) => {
+      lastGroupResult = groups;
+      renderGroupResultRow();
+    });
+
+    function renderGroupResultRow() {
+      const el = document.getElementById('fgResultRow');
+      if (!el) return;
+      el.style.display = lastGroupResult ? '' : 'none';
+    }
+
+    function copyGroupsToClipboard() {
+      if (!lastGroupResult) return;
+      // TSV: one column per group, one row per student slot, headers in row 1
+      const numGroups = lastGroupResult.length;
+      const maxLen    = Math.max(...lastGroupResult.map(g => g.length));
+      const rows      = [];
+      rows.push(lastGroupResult.map((_, i) => `Group ${i + 1}`).join('\t'));
+      for (let r = 0; r < maxLen; r++) {
+        rows.push(lastGroupResult.map(g => g[r] || '').join('\t'));
+      }
+      navigator.clipboard.writeText(rows.join('\n')).then(() => {
+        const btn = document.getElementById('fgCopyBtn');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied ✓';
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
+      });
+    }
 
     socket.on('groups:forced:all', (map) => {
       serverFG = map || {};
