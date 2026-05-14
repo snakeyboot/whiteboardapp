@@ -1296,7 +1296,7 @@
     </div>
     <div style="display:flex;gap:8px;margin-top:8px;">
       <button class="pbtn-pick" style="flex:1;background:#0d9488;color:#fff;" onclick="openGroupModal()">Group</button>
-      <button class="pbtn-pick gray" style="flex:1;opacity:0.35;cursor:not-allowed;" disabled>Cast</button>
+      <button class="pbtn-pick" style="flex:1;background:#854d0e;color:#fde68a;border:1px solid #ca8a04;" onclick="openAwardFromPick()">🏆 Award</button>
     </div>
   </div>
 </div>
@@ -3400,6 +3400,18 @@
     }
 
     let awardData = null;
+    let lastAwardMode = 'sotd'; // updated whenever server sends mode
+
+    window.openAwardFromPick = function() {
+      const nameEl = document.getElementById('pickName');
+      const name   = (nameEl ? nameEl.textContent.trim() : '');
+      openAwardOverlay({
+        mode:     lastAwardMode,
+        names:    name ? [name] : [],
+        active:   true,
+        revealed: false
+      });
+    };
 
     function openAwardOverlay(data) {
       awardData = data;
@@ -3483,7 +3495,7 @@
     };
 
     // Socket listeners
-    socket.on('award:launch', (data) => { openAwardOverlay(data); });
+    socket.on('award:launch', (data) => { lastAwardMode = data.mode || 'sotd'; openAwardOverlay(data); });
     socket.on('award:reveal', () => {
       // If already open and in pre-reveal state, trigger reveal (e.g. controller clicked Reveal)
       const overlay = document.getElementById('awardOverlay');
@@ -3500,6 +3512,7 @@
       awardData = null;
     });
     socket.on('award:state', (data) => {
+      if (data) lastAwardMode = data.mode || 'sotd';
       if (data && data.active && !data.revealed) openAwardOverlay(data);
       else if (data && data.active && data.revealed) { openAwardOverlay(data); doReveal(); }
     });
