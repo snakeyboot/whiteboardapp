@@ -2826,9 +2826,8 @@
       awardMode = mode;
       document.getElementById('awardModeSotd').classList.toggle('active', mode === 'sotd');
       document.getElementById('awardModeTony').classList.toggle('active', mode === 'tony');
-      // Re-push live if students already selected
       if (awardSelected.length > 0) {
-        socket.emit('award:launch', { mode: awardMode, names: awardSelected });
+        socket.emit('award:set', { mode: awardMode, names: awardSelected });
       }
     }
 
@@ -2858,14 +2857,12 @@
         awardSelected.push(name);
       }
       renderAwardStudentList();
-      // Live-push to display
+      // Silently save to server (display opens via its own Award button)
       if (awardSelected.length > 0) {
-        socket.emit('award:launch', { mode: awardMode, names: awardSelected });
-        awardActive = true;
-        document.getElementById('awardStatus').textContent = '🟢 Live — ' + awardSelected.join(' & ');
+        socket.emit('award:set', { mode: awardMode, names: awardSelected });
+        document.getElementById('awardStatus').textContent = '✓ ' + awardSelected.join(' & ');
       } else {
-        socket.emit('award:close');
-        awardActive = false;
+        socket.emit('award:set', { mode: awardMode, names: [] });
         document.getElementById('awardStatus').textContent = '';
       }
     }

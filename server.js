@@ -761,6 +761,15 @@ io.on('connection', async (socket) => {
 
   // ── Awards ──
   socket.emit('award:state', state.award);
+  // Silent save from controller — no broadcast, display reads on demand
+  socket.on('award:set', (data) => {
+    state.award = { ...data, active: false, revealed: false };
+  });
+  // Display requests current selection before opening overlay
+  socket.on('award:get', (_, cb) => {
+    if (typeof cb === 'function') cb(state.award);
+  });
+  // Launch/reveal/close still available for explicit broadcast if needed
   socket.on('award:launch', (data) => {
     state.award = { ...data, active: true, revealed: false };
     io.emit('award:launch', state.award);
