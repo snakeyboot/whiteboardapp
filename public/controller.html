@@ -1059,9 +1059,8 @@
 
     <!-- Awards -->
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;margin-bottom:10px;">
         <div class="card-title" style="margin-bottom:0;">🏆 Awards</div>
-        <div id="awardStatus" class="award-status" style="margin-top:0;"></div>
       </div>
       <div style="font-size:10px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#475569;margin-bottom:5px;">Award Type</div>
       <div class="award-mode-row">
@@ -1070,11 +1069,9 @@
       </div>
       <div id="awardSelectedChips" class="award-selected-chips" style="display:none;"></div>
       <div id="awardStudentList" class="award-student-list"></div>
-      <div class="award-action-row">
-        <button class="btn btn-gray btn-sm" style="flex:1;" id="awardLaunchBtn" onclick="launchAward()" disabled>Launch Display</button>
-        <button class="btn btn-sm" id="awardRevealCtrlBtn" onclick="revealAwardCtrl()" disabled
-          style="flex:1;background:#854d0e;border:1px solid #ca8a04;color:#fde68a;">Reveal</button>
-        <button class="btn btn-gray btn-sm" style="flex:none;padding:8px 10px;" id="awardCloseCtrlBtn" onclick="closeAwardCtrl()" disabled title="Close">✕</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+        <div id="awardStatus" class="award-status" style="margin-top:0;flex:1;"></div>
+        <button class="btn btn-gray btn-sm" style="flex:none;padding:8px 10px;" id="awardCloseCtrlBtn" onclick="closeAwardCtrl()" title="Close display">✕</button>
       </div>
     </div>
 
@@ -2829,6 +2826,10 @@
       awardMode = mode;
       document.getElementById('awardModeSotd').classList.toggle('active', mode === 'sotd');
       document.getElementById('awardModeTony').classList.toggle('active', mode === 'tony');
+      // Re-push live if students already selected
+      if (awardSelected.length > 0) {
+        socket.emit('award:launch', { mode: awardMode, names: awardSelected });
+      }
     }
 
     function renderAwardStudentList() {
@@ -2857,7 +2858,16 @@
         awardSelected.push(name);
       }
       renderAwardStudentList();
-      document.getElementById('awardLaunchBtn').disabled = awardSelected.length === 0;
+      // Live-push to display
+      if (awardSelected.length > 0) {
+        socket.emit('award:launch', { mode: awardMode, names: awardSelected });
+        awardActive = true;
+        document.getElementById('awardStatus').textContent = '🟢 Live — ' + awardSelected.join(' & ');
+      } else {
+        socket.emit('award:close');
+        awardActive = false;
+        document.getElementById('awardStatus').textContent = '';
+      }
     }
 
     function renderAwardChips() {
@@ -2869,38 +2879,26 @@
       ).join('');
     }
 
-    function launchAward() {
-      if (!awardSelected.length) return;
-      socket.emit('award:launch', { mode: awardMode, names: awardSelected });
-      awardActive = true;
-      document.getElementById('awardRevealCtrlBtn').disabled = false;
-      document.getElementById('awardCloseCtrlBtn').disabled = false;
-      document.getElementById('awardLaunchBtn').disabled = false;
-      document.getElementById('awardStatus').textContent = '🟢 Live on display';
-    }
-
-    function revealAwardCtrl() {
-      socket.emit('award:reveal');
-    }
-
     function closeAwardCtrl() {
       socket.emit('award:close');
       awardActive = false;
-      document.getElementById('awardRevealCtrlBtn').disabled = true;
-      document.getElementById('awardCloseCtrlBtn').disabled = true;
+      awardSelected = [];
+      renderAwardChips();
+      renderAwardStudentList();
       document.getElementById('awardStatus').textContent = '';
     }
 
-    // Sync state on connect
+    // Sync state on reconnect
     socket.on('award:state', (data) => {
       if (!data) return;
       awardMode = data.mode || 'sotd';
       setAwardMode(awardMode);
       awardActive = data.active || false;
-      if (awardActive) {
-        document.getElementById('awardRevealCtrlBtn').disabled = false;
-        document.getElementById('awardCloseCtrlBtn').disabled = false;
-        document.getElementById('awardStatus').textContent = '🟢 Live on display';
+      if (awardActive && data.names && data.names.length) {
+        awardSelected = data.names;
+        document.getElementById('awardStatus').textContent = '🟢 Live — ' + awardSelected.join(' & ');
+        renderAwardChips();
+        renderAwardStudentList();
       }
     });
 

@@ -1124,7 +1124,10 @@
     }
 
     #awardTrophyWrap {
-      position: relative; display: inline-block;
+      position: relative;
+      display: block;
+      width: fit-content;
+      margin: 0 auto;
       animation: trophyDrop 0.7s cubic-bezier(0.22,1,0.36,1) both;
     }
     @keyframes trophyDrop {
@@ -1144,17 +1147,18 @@
 
     #awardNamePlate {
       position: absolute;
-      bottom: 11.5%; left: 50%;
-      transform: translateX(-50%);
-      width: 58%;
+      top: 79%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 56%;
       text-align: center;
       font-family: 'Playfair Display', serif;
       color: #D4AF37;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      line-height: 1.25;
+      line-height: 1.3;
       overflow: hidden;
+      word-break: break-word;
       animation: fadeInUp 0.5s ease 0.5s both;
     }
 
@@ -1187,9 +1191,11 @@
 
   <!-- Pre-reveal state -->
   <div id="awardPreReveal" style="display:flex;flex-direction:column;align-items:center;">
-    <div id="awardModeLabel">AND THE AWARD GOES TO…</div>
     <button id="awardRevealBtn" onclick="triggerAwardReveal()">THE ENVELOPE, PLEASE…</button>
-    <div id="awardDrumrollText">🥁 DRUMROLL PLEASE…</div>
+    <div id="awardDrumrollText">
+      <div>🥁 DRUMROLL PLEASE…</div>
+      <div id="awardModeLine" style="margin-top:16px;font-size:clamp(16px,2vw,26px);letter-spacing:0.14em;"></div>
+    </div>
   </div>
 
   <!-- Post-reveal state -->
@@ -3422,24 +3428,26 @@
       document.getElementById('awardPostReveal').style.display = 'none';
       document.getElementById('awardRevealBtn').style.display = '';
       document.getElementById('awardDrumrollText').style.display = 'none';
+      document.getElementById('awardModeLine').textContent = '';
       document.getElementById('awardTrophyImg').src = '';
       document.getElementById('awardNamePlate').textContent = '';
-
-      // Set mode label
-      const label = data.mode === 'tony' ? 'AND THE TONY GOES TO…' : 'AND THE AWARD GOES TO…';
-      document.getElementById('awardModeLabel').textContent = label;
 
       overlay.classList.add('open');
     }
 
     window.triggerAwardReveal = function() {
+      if (!awardData) return;
+      // Set the mode line before showing drumroll
+      const modeLine = awardData.mode === 'tony'
+        ? 'THE TONY GOES TO…'
+        : 'THE STUDENT OF THE DAY GOES TO…';
+      document.getElementById('awardModeLine').textContent = modeLine;
+
       // Show drumroll, hide button
       document.getElementById('awardRevealBtn').style.display = 'none';
       document.getElementById('awardDrumrollText').style.display = 'block';
 
-      // Also emit reveal to server so controller knows
       socket.emit('award:reveal');
-
       setTimeout(() => { doReveal(); }, 2000);
     };
 
