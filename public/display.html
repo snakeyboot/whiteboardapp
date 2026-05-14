@@ -3478,11 +3478,11 @@
       // Confetti
       loadConfetti(() => {
         /* eslint-disable no-undef */
-        confetti({ particleCount: 260, spread: 100, origin: { y: 0.6 }, colors: ['#D4AF37','#ffffff','#FFDF00'] });
+        confetti({ particleCount: 260, spread: 100, origin: { y: 0.6 }, colors: ['#D4AF37','#ffffff','#FFDF00'], zIndex: 99999 });
         const end = Date.now() + 3000;
         (function frame() {
-          confetti({ particleCount: 2, angle: 60,  spread: 55, origin: { x: 0 }, colors: ['#D4AF37','#ffffff'] });
-          confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#D4AF37','#ffffff'] });
+          confetti({ particleCount: 2, angle: 60,  spread: 55, origin: { x: 0 }, colors: ['#D4AF37','#ffffff'], zIndex: 99999 });
+          confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#D4AF37','#ffffff'], zIndex: 99999 });
           if (Date.now() < end) requestAnimationFrame(frame);
         }());
       });

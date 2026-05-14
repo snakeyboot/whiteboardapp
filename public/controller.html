@@ -2832,7 +2832,7 @@
     }
 
     function renderAwardStudentList() {
-      const roster = allRosters[activeRosterId];
+      const roster  = rosters[activeId];
       const students = roster ? parseStudentsClient(roster.students) : [];
       const present  = students.filter(s => (s.attendance || 'present') !== 'absent');
       const list = document.getElementById('awardStudentList');
@@ -2905,8 +2905,7 @@
     });
 
     // Re-render student list when roster changes (hook into existing roster handlers)
-    const _origRenderAwardOnRosterChange = () => renderAwardStudentList();
-    socket.on('roster:activated', () => { awardSelected = []; renderAwardStudentList(); });
+    socket.on('roster:activated', () => { awardSelected = []; renderAwardChips(); renderAwardStudentList(); });
     socket.on('roster:all', () => renderAwardStudentList());
 
     // Check OAuth callback result on page load
