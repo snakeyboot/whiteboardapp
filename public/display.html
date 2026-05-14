@@ -1062,6 +1062,102 @@
       color: #4ade80;
     }
 
+    /* ── Award overlay ── */
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Montserrat:wght@700&display=swap');
+
+    #awardOverlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 9999;
+      background: #000;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: 'Montserrat', sans-serif;
+    }
+    #awardOverlay.open { display: flex; }
+
+    #awardCloseBtn {
+      position: absolute; top: 20px; right: 24px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      color: #94a3b8; font-size: 20px; width: 38px; height: 38px;
+      border-radius: 50%; cursor: pointer; line-height: 1;
+      transition: background 0.15s;
+    }
+    #awardCloseBtn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+    #awardModeLabel {
+      font-size: clamp(14px, 2vw, 22px);
+      letter-spacing: 0.18em; font-weight: 700; text-transform: uppercase;
+      color: #D4AF37; margin-bottom: clamp(16px, 3vh, 36px);
+      text-align: center;
+    }
+
+    #awardRevealBtn {
+      background: linear-gradient(45deg, #D4AF37, #F5E050);
+      color: #000; border: none;
+      padding: clamp(16px,2.5vh,28px) clamp(28px,5vw,56px);
+      font-size: clamp(18px, 2.5vw, 30px); font-weight: 700;
+      border-radius: 50px; cursor: pointer;
+      box-shadow: 0 0 40px rgba(212,175,55,0.45);
+      font-family: 'Montserrat', sans-serif; letter-spacing: 0.06em;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    #awardRevealBtn:hover { transform: scale(1.04); box-shadow: 0 0 60px rgba(212,175,55,0.65); }
+
+    #awardDrumrollText {
+      display: none;
+      font-size: clamp(22px, 3.5vw, 48px); font-weight: 700;
+      color: #D4AF37; letter-spacing: 0.08em;
+      animation: drumrollPulse 0.4s ease-in-out infinite alternate;
+    }
+    @keyframes drumrollPulse {
+      from { opacity: 0.7; transform: scale(0.98); }
+      to   { opacity: 1;   transform: scale(1.02); }
+    }
+
+    #awardPostReveal { display: none; flex-direction: column; align-items: center; }
+
+    #awardCongrats {
+      font-size: clamp(16px, 2.2vw, 28px); letter-spacing: 0.2em;
+      color: #D4AF37; margin-bottom: clamp(10px,2vh,24px);
+      font-weight: 700; text-transform: uppercase;
+      animation: fadeInUp 0.6s ease both;
+    }
+
+    #awardTrophyWrap {
+      position: relative; display: inline-block;
+      animation: trophyDrop 0.7s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes trophyDrop {
+      from { opacity: 0; transform: translateY(-60px) scale(0.8); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    #awardTrophyImg {
+      display: block;
+      max-height: 68vh; max-width: 55vw;
+      width: auto; height: auto;
+    }
+
+    #awardNamePlate {
+      position: absolute;
+      bottom: 11.5%; left: 50%;
+      transform: translateX(-50%);
+      width: 58%;
+      text-align: center;
+      font-family: 'Playfair Display', serif;
+      color: #D4AF37;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      line-height: 1.25;
+      overflow: hidden;
+      animation: fadeInUp 0.5s ease 0.5s both;
+    }
+
     /* ── Timer done overlay ── */
     .done-overlay {
       position: fixed;
@@ -1084,6 +1180,27 @@
 <body>
 
 <div class="done-overlay" id="doneOverlay"></div>
+
+<!-- Award Overlay -->
+<div id="awardOverlay">
+  <button id="awardCloseBtn" onclick="closeAward()">✕</button>
+
+  <!-- Pre-reveal state -->
+  <div id="awardPreReveal" style="display:flex;flex-direction:column;align-items:center;">
+    <div id="awardModeLabel">AND THE AWARD GOES TO…</div>
+    <button id="awardRevealBtn" onclick="triggerAwardReveal()">THE ENVELOPE, PLEASE…</button>
+    <div id="awardDrumrollText">🥁 DRUMROLL PLEASE…</div>
+  </div>
+
+  <!-- Post-reveal state -->
+  <div id="awardPostReveal">
+    <div id="awardCongrats">CONGRATULATIONS!</div>
+    <div id="awardTrophyWrap">
+      <img id="awardTrophyImg" src="" alt="trophy">
+      <div id="awardNamePlate"></div>
+    </div>
+  </div>
+</div>
 
 <!-- Slides -->
 <div class="slides-bg">
@@ -1851,7 +1968,7 @@
     dur = s.timer.duration; rem = s.timer.remaining; running = s.timer.running;
     renderTimer(rem, dur, running);
     if (s.pick.name) showPick(s.pick.name, false);
-    if (s.slides.url) switchToMaterial(s.slides.url);
+    if (s.slides.url && !activeRawUrl) switchToMaterial(s.slides.url);
     allRosters     = s.rosters || {};
     rosterIds      = Object.keys(allRosters);
     activeRosterId = s.activeRosterId;
@@ -2125,6 +2242,7 @@
         btn.textContent = display;
         btn.onclick = () => {
           switchToMaterial(m.url);
+          socket.emit('slides:push', m.url);
           document.querySelectorAll('.mat-btn').forEach(b => b.classList.remove('mat-active'));
           btn.classList.add('mat-active');
         };
@@ -3268,6 +3386,124 @@
       }
     } catch (e) { console.error('[Spotify] SDK init failed:', e); }
   }
+
+  // ── Awards ────────────────────────────────────────────────────────────────
+  (function() {
+    // Lazy-load confetti library on first use
+    let confettiReady = false;
+    function loadConfetti(cb) {
+      if (confettiReady) { cb(); return; }
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js';
+      s.onload = () => { confettiReady = true; cb(); };
+      document.head.appendChild(s);
+    }
+
+    let awardData = null;
+
+    function openAwardOverlay(data) {
+      awardData = data;
+      const overlay = document.getElementById('awardOverlay');
+
+      // Reset to pre-reveal state
+      document.getElementById('awardPreReveal').style.display = 'flex';
+      document.getElementById('awardPostReveal').style.display = 'none';
+      document.getElementById('awardRevealBtn').style.display = '';
+      document.getElementById('awardDrumrollText').style.display = 'none';
+      document.getElementById('awardTrophyImg').src = '';
+      document.getElementById('awardNamePlate').textContent = '';
+
+      // Set mode label
+      const label = data.mode === 'tony' ? 'AND THE TONY GOES TO…' : 'AND THE AWARD GOES TO…';
+      document.getElementById('awardModeLabel').textContent = label;
+
+      overlay.classList.add('open');
+    }
+
+    window.triggerAwardReveal = function() {
+      // Show drumroll, hide button
+      document.getElementById('awardRevealBtn').style.display = 'none';
+      document.getElementById('awardDrumrollText').style.display = 'block';
+
+      // Also emit reveal to server so controller knows
+      socket.emit('award:reveal');
+
+      setTimeout(() => { doReveal(); }, 2000);
+    };
+
+    function doReveal() {
+      if (!awardData) return;
+      const pre  = document.getElementById('awardPreReveal');
+      const post = document.getElementById('awardPostReveal');
+
+      pre.style.display = 'none';
+
+      // Set trophy image
+      const imgSrc = awardData.mode === 'tony' ? '/images/trophy_tony.png' : '/images/trophy_sotd.png';
+      document.getElementById('awardTrophyImg').src = imgSrc;
+
+      // Set name on plaque
+      const plate = document.getElementById('awardNamePlate');
+      const names = awardData.names || [];
+      plate.textContent = names.join('\n');
+      // Dynamic font size based on longest name + count
+      const maxLen = Math.max(...names.map(n => n.length), 1);
+      let fs;
+      if (names.length === 1) {
+        fs = maxLen <= 10 ? 'clamp(16px,2.4vw,28px)'
+           : maxLen <= 16 ? 'clamp(13px,1.9vw,22px)'
+           :                'clamp(10px,1.5vw,17px)';
+      } else {
+        fs = maxLen <= 10 ? 'clamp(13px,1.8vw,21px)'
+           : maxLen <= 16 ? 'clamp(11px,1.5vw,17px)'
+           :                'clamp(9px, 1.2vw,14px)';
+      }
+      plate.style.fontSize = fs;
+      plate.style.whiteSpace = names.length > 1 ? 'pre' : 'normal';
+
+      post.style.display = 'flex';
+
+      // Confetti
+      loadConfetti(() => {
+        /* eslint-disable no-undef */
+        confetti({ particleCount: 260, spread: 100, origin: { y: 0.6 }, colors: ['#D4AF37','#ffffff','#FFDF00'] });
+        const end = Date.now() + 3000;
+        (function frame() {
+          confetti({ particleCount: 2, angle: 60,  spread: 55, origin: { x: 0 }, colors: ['#D4AF37','#ffffff'] });
+          confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#D4AF37','#ffffff'] });
+          if (Date.now() < end) requestAnimationFrame(frame);
+        }());
+      });
+    }
+
+    window.closeAward = function() {
+      document.getElementById('awardOverlay').classList.remove('open');
+      socket.emit('award:close');
+      awardData = null;
+    };
+
+    // Socket listeners
+    socket.on('award:launch', (data) => { openAwardOverlay(data); });
+    socket.on('award:reveal', () => {
+      // If already open and in pre-reveal state, trigger reveal (e.g. controller clicked Reveal)
+      const overlay = document.getElementById('awardOverlay');
+      if (!overlay.classList.contains('open')) return;
+      const pre = document.getElementById('awardPreReveal');
+      if (pre.style.display !== 'none') {
+        document.getElementById('awardRevealBtn').style.display = 'none';
+        document.getElementById('awardDrumrollText').style.display = 'block';
+        setTimeout(() => { doReveal(); }, 2000);
+      }
+    });
+    socket.on('award:close', () => {
+      document.getElementById('awardOverlay').classList.remove('open');
+      awardData = null;
+    });
+    socket.on('award:state', (data) => {
+      if (data && data.active && !data.revealed) openAwardOverlay(data);
+      else if (data && data.active && data.revealed) { openAwardOverlay(data); doReveal(); }
+    });
+  }());
 </script>
 </body>
 </html>

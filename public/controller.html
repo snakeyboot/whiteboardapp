@@ -801,6 +801,34 @@
     .sp-queue-art { width: 30px; height: 30px; border-radius: 4px; object-fit: cover; flex-shrink: 0; background: #1e293b; }
     .sp-queue-name { font-size: 12px; font-weight: 600; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sp-queue-artist { font-size: 10px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Awards ── */
+    .award-mode-row { display: flex; gap: 6px; margin-bottom: 10px; }
+    .award-mode-btn {
+      flex: 1; padding: 7px 4px; font-size: 12px; font-weight: 700;
+      border-radius: 7px; border: 1px solid #334155; background: #1e293b;
+      color: #64748b; cursor: pointer; transition: all 0.15s; text-align: center;
+      letter-spacing: 0.03em;
+    }
+    .award-mode-btn.active { background: #854d0e; border-color: #ca8a04; color: #fde68a; }
+    .award-student-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; margin-bottom: 8px; }
+    .award-student-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border-radius: 6px; background: #1e293b;
+      cursor: pointer; font-size: 12px; color: #94a3b8; transition: background 0.1s;
+    }
+    .award-student-row:hover { background: #263044; }
+    .award-student-row.selected { background: #1c3553; color: #93c5fd; }
+    .award-student-row.selected::before { content: '✓'; color: #60a5fa; font-weight: 700; margin-right: 2px; }
+    .award-selected-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; min-height: 0; }
+    .award-chip {
+      display: flex; align-items: center; gap: 5px;
+      background: #1c3553; border: 1px solid #1e40af; color: #93c5fd;
+      border-radius: 20px; padding: 3px 10px 3px 10px; font-size: 12px; font-weight: 600;
+    }
+    .award-chip-x { background: none; border: none; color: #60a5fa; cursor: pointer; font-size: 14px; padding: 0; line-height: 1; margin-left: 2px; }
+    .award-action-row { display: flex; gap: 6px; margin-top: 4px; }
+    .award-status { font-size: 11px; color: #475569; text-align: center; margin-top: 5px; min-height: 14px; }
   </style>
 </head>
 <body>
@@ -1026,6 +1054,26 @@
         <div id="spQueueSection" style="display:none;border-top:1px solid #1e293b;padding-top:8px;margin-top:8px;">
           <div id="spQueueList"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Awards -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title" style="margin-bottom:0;">🏆 Awards</div>
+        <div id="awardStatus" class="award-status" style="margin-top:0;"></div>
+      </div>
+      <div class="award-mode-row">
+        <button class="award-mode-btn active" id="awardModeSotd" onclick="setAwardMode('sotd')">📚 Student of the Day</button>
+        <button class="award-mode-btn" id="awardModeTony" onclick="setAwardMode('tony')">🎭 Tony Award</button>
+      </div>
+      <div id="awardSelectedChips" class="award-selected-chips" style="display:none;"></div>
+      <div id="awardStudentList" class="award-student-list"></div>
+      <div class="award-action-row">
+        <button class="btn btn-gray btn-sm" style="flex:1;" id="awardLaunchBtn" onclick="launchAward()" disabled>Launch Display</button>
+        <button class="btn btn-sm" id="awardRevealCtrlBtn" onclick="revealAwardCtrl()" disabled
+          style="flex:1;background:#854d0e;border:1px solid #ca8a04;color:#fde68a;">Reveal</button>
+        <button class="btn btn-gray btn-sm" style="flex:none;padding:8px 10px;" id="awardCloseCtrlBtn" onclick="closeAwardCtrl()" disabled title="Close">✕</button>
       </div>
     </div>
 
@@ -1316,6 +1364,7 @@
       initRosters(s.rosters, s.activeRosterId);
       if (s.wordWall) { wwWords = s.wordWall.words || []; renderWwWordList(); }
       renderForcedGroupsCard();
+      renderAwardStudentList();
     });
 
     socket.on('timer:update', (t) => {
@@ -2769,6 +2818,95 @@
     function spPlaylistsOverlayClick(e) {
       if (e.target === document.getElementById('spPlaylistsOverlay')) closeSpPlaylists();
     }
+
+    // ── Awards ─────────────────────────────────────────────────────────────
+    let awardMode = 'sotd';
+    let awardSelected = []; // up to 2 names (strings)
+    let awardActive = false;
+
+    function setAwardMode(mode) {
+      awardMode = mode;
+      document.getElementById('awardModeSotd').classList.toggle('active', mode === 'sotd');
+      document.getElementById('awardModeTony').classList.toggle('active', mode === 'tony');
+    }
+
+    function renderAwardStudentList() {
+      const roster = allRosters[activeRosterId];
+      const students = roster ? parseStudentsClient(roster.students) : [];
+      const present  = students.filter(s => (s.attendance || 'present') !== 'absent');
+      const list = document.getElementById('awardStudentList');
+      if (!present.length) {
+        list.innerHTML = '<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">No active class</div>';
+        return;
+      }
+      list.innerHTML = present.map(s => {
+        const name = fullNameClient(s);
+        const sel  = awardSelected.includes(name);
+        return `<div class="award-student-row${sel ? ' selected' : ''}" onclick="toggleAwardStudent(${escHtml(JSON.stringify(name))})">${escHtml(name)}</div>`;
+      }).join('');
+      renderAwardChips();
+    }
+
+    function toggleAwardStudent(name) {
+      const idx = awardSelected.indexOf(name);
+      if (idx >= 0) {
+        awardSelected.splice(idx, 1);
+      } else {
+        if (awardSelected.length >= 2) return; // max 2
+        awardSelected.push(name);
+      }
+      renderAwardStudentList();
+      document.getElementById('awardLaunchBtn').disabled = awardSelected.length === 0;
+    }
+
+    function renderAwardChips() {
+      const wrap = document.getElementById('awardSelectedChips');
+      if (!awardSelected.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+      wrap.style.display = 'flex';
+      wrap.innerHTML = awardSelected.map(name =>
+        `<div class="award-chip">${escHtml(name)}<button class="award-chip-x" onclick="toggleAwardStudent(${escHtml(JSON.stringify(name))})">×</button></div>`
+      ).join('');
+    }
+
+    function launchAward() {
+      if (!awardSelected.length) return;
+      socket.emit('award:launch', { mode: awardMode, names: awardSelected });
+      awardActive = true;
+      document.getElementById('awardRevealCtrlBtn').disabled = false;
+      document.getElementById('awardCloseCtrlBtn').disabled = false;
+      document.getElementById('awardLaunchBtn').disabled = false;
+      document.getElementById('awardStatus').textContent = '🟢 Live on display';
+    }
+
+    function revealAwardCtrl() {
+      socket.emit('award:reveal');
+    }
+
+    function closeAwardCtrl() {
+      socket.emit('award:close');
+      awardActive = false;
+      document.getElementById('awardRevealCtrlBtn').disabled = true;
+      document.getElementById('awardCloseCtrlBtn').disabled = true;
+      document.getElementById('awardStatus').textContent = '';
+    }
+
+    // Sync state on connect
+    socket.on('award:state', (data) => {
+      if (!data) return;
+      awardMode = data.mode || 'sotd';
+      setAwardMode(awardMode);
+      awardActive = data.active || false;
+      if (awardActive) {
+        document.getElementById('awardRevealCtrlBtn').disabled = false;
+        document.getElementById('awardCloseCtrlBtn').disabled = false;
+        document.getElementById('awardStatus').textContent = '🟢 Live on display';
+      }
+    });
+
+    // Re-render student list when roster changes (hook into existing roster handlers)
+    const _origRenderAwardOnRosterChange = () => renderAwardStudentList();
+    socket.on('roster:activated', () => { awardSelected = []; renderAwardStudentList(); });
+    socket.on('roster:all', () => renderAwardStudentList());
 
     // Check OAuth callback result on page load
     (function() {

@@ -475,6 +475,7 @@ const state = {
   wordWall: { words: [], listName: '' },
   forcedGroups: {},    // rosterId → [[name,…],…] | deleted key = none
   lastGroupResult: null, // [[name,…],…] — last confirmed groups from display
+  award: { mode: 'sotd', names: [], active: false, revealed: false },
 };
 
 // Deck — shuffled list ensuring no repeats until everyone is called
@@ -757,6 +758,21 @@ io.on('connection', async (socket) => {
   // ── Forced Groups ──
   socket.emit('groups:forced:all', state.forcedGroups);
   if (state.lastGroupResult) socket.emit('groups:result', state.lastGroupResult);
+
+  // ── Awards ──
+  socket.emit('award:state', state.award);
+  socket.on('award:launch', (data) => {
+    state.award = { ...data, active: true, revealed: false };
+    io.emit('award:launch', state.award);
+  });
+  socket.on('award:reveal', () => {
+    state.award.revealed = true;
+    io.emit('award:reveal');
+  });
+  socket.on('award:close', () => {
+    state.award.active = false;
+    io.emit('award:close');
+  });
 
   socket.on('groups:result', (groups) => {
     state.lastGroupResult = groups;
