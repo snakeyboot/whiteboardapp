@@ -114,6 +114,8 @@
     .tab-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
     .tab-btn.add-tab { background: transparent; border-style: dashed; color: #64748b; }
     .tab-btn.add-tab:hover { color: #94a3b8; border-color: #64748b; }
+    .tab-wrap-dragging { opacity: 0.35; }
+    .tab-wrap-over .tab-btn:not(.add-tab) { outline: 2px solid #3b82f6; outline-offset: 2px; }
     .tab-edit-btn {
       padding: 6px 8px;
       border-radius: 8px;
@@ -1390,11 +1392,24 @@
 
     // ── Rosters / Classes ──────────────────────────────────
     let rosters  = {};
-    let activeId = null;
+    let activeId    = null;
+    let rosterOrder = []; // ordered array of roster IDs
+    let dragSrcId   = null;
+
+    function syncRosterOrder(data) {
+      // Add any new IDs not yet tracked (append at end)
+      Object.keys(data).forEach(id => { if (!rosterOrder.includes(id)) rosterOrder.push(id); });
+      // Remove IDs that no longer exist
+      rosterOrder = rosterOrder.filter(id => data[id]);
+    }
 
     function initRosters(data, serverId) {
       rosters  = data || {};
-      activeId = (serverId && rosters[serverId]) ? serverId : Object.keys(rosters)[0];
+      // Seed order from sortOrder field, then sync
+      rosterOrder = Object.entries(rosters)
+        .sort(([,a],[,b]) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        .map(([id]) => id);
+      activeId = (serverId && rosters[serverId]) ? serverId : rosterOrder[0];
       if (activeId) socket.emit('roster:activate', activeId);
       renderClassTabs();
       loadGradebook(activeId);
@@ -1405,10 +1420,50 @@
     function renderClassTabs() {
       const container = document.getElementById('classesTabs');
       container.innerHTML = '';
-      Object.entries(rosters).forEach(([id, r]) => {
+      rosterOrder.forEach(id => {
+        const r = rosters[id];
+        if (!r) return;
+
         const wrap = document.createElement('span');
-        wrap.style.display = 'inline-flex';
-        wrap.style.gap = '3px';
+        wrap.className = 'tab-wrap';
+        wrap.style.cssText = 'display:inline-flex;gap:3px;cursor:grab;';
+        wrap.draggable = true;
+        wrap.dataset.id = id;
+
+        wrap.addEventListener('dragstart', e => {
+          dragSrcId = id;
+          e.dataTransfer.effectAllowed = 'move';
+          setTimeout(() => wrap.classList.add('tab-wrap-dragging'), 0);
+        });
+        wrap.addEventListener('dragend', () => {
+          dragSrcId = null;
+          wrap.classList.remove('tab-wrap-dragging');
+          container.querySelectorAll('.tab-wrap').forEach(el => el.classList.remove('tab-wrap-over'));
+        });
+        wrap.addEventListener('dragover', e => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (dragSrcId && dragSrcId !== id) wrap.classList.add('tab-wrap-over');
+        });
+        wrap.addEventListener('dragleave', () => wrap.classList.remove('tab-wrap-over'));
+        wrap.addEventListener('drop', e => {
+          e.preventDefault();
+          wrap.classList.remove('tab-wrap-over');
+          if (!dragSrcId || dragSrcId === id) return;
+          const from = rosterOrder.indexOf(dragSrcId);
+          const to   = rosterOrder.indexOf(id);
+          if (from < 0 || to < 0) return;
+          rosterOrder.splice(from, 1);
+          rosterOrder.splice(to, 0, dragSrcId);
+          // Persist new sort order
+          rosterOrder.forEach((rid, i) => {
+            rosters[rid].sortOrder = i;
+            const r2 = rosters[rid];
+            socket.emit('roster:save', { id: rid, name: r2.name, students: r2.students,
+              slidesUrl: r2.slidesUrl || '', sortOrder: i, materials: r2.materials || '[]' });
+          });
+          renderClassTabs();
+        });
 
         const btn = document.createElement('button');
         btn.className = 'tab-btn' + (id === activeId ? ' active' : '');
@@ -1425,6 +1480,7 @@
         wrap.appendChild(edit);
         container.appendChild(wrap);
       });
+
       const add = document.createElement('button');
       add.className = 'tab-btn add-tab';
       add.textContent = '+ New';
@@ -1444,7 +1500,8 @@
     function addRoster() {
       const id = uid();
       const n  = Object.keys(rosters).length + 1;
-      rosters[id] = { name: `Period ${n}`, students: '[]', slidesUrl: '', grades: '{}', materials: '[]' };
+      rosters[id] = { name: `Period ${n}`, students: '[]', slidesUrl: '', grades: '{}', materials: '[]', sortOrder: rosterOrder.length };
+      rosterOrder.push(id);
       activeId = id;
       socket.emit('roster:activate', id);
       saveCurrentRoster();
@@ -1472,7 +1529,8 @@
     socket.on('roster:all', (data) => {
       const prev = activeId;
       rosters  = data;
-      activeId = data[prev] ? prev : Object.keys(data)[0];
+      syncRosterOrder(data);
+      activeId = data[prev] ? prev : rosterOrder[0];
       renderClassTabs();
       loadGradebook(activeId);
       renderMaterials();
