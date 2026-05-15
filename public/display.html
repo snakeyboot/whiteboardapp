@@ -2132,12 +2132,9 @@
     if (pub) return `https://docs.google.com/presentation/d/e/${pub[1]}/embed`;
     const doc = url.match(/\/presentation\/d\/([^/?#]+)/);
     if (doc) return `https://docs.google.com/presentation/d/${doc[1]}/embed`;
-    // Google Drive PDF — /preview sets X-Frame-Options:SAMEORIGIN, so proxy the direct download
+    // Google Drive PDF — load /preview directly (fast, served from Google CDN)
     const drivePdf = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
-    if (drivePdf) {
-      const direct = `https://drive.google.com/uc?export=download&id=${drivePdf[1]}`;
-      return `/api/pdf-proxy?url=${encodeURIComponent(direct)}`;
-    }
+    if (drivePdf) return `https://drive.google.com/file/d/${drivePdf[1]}/preview`;
     // Any other http(s) URL — route through the server proxy so X-Frame-Options /
     // CSP headers are stripped and the page can actually load in the iframe.
     if (url.startsWith('http://') || url.startsWith('https://')) {
