@@ -135,12 +135,22 @@ app.get('/api/pdf-proxy', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).send('Missing url');
   try {
-    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
-    if (!r.ok) return res.status(r.status).send(`Upstream ${r.status}`);
-    const ct = r.headers.get('content-type') || 'application/pdf';
-    res.setHeader('Content-Type', ct);
+    const r = await fetch(url, {
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept': 'application/pdf,*/*',
+      }
+    });
+    if (!r.ok) return res.status(r.status).send(`Upstream error ${r.status}`);
+    const ct = r.headers.get('content-type') || '';
+    // If Google returned an HTML page (virus-scan confirmation) instead of the PDF, bail out clearly
+    if (ct.includes('text/html')) {
+      return res.status(502).send('Google returned a confirmation page — file may be too large or not public');
+    }
+    res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    // Don't forward X-Frame-Options — we want our own iframe to be able to display this
     const { Readable } = require('stream');
     Readable.fromWeb(r.body).pipe(res);
   } catch (e) {

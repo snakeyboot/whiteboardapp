@@ -2002,8 +2002,11 @@
       }
       if (type === 'pdf') {
         const m = url.match(/\/file\/d\/([^/?#]+)/);
-        if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
-        // Non-Drive PDFs: stream through binary proxy so browser renders natively
+        if (m) {
+          // Drive /preview sets X-Frame-Options:SAMEORIGIN — proxy the direct download instead
+          const direct = `https://drive.google.com/uc?export=download&id=${m[1]}`;
+          return `/api/pdf-proxy?url=${encodeURIComponent(direct)}`;
+        }
         return `/api/pdf-proxy?url=${encodeURIComponent(url)}`;
       }
       if (type === 'youtube') {
