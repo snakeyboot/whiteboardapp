@@ -2,9 +2,15 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const { Pool } = require('pg');
 const { Readability } = require('@mozilla/readability');
 const { JSDOM } = require('jsdom');
+
+// ── PDF cache (persists on disk for the lifetime of the deployment) ──────────
+const PDF_CACHE_DIR = path.join(__dirname, 'pdf-cache');
+if (!fs.existsSync(PDF_CACHE_DIR)) fs.mkdirSync(PDF_CACHE_DIR, { recursive: true });
 
 const app = express();
 const server = http.createServer(app);
@@ -134,7 +140,38 @@ app.get('/api/reader', async (req, res) => {
 app.get('/api/pdf-proxy', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).send('Missing url');
+
+  // Cache key: Drive file ID if present, otherwise MD5 of URL
+  const driveId = url.match(/[?&]id=([^&]+)/)?.[1];
+  const cacheKey = driveId || crypto.createHash('md5').update(url).digest('hex');
+  const cachePath = path.join(PDF_CACHE_DIR, `${cacheKey}.pdf`);
+
   try {
+    // ── Serve from disk cache if available ──────────────────────────────────
+    if (fs.existsSync(cachePath)) {
+      const stat = fs.statSync(cachePath);
+      const total = stat.size;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('Accept-Ranges', 'bytes');
+
+      const range = req.headers.range;
+      if (range) {
+        const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(startStr, 10);
+        const end   = endStr ? parseInt(endStr, 10) : total - 1;
+        res.status(206);
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+        res.setHeader('Content-Length', end - start + 1);
+        fs.createReadStream(cachePath, { start, end }).pipe(res);
+      } else {
+        res.setHeader('Content-Length', total);
+        fs.createReadStream(cachePath).pipe(res);
+      }
+      return;
+    }
+
+    // ── Fetch from origin, cache to disk, serve ──────────────────────────────
     const r = await fetch(url, {
       redirect: 'follow',
       headers: {
@@ -144,15 +181,32 @@ app.get('/api/pdf-proxy', async (req, res) => {
     });
     if (!r.ok) return res.status(r.status).send(`Upstream error ${r.status}`);
     const ct = r.headers.get('content-type') || '';
-    // If Google returned an HTML page (virus-scan confirmation) instead of the PDF, bail out clearly
     if (ct.includes('text/html')) {
-      return res.status(502).send('Google returned a confirmation page — file may be too large or not public');
+      return res.status(502).send('Google returned a confirmation page — file may be too large or not publicly shared');
     }
+
+    // Buffer into memory, write to disk, then serve with range support
+    const buffer = Buffer.from(await r.arrayBuffer());
+    fs.writeFileSync(cachePath, buffer);
+
+    const total = buffer.length;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
-    // Don't forward X-Frame-Options — we want our own iframe to be able to display this
-    const { Readable } = require('stream');
-    Readable.fromWeb(r.body).pipe(res);
+    res.setHeader('Accept-Ranges', 'bytes');
+
+    const range = req.headers.range;
+    if (range) {
+      const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(startStr, 10);
+      const end   = endStr ? parseInt(endStr, 10) : total - 1;
+      res.status(206);
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+      res.setHeader('Content-Length', end - start + 1);
+      res.end(buffer.slice(start, end + 1));
+    } else {
+      res.setHeader('Content-Length', total);
+      res.end(buffer);
+    }
   } catch (e) {
     res.status(502).send('PDF proxy error: ' + e.message);
   }
