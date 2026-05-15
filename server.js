@@ -154,6 +154,13 @@ app.get('/api/pdf-proxy', async (req, res) => {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'inline');
       res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('ETag', `"${cacheKey}"`);
+
+      // Conditional request — browser already has it
+      if (req.headers['if-none-match'] === `"${cacheKey}"`) {
+        return res.status(304).end();
+      }
 
       const range = req.headers.range;
       if (range) {
@@ -193,6 +200,8 @@ app.get('/api/pdf-proxy', async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
     res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('ETag', `"${cacheKey}"`);
 
     const range = req.headers.range;
     if (range) {
