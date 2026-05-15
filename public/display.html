@@ -996,7 +996,8 @@
     }
     #settingsBtn { right: 16px; }
     #snapBtn     { right: 54px; }
-    #settingsBtn:hover, #snapBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
+    #fsBtn       { right: 92px; }
+    #settingsBtn:hover, #snapBtn:hover, #fsBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
     #settingsBtn.active { color: #94a3b8; border-color: #64748b; background: rgba(15,23,42,0.95); }
 
     #settingsPanel {
@@ -1531,6 +1532,12 @@
 </div>
 
 <!-- Snap-to-sides button -->
+<button id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">
+  <svg id="fsBtnIcon" width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
+    <path d="M1 1h4v1.5H2.5V4H1V1zm7 0h4v3h-1.5V2.5H8V1zM1 9h1.5v1.5H4V12H1V9zm8 2.5V13h4v-3h-1.5v1.5H9z"/>
+  </svg>
+</button>
+
 <button id="snapBtn" onclick="snapWidgets()" title="Snap widgets to sides">
   <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
     <rect x="0.5" y="1" width="3" height="11" rx="1"/>
@@ -2896,6 +2903,23 @@
 
   let settingsOpen = false;
   let dragSrcKey   = null;
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+  document.addEventListener('fullscreenchange', () => {
+    const isFs = !!document.fullscreenElement;
+    const icon = document.getElementById('fsBtnIcon');
+    if (!icon) return;
+    // Swap icon: expand arrows when not fullscreen, compress arrows when fullscreen
+    icon.innerHTML = isFs
+      ? '<path d="M4 1H1v3h1.5V2.5H4V1zm5 0v1.5h1.5V4H12V1H9zM1 9v3h3v-1.5H2.5V9H1zm9 1.5V12h3V9h-1.5v1.5H10z"/>'
+      : '<path d="M1 1h4v1.5H2.5V4H1V1zm7 0h4v3h-1.5V2.5H8V1zM1 9h1.5v1.5H4V12H1V9zm8 2.5V13h4v-3h-1.5v1.5H9z"/>';
+  });
 
   function toggleSettings() {
     settingsOpen = !settingsOpen;

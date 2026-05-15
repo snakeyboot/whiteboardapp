@@ -1945,7 +1945,8 @@
       if (type === 'pdf') {
         const m = url.match(/\/file\/d\/([^/?#]+)/);
         if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
-        return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+        // Non-Drive PDFs: stream through binary proxy so browser renders natively
+        return `/api/pdf-proxy?url=${encodeURIComponent(url)}`;
       }
       if (type === 'youtube') {
         // youtu.be/{id} or ?v={id} or /embed/{id}
@@ -2008,11 +2009,28 @@
           <span class="mat-title">${escHtml(m.title || m.url)}</span>
           <div class="mat-btns">
             <button class="mat-btn mat-push" onclick="pushMaterial(${i})"   title="Show on display">▶</button>
-            <button class="mat-btn mat-del"  onclick="reloadMaterial(${i})" title="Reload" style="background:#1e293b;color:#94a3b8;">↺</button>
-            <button class="mat-btn mat-del"  onclick="editMaterial(${i})"   title="Edit"   style="background:#1e3a5f;color:#60a5fa;">✏</button>
+            <button class="mat-btn mat-del"  onclick="copyMatUrl(${i})"     title="Copy URL" style="background:#1e293b;color:#94a3b8;">⧉</button>
+            <button class="mat-btn mat-del"  onclick="reloadMaterial(${i})" title="Reload"   style="background:#1e293b;color:#94a3b8;">↺</button>
+            <button class="mat-btn mat-del"  onclick="editMaterial(${i})"   title="Edit"     style="background:#1e3a5f;color:#60a5fa;">✏</button>
             <button class="mat-btn mat-del"  onclick="removeMaterial(${i})" title="Remove">✕</button>
           </div>
         </div>`).join('');
+    }
+
+    function copyMatUrl(i) {
+      const list = getMaterials();
+      if (!list[i]) return;
+      navigator.clipboard.writeText(list[i].url).then(() => {
+        // Flash the button briefly
+        const btns = document.querySelectorAll(`#materialsListEl .material-row:nth-child(${i+1}) .mat-btn`);
+        const btn = [...btns].find(b => b.title === 'Copy URL');
+        if (btn) {
+          const orig = btn.textContent;
+          btn.textContent = '✓';
+          btn.style.color = '#22c55e';
+          setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1200);
+        }
+      });
     }
 
     let editMatIdx = -1;
