@@ -247,26 +247,45 @@ app.get('/api/book-info', async (req, res) => {
                         || null;
 
     // Open Graph / book meta tags
-    const title       = meta('og:title')       || meta('title') || 'Unknown Title';
-    const cover       = meta('og:image')       || null;
-    const description = meta('og:description') || '';
-    const authorMeta  = meta('books:author');
+    const title      = meta('og:title') || meta('title') || 'Unknown Title';
+    const cover      = meta('og:image') || null;
+    const authorMeta = meta('books:author');
 
-    // JSON-LD structured data (richer: page count, isbn, published date)
+    // JSON-LD structured data (richer: page count, isbn, published date, full description)
     let pageCount = null, publishedDate = '', authors = authorMeta ? [authorMeta] : [];
+    let jsonLdDesc = '';
     doc.querySelectorAll('script[type="application/ld+json"]').forEach(s => {
       try {
         const d = JSON.parse(s.textContent);
         const book = Array.isArray(d) ? d.find(x => x['@type'] === 'Book') : (d['@type'] === 'Book' ? d : null);
         if (!book) return;
-        if (book.numberOfPages && !pageCount)   pageCount = book.numberOfPages;
+        if (book.numberOfPages && !pageCount)     pageCount = book.numberOfPages;
         if (book.datePublished && !publishedDate) publishedDate = book.datePublished.slice(0, 4);
+        if (book.description && !jsonLdDesc)      jsonLdDesc = book.description;
         if (book.author && !authors.length) {
           const a = Array.isArray(book.author) ? book.author : [book.author];
           authors = a.map(x => x.name || x).filter(Boolean);
         }
       } catch {}
     });
+
+    // Full description: try DOM elements Goodreads uses, then JSON-LD, then og:description
+    const descSelectors = [
+      '[data-testid="description"] .TruncatedContent__text--large',
+      '[data-testid="description"] .TruncatedContent__text',
+      '[data-testid="description"]',
+      '.BookPageMetadataSection__description .TruncatedContent__text--large',
+      '.BookPageMetadataSection__description .TruncatedContent__text',
+      '.BookPageMetadataSection__description',
+      '#description span:not([style*="display:none"])',
+      '#description',
+    ];
+    let descRaw = '';
+    for (const sel of descSelectors) {
+      const el = doc.querySelector(sel);
+      if (el) { descRaw = el.textContent.trim(); break; }
+    }
+    const description = descRaw || jsonLdDesc || meta('og:description') || '';
 
     // Genres — Goodreads embeds them as links in the shelf/genre section
     const genreEls = doc.querySelectorAll('[data-testid="contentContainer"] .Button__labelItem, .BookPageMetadataSection__genres a, .left .bookPageGenreLink');
