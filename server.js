@@ -221,6 +221,37 @@ app.get('/api/pdf-proxy', async (req, res) => {
   }
 });
 
+app.get('/api/book-info', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'Missing url' });
+  // Extract Google Books volume ID from the url parameter
+  const idMatch = url.match(/[?&]id=([^&#]+)/) || url.match(/\/([A-Za-z0-9_-]{8,})\/?(?:[?#]|$)/);
+  if (!idMatch) return res.status(400).json({ error: 'Could not extract a book ID from that URL' });
+  const volumeId = idMatch[1];
+  try {
+    const r = await fetch(`https://www.googleapis.com/books/v1/volumes/${volumeId}`, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return res.status(r.status).json({ error: `Google Books returned ${r.status}` });
+    const data = await r.json();
+    const vi = data.volumeInfo;
+    if (!vi) return res.status(404).json({ error: 'Book not found' });
+    // Build a clean HTTPS cover URL; remove the page-curl edge effect
+    let cover = vi.imageLinks?.thumbnail || vi.imageLinks?.smallThumbnail || null;
+    if (cover) cover = cover.replace('http://', 'https://').replace('&edge=curl', '').replace('zoom=1', 'zoom=3');
+    res.json({
+      id:            volumeId,
+      title:         vi.title         || 'Unknown Title',
+      authors:       vi.authors       || [],
+      description:   vi.description   || '',
+      pageCount:     vi.pageCount     || null,
+      categories:    vi.categories    || [],
+      cover:         cover,
+      publishedDate: vi.publishedDate || '',
+    });
+  } catch (e) {
+    res.status(502).json({ error: 'Failed to fetch book info: ' + e.message });
+  }
+});
+
 app.get('/api/fetch-title', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.json({ title: '' });
@@ -566,6 +597,7 @@ const state = {
   forcedGroups: {},    // rosterId → [[name,…],…] | deleted key = none
   lastGroupResult: null, // [[name,…],…] — last confirmed groups from display
   award: { mode: 'sotd', names: [], active: false, revealed: false },
+  book: null, // { id, title, authors, description, pageCount, categories, cover, publishedDate }
 };
 
 // Deck — shuffled list ensuring no repeats until everyone is called
@@ -871,6 +903,17 @@ io.on('connection', async (socket) => {
   socket.on('award:close', () => {
     state.award.active = false;
     io.emit('award:close');
+  });
+
+  // ── Book (What Am I Reading) ──
+  socket.emit('book:update', state.book);
+  socket.on('book:set', (data) => {
+    state.book = data;
+    io.emit('book:update', data);
+  });
+  socket.on('book:clear', () => {
+    state.book = null;
+    io.emit('book:update', null);
   });
 
   socket.on('groups:result', (groups) => {

@@ -1163,6 +1163,67 @@
       animation: fadeInUp 0.5s ease 0.5s both;
     }
 
+    /* ── Book widget ── */
+    #bookCover {
+      display: block; width: 100%; border-radius: 4px;
+      cursor: pointer; transition: filter 0.15s, transform 0.15s;
+      box-shadow: 2px 4px 12px rgba(0,0,0,0.5);
+    }
+    #bookCover:hover { filter: brightness(1.1); transform: scale(1.03); }
+    .book-widget-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; padding: 14px 0; color: #1e293b;
+    }
+    .book-widget-empty svg { opacity: 0.18; }
+    .book-widget-empty span { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; }
+
+    /* ── Book modal ── */
+    #bookModal {
+      display: none; position: fixed; inset: 0; z-index: 800;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+    }
+    #bookModal.open { display: flex; }
+    #bookModalCard {
+      background: #0f172a; border: 1px solid #1e293b; border-radius: 14px;
+      max-width: min(92vw, 680px); max-height: 86vh;
+      display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+      animation: fadeInUp 0.25s ease both;
+    }
+    #bookModalBody {
+      display: flex; gap: 0; overflow: hidden; flex: 1;
+    }
+    #bookModalCoverCol {
+      flex-shrink: 0; width: 160px; background: #020617;
+      display: flex; align-items: flex-start; padding: 20px 16px 20px 20px;
+    }
+    #bookModalCoverCol img { width: 100%; border-radius: 6px; box-shadow: 3px 6px 20px rgba(0,0,0,0.6); }
+    #bookModalInfo {
+      flex: 1; padding: 20px 20px 0 4px; overflow-y: auto; min-width: 0;
+    }
+    #bookModalTitle {
+      font-size: clamp(15px,1.8vw,22px); font-weight: 700; color: #f8fafc;
+      line-height: 1.25; margin-bottom: 4px;
+    }
+    #bookModalAuthor { font-size: 13px; color: #94a3b8; margin-bottom: 12px; }
+    .book-meta-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+    .book-meta-chip {
+      font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+      background: #1e293b; color: #64748b; border: 1px solid #334155;
+    }
+    #bookModalDesc {
+      font-size: 12px; color: #94a3b8; line-height: 1.65;
+      padding-bottom: 20px; border-top: 1px solid #1e293b; padding-top: 12px; margin-top: 4px;
+    }
+    #bookModalClose {
+      position: absolute; top: 14px; right: 16px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      color: #64748b; width: 30px; height: 30px; border-radius: 50%;
+      font-size: 16px; cursor: pointer; line-height: 1;
+    }
+    #bookModalClose:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
     /* ── Timer done overlay ── */
     .done-overlay {
       position: fixed;
@@ -1527,6 +1588,44 @@
     <div class="att-footer">
       <button class="att-all-btn" onclick="resetDisplayMaterials()">Use Roster Materials</button>
       <button class="att-save-btn" onclick="closeDisplayPresets()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Book Widget -->
+<div class="widget" id="bookWidget">
+  <div class="widget-handle" id="bookHandle">
+    <div class="grip">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <div class="widget-label">Reading</div>
+  </div>
+  <div class="widget-body" style="padding:10px;" id="bookWidgetBody">
+    <div class="book-widget-empty" id="bookWidgetEmpty">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      <span>No book set</span>
+    </div>
+    <img id="bookCover" src="" alt="Book cover" style="display:none;" onclick="openBookModal()">
+  </div>
+</div>
+
+<!-- Book Modal -->
+<div id="bookModal" onclick="bookModalOutsideClick(event)">
+  <div id="bookModalCard" style="position:relative;">
+    <button id="bookModalClose" onclick="closeBookModal()">✕</button>
+    <div id="bookModalBody">
+      <div id="bookModalCoverCol">
+        <img id="bookModalCoverImg" src="" alt="cover">
+      </div>
+      <div id="bookModalInfo">
+        <div id="bookModalTitle"></div>
+        <div id="bookModalAuthor"></div>
+        <div class="book-meta-chips" id="bookMetaChips"></div>
+        <div id="bookModalDesc"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2884,6 +2983,7 @@
     { key: 'wordwall', label: 'Word Wall', id: 'wordWallWidget' },
     { key: 'groups',   label: 'Groups',    id: 'groupsWidget'   },
     { key: 'spotify',  label: 'Spotify',   id: 'spotifyWidget'  },
+    { key: 'book',     label: 'Reading',   id: 'bookWidget'     },
   ];
 
   const VIS_KEY   = 'croom_widget_vis_v1';
@@ -3552,6 +3652,57 @@
       else if (data && data.active && data.revealed) { openAwardOverlay(data); doReveal(); }
     });
   }());
+
+  // ── Book (What Am I Reading) ──────────────────────────────────────────────
+  let currentBook = null;
+
+  function renderBookWidget(book) {
+    currentBook = book;
+    const cover   = document.getElementById('bookCover');
+    const empty   = document.getElementById('bookWidgetEmpty');
+    if (book && book.cover) {
+      cover.src          = book.cover;
+      cover.style.display = '';
+      empty.style.display = 'none';
+    } else {
+      cover.style.display = 'none';
+      empty.style.display = '';
+    }
+  }
+
+  window.openBookModal = function() {
+    if (!currentBook) return;
+    const b = currentBook;
+    document.getElementById('bookModalCoverImg').src = b.cover || '';
+    document.getElementById('bookModalCoverImg').style.display = b.cover ? '' : 'none';
+    document.getElementById('bookModalTitle').textContent  = b.title || '';
+    document.getElementById('bookModalAuthor').textContent = (b.authors || []).join(', ');
+
+    // Meta chips: page count, year, categories
+    const chips = [];
+    if (b.pageCount)     chips.push(`${b.pageCount} pages`);
+    if (b.publishedDate) chips.push(b.publishedDate.slice(0, 4));
+    (b.categories || []).forEach(c => chips.push(c));
+    document.getElementById('bookMetaChips').innerHTML =
+      chips.map(c => `<span class="book-meta-chip">${c}</span>`).join('');
+
+    // Description — strip HTML tags Google sometimes includes
+    const raw  = b.description || 'No description available.';
+    const desc = raw.replace(/<[^>]+>/g, '');
+    document.getElementById('bookModalDesc').textContent = desc;
+
+    document.getElementById('bookModal').classList.add('open');
+  };
+
+  window.closeBookModal = function() {
+    document.getElementById('bookModal').classList.remove('open');
+  };
+
+  window.bookModalOutsideClick = function(e) {
+    if (e.target === document.getElementById('bookModal')) closeBookModal();
+  };
+
+  socket.on('book:update', (data) => renderBookWidget(data));
 </script>
 </body>
 </html>

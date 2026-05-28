@@ -804,6 +804,19 @@
     .sp-queue-name { font-size: 12px; font-weight: 600; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sp-queue-artist { font-size: 10px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+    /* ── Reading ── */
+    .book-preview {
+      display: flex; gap: 10px; align-items: flex-start;
+      background: #0f172a; border-radius: 8px; padding: 8px; margin-bottom: 8px;
+    }
+    .book-preview-cover {
+      width: 54px; flex-shrink: 0; border-radius: 4px; overflow: hidden; background: #1e293b;
+    }
+    .book-preview-cover img { width: 100%; display: block; }
+    .book-preview-info { flex: 1; min-width: 0; }
+    .book-preview-title { font-size: 12px; font-weight: 700; color: #f1f5f9; margin-bottom: 2px; line-height: 1.3; }
+    .book-preview-author { font-size: 11px; color: #64748b; }
+
     /* ── Awards ── */
     .award-mode-row { display: flex; gap: 6px; margin-bottom: 10px; }
     .award-mode-btn {
@@ -1057,6 +1070,22 @@
           <div id="spQueueList"></div>
         </div>
       </div>
+    </div>
+
+    <!-- What Am I Reading -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title" style="margin-bottom:0;">📖 Reading</div>
+        <button class="btn btn-gray btn-sm" style="flex:none;" id="bookClearBtn" onclick="clearBook()" style="display:none;">Clear</button>
+      </div>
+      <div id="bookPreview" style="display:none;"></div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="bookUrlInput" placeholder="Paste Google Books URL…"
+          style="flex:1;background:#0f172a;border:1px solid #334155;border-radius:7px;padding:8px 10px;font-size:12px;color:#e2e8f0;outline:none;"
+          onkeydown="if(event.key==='Enter')loadBook()">
+        <button class="btn btn-blue btn-sm" style="flex:none;" onclick="loadBook()">Load</button>
+      </div>
+      <div id="bookLoadStatus" style="font-size:11px;color:#475569;margin-top:5px;min-height:14px;"></div>
     </div>
 
     <!-- Awards -->
@@ -2891,6 +2920,56 @@
     function spPlaylistsOverlayClick(e) {
       if (e.target === document.getElementById('spPlaylistsOverlay')) closeSpPlaylists();
     }
+
+    // ── Reading ────────────────────────────────────────────────────────────
+    async function loadBook() {
+      const input  = document.getElementById('bookUrlInput');
+      const status = document.getElementById('bookLoadStatus');
+      const url    = input.value.trim();
+      if (!url) return;
+      status.textContent = 'Loading…';
+      status.style.color = '#475569';
+      try {
+        const r    = await fetch(`/api/book-info?url=${encodeURIComponent(url)}`);
+        const data = await r.json();
+        if (!r.ok) { status.textContent = data.error || 'Failed'; status.style.color = '#ef4444'; return; }
+        socket.emit('book:set', data);
+        renderBookPreview(data);
+        input.value = '';
+        status.textContent = '✓ Loaded';
+        status.style.color = '#22c55e';
+        setTimeout(() => { status.textContent = ''; }, 2000);
+      } catch (e) {
+        status.textContent = 'Network error'; status.style.color = '#ef4444';
+      }
+    }
+
+    function renderBookPreview(book) {
+      const preview = document.getElementById('bookPreview');
+      const clearBtn = document.getElementById('bookClearBtn');
+      if (!book) { preview.style.display = 'none'; clearBtn.style.display = 'none'; return; }
+      preview.style.display = '';
+      clearBtn.style.display = '';
+      preview.innerHTML = `
+        <div class="book-preview">
+          <div class="book-preview-cover">
+            ${book.cover ? `<img src="${escHtml(book.cover)}" alt="cover">` : '<div style="height:76px;background:#1e293b;"></div>'}
+          </div>
+          <div class="book-preview-info">
+            <div class="book-preview-title">${escHtml(book.title)}</div>
+            <div class="book-preview-author">${escHtml((book.authors||[]).join(', '))}</div>
+            ${book.pageCount ? `<div style="font-size:10px;color:#475569;margin-top:3px;">${book.pageCount} pages</div>` : ''}
+          </div>
+        </div>`;
+    }
+
+    function clearBook() {
+      socket.emit('book:clear');
+      renderBookPreview(null);
+      document.getElementById('bookLoadStatus').textContent = '';
+    }
+
+    socket.on('book:update', (data) => renderBookPreview(data));
 
     // ── Awards ─────────────────────────────────────────────────────────────
     let awardMode = 'sotd';
