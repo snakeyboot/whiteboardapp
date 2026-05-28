@@ -1364,6 +1364,7 @@
     </div>
     <div style="display:flex;gap:8px;margin-top:8px;">
       <button class="pbtn-pick" style="flex:1;background:#0d9488;color:#fff;" onclick="openGroupModal()">Group</button>
+      <button class="pbtn-pick" style="flex:1;background:#1e40af;color:#bfdbfe;" onclick="openOrderModal()">Order</button>
       <button class="pbtn-pick" style="flex:1;background:#854d0e;color:#fde68a;border:1px solid #ca8a04;" onclick="openAwardFromPick()">🏆 Award</button>
     </div>
   </div>
@@ -1485,6 +1486,24 @@
     <div class="group-grid" id="groupGrid"></div>
     <div class="att-footer" style="border-top:1px solid #1e293b;">
       <button class="att-save-btn" onclick="doneGroups()" style="flex:1;">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Random Order Overlay -->
+<div class="att-overlay" id="orderOverlay" onclick="if(event.target===this)closeOrderModal()">
+  <div class="att-modal" style="max-width:min(420px,96vw);max-height:88vh;display:flex;flex-direction:column;">
+    <div class="att-header">
+      <div>
+        <div class="att-title">Random Order</div>
+        <div class="att-sub" id="orderSub"></div>
+      </div>
+      <button class="att-close" onclick="closeOrderModal()">✕</button>
+    </div>
+    <div id="orderList" style="flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:4px;"></div>
+    <div class="att-footer" style="border-top:1px solid #1e293b;gap:8px;">
+      <button class="group-shuffle-btn" onclick="shuffleOrder()" style="flex:none;padding:8px 18px;">🔀 Shuffle</button>
+      <button class="att-save-btn" onclick="closeOrderModal()" style="flex:1;">Done</button>
     </div>
   </div>
 </div>
@@ -2550,6 +2569,46 @@
       if (parseConflictSet(m).has(sName))    return true;
     }
     return false;
+  }
+
+  // ── Random Order ──────────────────────────────────────────────────────────
+  let orderList = [];
+
+  function openOrderModal() {
+    const r = allRosters[activeRosterId];
+    if (!r) return;
+    const students = parseRosterStudents(r.students).filter(s => (s.attendance || 'present') !== 'absent');
+    if (!students.length) return;
+    document.getElementById('orderSub').textContent = r.name + ' · ' + students.length + ' students';
+    orderList = [...students];
+    shuffleArray(orderList);
+    renderOrderList();
+    document.getElementById('orderOverlay').classList.add('open');
+  }
+
+  function shuffleOrder() {
+    shuffleArray(orderList);
+    renderOrderList();
+  }
+
+  function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  function renderOrderList() {
+    document.getElementById('orderList').innerHTML = orderList.map((s, i) => `
+      <div style="display:flex;align-items:center;gap:12px;padding:7px 10px;border-radius:8px;background:#1e293b;border:1px solid #334155;">
+        <span style="font-size:12px;font-weight:700;color:#475569;min-width:22px;text-align:right;">${i + 1}</span>
+        <span style="font-size:15px;font-weight:600;color:#e2e8f0;">${fullNameDisplay(s)}</span>
+      </div>
+    `).join('');
+  }
+
+  function closeOrderModal() {
+    document.getElementById('orderOverlay').classList.remove('open');
   }
 
   function openGroupModal() {
