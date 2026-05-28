@@ -1602,6 +1602,7 @@
     <div class="widget-label">Reading</div>
   </div>
   <div class="widget-body" style="padding:10px;" id="bookWidgetBody">
+    <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#475569;text-align:center;margin-bottom:7px;">Currently Reading</div>
     <div class="book-widget-empty" id="bookWidgetEmpty">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -1868,6 +1869,8 @@
     makeDraggable(ww, document.getElementById('wordWallHandle'),   'wordwall', window.innerWidth - ww.offsetWidth - 16, Math.round((window.innerHeight - ww.offsetHeight) / 2));
     const sw = document.getElementById('spotifyWidget');
     makeDraggable(sw, document.getElementById('spotifyHandle'),    'spotify',  16, 16);
+    const bw = document.getElementById('bookWidget');
+    makeDraggable(bw, document.getElementById('bookHandle'),       'book',     Math.round((window.innerWidth - bw.offsetWidth) / 2), window.innerHeight - bw.offsetHeight - 16);
     tickClock();           // populate clock content before measuring heights
     applyWidgetVisibility();
     addResizeHandles();
