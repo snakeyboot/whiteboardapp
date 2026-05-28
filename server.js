@@ -224,31 +224,57 @@ app.get('/api/pdf-proxy', async (req, res) => {
 app.get('/api/book-info', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'Missing url' });
-  // Extract Google Books volume ID from the url parameter
-  const idMatch = url.match(/[?&]id=([^&#]+)/) || url.match(/\/([A-Za-z0-9_-]{8,})\/?(?:[?#]|$)/);
-  if (!idMatch) return res.status(400).json({ error: 'Could not extract a book ID from that URL' });
-  const volumeId = idMatch[1];
+  if (!url.includes('goodreads.com')) {
+    return res.status(400).json({ error: 'Please paste a Goodreads book URL' });
+  }
   try {
-    const r = await fetch(`https://www.googleapis.com/books/v1/volumes/${volumeId}`, { signal: AbortSignal.timeout(8000) });
-    if (!r.ok) return res.status(r.status).json({ error: `Google Books returned ${r.status}` });
-    const data = await r.json();
-    const vi = data.volumeInfo;
-    if (!vi) return res.status(404).json({ error: 'Book not found' });
-    // Build a clean HTTPS cover URL; remove the page-curl edge effect
-    let cover = vi.imageLinks?.thumbnail || vi.imageLinks?.smallThumbnail || null;
-    if (cover) cover = cover.replace('http://', 'https://').replace('&edge=curl', '').replace('zoom=1', 'zoom=3');
-    res.json({
-      id:            volumeId,
-      title:         vi.title         || 'Unknown Title',
-      authors:       vi.authors       || [],
-      description:   vi.description   || '',
-      pageCount:     vi.pageCount     || null,
-      categories:    vi.categories    || [],
-      cover:         cover,
-      publishedDate: vi.publishedDate || '',
+    const r = await fetch(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      }
     });
+    if (!r.ok) return res.status(r.status).json({ error: `Goodreads returned ${r.status}` });
+    const html = await r.text();
+    const dom  = new JSDOM(html);
+    const doc  = dom.window.document;
+
+    const meta = (prop) => doc.querySelector(`meta[property="${prop}"]`)?.getAttribute('content')
+                        || doc.querySelector(`meta[name="${prop}"]`)?.getAttribute('content')
+                        || null;
+
+    // Open Graph / book meta tags
+    const title       = meta('og:title')       || meta('title') || 'Unknown Title';
+    const cover       = meta('og:image')       || null;
+    const description = meta('og:description') || '';
+    const authorMeta  = meta('books:author');
+
+    // JSON-LD structured data (richer: page count, isbn, published date)
+    let pageCount = null, publishedDate = '', authors = authorMeta ? [authorMeta] : [];
+    doc.querySelectorAll('script[type="application/ld+json"]').forEach(s => {
+      try {
+        const d = JSON.parse(s.textContent);
+        const book = Array.isArray(d) ? d.find(x => x['@type'] === 'Book') : (d['@type'] === 'Book' ? d : null);
+        if (!book) return;
+        if (book.numberOfPages && !pageCount)   pageCount = book.numberOfPages;
+        if (book.datePublished && !publishedDate) publishedDate = book.datePublished.slice(0, 4);
+        if (book.author && !authors.length) {
+          const a = Array.isArray(book.author) ? book.author : [book.author];
+          authors = a.map(x => x.name || x).filter(Boolean);
+        }
+      } catch {}
+    });
+
+    // Genres — Goodreads embeds them as links in the shelf/genre section
+    const genreEls = doc.querySelectorAll('[data-testid="contentContainer"] .Button__labelItem, .BookPageMetadataSection__genres a, .left .bookPageGenreLink');
+    const categories = [...new Set([...genreEls].map(el => el.textContent.trim()).filter(Boolean))].slice(0, 4);
+
+    res.json({ title, authors, description, pageCount, categories, cover, publishedDate });
   } catch (e) {
-    res.status(502).json({ error: 'Failed to fetch book info: ' + e.message });
+    res.status(502).json({ error: 'Failed to fetch from Goodreads: ' + e.message });
   }
 });
 
