@@ -2091,6 +2091,7 @@
     updateDeckInfo(s.deckRemaining, s.deckTotal);
     renderMaterialsWidget();
     if (s.wordWall) { wwWords = s.wordWall.words || []; renderWwWidget(); }
+    if (s.activeBook !== undefined) renderBookWidget(s.activeBook);
   });
 
   socket.on('deck:update', ({ remaining, total }) => updateDeckInfo(remaining, total));
@@ -3689,12 +3690,10 @@
     document.getElementById('bookMetaChips').innerHTML =
       chips.map(c => `<span class="book-meta-chip">${c}</span>`).join('');
 
-    // Description — strip HTML, then show 1–2 sentences
-    const raw   = b.description || 'No description available.';
-    const plain = raw.replace(/<[^>]+>/g, '').trim();
-    const sentences = plain.match(/[^.!?]+[.!?]+/g) || [plain];
-    const desc  = sentences.slice(0, 2).join(' ').trim();
-    document.getElementById('bookModalDesc').textContent = desc || plain;
+    // Description — strip HTML, show as-is
+    const raw  = b.description || 'No description available.';
+    const desc = raw.replace(/<[^>]+>/g, '').trim();
+    document.getElementById('bookModalDesc').textContent = desc || 'No description available.';
 
     document.getElementById('bookModal').classList.add('open');
   };
@@ -3707,7 +3706,7 @@
     if (e.target === document.getElementById('bookModal')) closeBookModal();
   };
 
-  socket.on('book:update', (data) => renderBookWidget(data));
+  socket.on('book:display', (data) => renderBookWidget(data));
 </script>
 </body>
 </html>

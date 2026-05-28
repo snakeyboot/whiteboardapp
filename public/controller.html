@@ -804,18 +804,23 @@
     .sp-queue-name { font-size: 12px; font-weight: 600; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sp-queue-artist { font-size: 10px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* ── Reading ── */
-    .book-preview {
-      display: flex; gap: 10px; align-items: flex-start;
-      background: #0f172a; border-radius: 8px; padding: 8px; margin-bottom: 8px;
+    /* ── Reading / Book Library ── */
+    .book-lib { display: flex; flex-direction: column; gap: 5px; max-height: 280px; overflow-y: auto; margin-bottom: 8px; }
+    .book-card {
+      display: flex; gap: 8px; align-items: center;
+      background: #0f172a; border-radius: 8px; padding: 7px 8px;
+      border: 1px solid #334155; cursor: pointer; transition: border-color 0.15s;
     }
-    .book-preview-cover {
-      width: 54px; flex-shrink: 0; border-radius: 4px; overflow: hidden; background: #1e293b;
-    }
-    .book-preview-cover img { width: 100%; display: block; }
-    .book-preview-info { flex: 1; min-width: 0; }
-    .book-preview-title { font-size: 12px; font-weight: 700; color: #f1f5f9; margin-bottom: 2px; line-height: 1.3; }
-    .book-preview-author { font-size: 11px; color: #64748b; }
+    .book-card:hover { border-color: #475569; }
+    .book-card.active { border-color: #3b82f6; background: #0c1a30; }
+    .book-card-cover { width: 40px; flex-shrink: 0; border-radius: 3px; overflow: hidden; background: #1e293b; min-height: 54px; display: flex; align-items: center; justify-content: center; }
+    .book-card-cover img { width: 100%; display: block; }
+    .book-card-info { flex: 1; min-width: 0; }
+    .book-card-title { font-size: 11px; font-weight: 700; color: #f1f5f9; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .book-card-author { font-size: 10px; color: #64748b; margin-top: 2px; }
+    .book-card-badge { font-size: 9px; color: #60a5fa; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 3px; }
+    .book-card-remove { width: 22px; height: 22px; border-radius: 50%; background: transparent; border: none; color: #475569; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.1s, color 0.1s; padding: 0; }
+    .book-card-remove:hover { background: #3f1515; color: #f87171; }
 
     /* ── Awards ── */
     .award-mode-row { display: flex; gap: 6px; margin-bottom: 10px; }
@@ -1076,9 +1081,9 @@
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div class="card-title" style="margin-bottom:0;">📖 Reading</div>
-        <button class="btn btn-gray btn-sm" style="flex:none;" id="bookClearBtn" onclick="clearBook()" style="display:none;">Clear</button>
+        <button class="btn btn-gray btn-sm" id="bookClearDisplayBtn" onclick="clearBookDisplay()" style="display:none;">Clear Display</button>
       </div>
-      <div id="bookPreview" style="display:none;"></div>
+      <div id="bookLibrary" class="book-lib"></div>
       <div style="display:flex;gap:6px;">
         <input type="text" id="bookUrlInput" placeholder="Paste Goodreads book URL…"
           style="flex:1;background:#0f172a;border:1px solid #334155;border-radius:7px;padding:8px 10px;font-size:12px;color:#e2e8f0;outline:none;"
@@ -2921,7 +2926,11 @@
       if (e.target === document.getElementById('spPlaylistsOverlay')) closeSpPlaylists();
     }
 
-    // ── Reading ────────────────────────────────────────────────────────────
+    // ── Reading (Book Library) ─────────────────────────────────────────────
+    let bookLibrary      = [];  // all persisted books
+    let activeBookId     = null; // id of book currently on display
+    let bookDeletePending = null; // id pending delete confirmation
+
     async function loadBook() {
       const input  = document.getElementById('bookUrlInput');
       const status = document.getElementById('bookLoadStatus');
@@ -2933,43 +2942,93 @@
         const r    = await fetch(`/api/book-info?url=${encodeURIComponent(url)}`);
         const data = await r.json();
         if (!r.ok) { status.textContent = data.error || 'Failed'; status.style.color = '#ef4444'; return; }
-        socket.emit('book:set', data);
-        renderBookPreview(data);
+        data.id          = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        data.goodreadsUrl = url;
+        socket.emit('book:add', data);
         input.value = '';
-        status.textContent = '✓ Loaded';
+        status.textContent = '✓ Added to library';
         status.style.color = '#22c55e';
-        setTimeout(() => { status.textContent = ''; }, 2000);
+        setTimeout(() => { status.textContent = ''; }, 2500);
       } catch (e) {
         status.textContent = 'Network error'; status.style.color = '#ef4444';
       }
     }
 
-    function renderBookPreview(book) {
-      const preview = document.getElementById('bookPreview');
-      const clearBtn = document.getElementById('bookClearBtn');
-      if (!book) { preview.style.display = 'none'; clearBtn.style.display = 'none'; return; }
-      preview.style.display = '';
-      clearBtn.style.display = '';
-      preview.innerHTML = `
-        <div class="book-preview">
-          <div class="book-preview-cover">
-            ${book.cover ? `<img src="${escHtml(book.cover)}" alt="cover">` : '<div style="height:76px;background:#1e293b;"></div>'}
+    function renderBookLibrary() {
+      const lib      = document.getElementById('bookLibrary');
+      const clearBtn = document.getElementById('bookClearDisplayBtn');
+      if (!bookLibrary.length) {
+        lib.innerHTML = '<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">No books yet — paste a Goodreads URL to add one</div>';
+        clearBtn.style.display = 'none';
+        return;
+      }
+      clearBtn.style.display = activeBookId ? '' : 'none';
+      lib.innerHTML = bookLibrary.map(book => `
+        <div class="book-card${book.id === activeBookId ? ' active' : ''}"
+             data-bookid="${escHtml(book.id)}"
+             onclick="toggleDisplayBook(this.dataset.bookid)">
+          <div class="book-card-cover">
+            ${book.cover ? `<img src="${escHtml(book.cover)}" alt="">` : ''}
           </div>
-          <div class="book-preview-info">
-            <div class="book-preview-title">${escHtml(book.title)}</div>
-            <div class="book-preview-author">${escHtml((book.authors||[]).join(', '))}</div>
-            ${book.pageCount ? `<div style="font-size:10px;color:#475569;margin-top:3px;">${book.pageCount} pages</div>` : ''}
+          <div class="book-card-info">
+            <div class="book-card-title">${escHtml(book.title)}</div>
+            <div class="book-card-author">${escHtml((book.authors||[]).join(', '))}</div>
+            ${book.id === activeBookId ? '<div class="book-card-badge">● On Display</div>' : ''}
           </div>
-        </div>`;
+          <button class="book-card-remove"
+                  data-bookid="${escHtml(book.id)}"
+                  data-booktitle="${escHtml(book.title)}"
+                  onclick="event.stopPropagation();askDeleteBook(this.dataset.bookid, this.dataset.booktitle)">✕</button>
+        </div>
+      `).join('');
     }
 
-    function clearBook() {
-      socket.emit('book:clear');
-      renderBookPreview(null);
-      document.getElementById('bookLoadStatus').textContent = '';
+    function toggleDisplayBook(id) {
+      if (activeBookId === id) {
+        // clicking the active book clears the display
+        activeBookId = null;
+        socket.emit('book:clear-display');
+      } else {
+        activeBookId = id;
+        socket.emit('book:display', id);
+      }
+      renderBookLibrary();
     }
 
-    socket.on('book:update', (data) => renderBookPreview(data));
+    function clearBookDisplay() {
+      activeBookId = null;
+      socket.emit('book:clear-display');
+      renderBookLibrary();
+    }
+
+    function askDeleteBook(id, title) {
+      bookDeletePending = id;
+      document.getElementById('bookDeleteTitle').textContent = `"${title}"`;
+      const modal = document.getElementById('bookDeleteModal');
+      modal.style.display = 'flex';
+    }
+
+    function cancelBookDelete() {
+      bookDeletePending = null;
+      document.getElementById('bookDeleteModal').style.display = 'none';
+    }
+
+    function confirmBookDelete() {
+      if (!bookDeletePending) return;
+      socket.emit('book:remove', bookDeletePending);
+      bookDeletePending = null;
+      document.getElementById('bookDeleteModal').style.display = 'none';
+    }
+
+    socket.on('books:all', (data) => {
+      bookLibrary = data || [];
+      renderBookLibrary();
+    });
+
+    socket.on('book:display', (book) => {
+      activeBookId = book ? book.id : null;
+      renderBookLibrary();
+    });
 
     // ── Awards ─────────────────────────────────────────────────────────────
     let awardMode = 'sotd';
@@ -3074,5 +3133,18 @@
       }
     })();
   </script>
+
+  <!-- Book delete confirmation modal -->
+  <div id="bookDeleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:22px 20px;max-width:290px;width:90%;text-align:center;">
+      <div style="font-size:26px;margin-bottom:8px;">🗑️</div>
+      <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:6px;">Remove this book?</div>
+      <div id="bookDeleteTitle" style="font-size:11px;color:#94a3b8;margin-bottom:16px;line-height:1.4;"></div>
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <button class="btn btn-gray btn-sm" onclick="cancelBookDelete()">Cancel</button>
+        <button onclick="confirmBookDelete()" style="background:#7f1d1d;color:#fca5a5;font-size:12px;padding:6px 16px;border-radius:7px;border:none;cursor:pointer;font-weight:600;">Remove</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

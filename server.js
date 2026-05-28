@@ -352,6 +352,20 @@ async function initDB() {
       value TEXT
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS books (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      authors TEXT DEFAULT '[]',
+      description TEXT DEFAULT '',
+      page_count INTEGER,
+      categories TEXT DEFAULT '[]',
+      cover TEXT,
+      published_date TEXT DEFAULT '',
+      goodreads_url TEXT DEFAULT '',
+      added_at BIGINT DEFAULT 0
+    )
+  `);
   const { rows } = await pool.query('SELECT COUNT(*) FROM rosters');
   if (parseInt(rows[0].count) === 0) {
     const id = Date.now().toString(36);
@@ -360,6 +374,22 @@ async function initDB() {
       [id, 'Period 1', '[]', '', 0]
     );
   }
+}
+
+async function getAllBooks() {
+  const { rows } = await pool.query('SELECT * FROM books ORDER BY added_at ASC');
+  return rows.map(r => ({
+    id: r.id,
+    title: r.title,
+    authors: r.authors ? JSON.parse(r.authors) : [],
+    description: r.description || '',
+    pageCount: r.page_count || null,
+    categories: r.categories ? JSON.parse(r.categories) : [],
+    cover: r.cover || null,
+    publishedDate: r.published_date || '',
+    goodreadsUrl: r.goodreads_url || '',
+    addedAt: r.added_at || 0,
+  }));
 }
 
 async function getAllWordLists() {
@@ -623,7 +653,8 @@ const state = {
   forcedGroups: {},    // rosterId → [[name,…],…] | deleted key = none
   lastGroupResult: null, // [[name,…],…] — last confirmed groups from display
   award: { mode: 'sotd', names: [], active: false, revealed: false },
-  book: null, // { id, title, authors, description, pageCount, categories, cover, publishedDate }
+  activeBook: null, // currently displayed book
+  books: [],        // library (loaded from DB on startup)
 };
 
 // Deck — shuffled list ensuring no repeats until everyone is called
@@ -931,15 +962,58 @@ io.on('connection', async (socket) => {
     io.emit('award:close');
   });
 
-  // ── Book (What Am I Reading) ──
-  socket.emit('book:update', state.book);
-  socket.on('book:set', (data) => {
-    state.book = data;
-    io.emit('book:update', data);
+  // ── Books (What Am I Reading Library) ──
+  socket.emit('books:all', state.books);
+  socket.emit('book:display', state.activeBook);
+
+  socket.on('book:add', async (data) => {
+    try {
+      const book = {
+        id: data.id || Date.now().toString(36),
+        title: data.title || 'Unknown',
+        authors: data.authors || [],
+        description: data.description || '',
+        pageCount: data.pageCount || null,
+        categories: data.categories || [],
+        cover: data.cover || null,
+        publishedDate: data.publishedDate || '',
+        goodreadsUrl: data.goodreadsUrl || '',
+        addedAt: Date.now(),
+      };
+      await pool.query(
+        `INSERT INTO books (id,title,authors,description,page_count,categories,cover,published_date,goodreads_url,added_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         ON CONFLICT (id) DO NOTHING`,
+        [book.id, book.title, JSON.stringify(book.authors), book.description,
+         book.pageCount, JSON.stringify(book.categories), book.cover,
+         book.publishedDate, book.goodreadsUrl, book.addedAt]
+      );
+      state.books = await getAllBooks();
+      io.emit('books:all', state.books);
+    } catch (e) { console.error('book:add', e); }
   });
-  socket.on('book:clear', () => {
-    state.book = null;
-    io.emit('book:update', null);
+
+  socket.on('book:remove', async (id) => {
+    try {
+      await pool.query('DELETE FROM books WHERE id=$1', [id]);
+      if (state.activeBook && state.activeBook.id === id) {
+        state.activeBook = null;
+        io.emit('book:display', null);
+      }
+      state.books = await getAllBooks();
+      io.emit('books:all', state.books);
+    } catch (e) { console.error('book:remove', e); }
+  });
+
+  socket.on('book:display', (id) => {
+    const book = id ? state.books.find(b => b.id === id) : null;
+    state.activeBook = book || null;
+    io.emit('book:display', state.activeBook);
+  });
+
+  socket.on('book:clear-display', () => {
+    state.activeBook = null;
+    io.emit('book:display', null);
   });
 
   socket.on('groups:result', (groups) => {
@@ -1035,6 +1109,7 @@ io.on('connection', async (socket) => {
 // ── Start ─────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 initDB()
+  .then(async () => { state.books = await getAllBooks(); })
   .then(() => loadSpotifyTokens())
   .then(() => {
     if (spotifyTokens) startSpotifyPoll();
