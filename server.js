@@ -1044,15 +1044,26 @@ io.on('connection', async (socket) => {
     } catch (e) { console.error('book:remove', e); }
   });
 
-  socket.on('book:display', (id) => {
+  socket.on('book:display', async (id) => {
     const book = id ? state.books.find(b => b.id === id) : null;
     state.activeBook = book || null;
     io.emit('book:display', state.activeBook);
+    try {
+      await pool.query(
+        "INSERT INTO app_config (key,value) VALUES ('active_book_id',$1) ON CONFLICT (key) DO UPDATE SET value=$1",
+        [id || null]
+      );
+    } catch (e) { console.error('persist active_book_id', e); }
   });
 
-  socket.on('book:clear-display', () => {
+  socket.on('book:clear-display', async () => {
     state.activeBook = null;
     io.emit('book:display', null);
+    try {
+      await pool.query(
+        "INSERT INTO app_config (key,value) VALUES ('active_book_id',NULL) ON CONFLICT (key) DO UPDATE SET value=NULL"
+      );
+    } catch (e) { console.error('clear active_book_id', e); }
   });
 
   // ── Class Orders ──
@@ -1167,7 +1178,16 @@ io.on('connection', async (socket) => {
 // ── Start ─────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 initDB()
-  .then(async () => { state.books = await getAllBooks(); })
+  .then(async () => {
+    state.books = await getAllBooks();
+    try {
+      const { rows } = await pool.query("SELECT value FROM app_config WHERE key='active_book_id'");
+      if (rows.length && rows[0].value) {
+        const book = state.books.find(b => b.id === rows[0].value);
+        if (book) state.activeBook = book;
+      }
+    } catch (e) { console.error('load active_book_id', e); }
+  })
   .then(() => loadSpotifyTokens())
   .then(() => {
     if (spotifyTokens) startSpotifyPoll();
