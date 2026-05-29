@@ -944,6 +944,9 @@
       <div id="fgResultRow" style="display:none;margin-bottom:8px;">
         <button class="btn btn-gray btn-sm" id="fgCopyBtn" onclick="copyGroupsToClipboard()" style="width:100%;">Copy Groups for Sheets</button>
       </div>
+      <div id="orderResultRow" style="display:none;margin-bottom:8px;">
+        <button class="btn btn-gray btn-sm" id="orderCopyBtn" onclick="copyOrderToClipboard()" style="width:100%;">Copy Order for Sheets</button>
+      </div>
       <div id="fgStatus" style="font-size:11px;color:#475569;margin-bottom:8px;min-height:14px;"></div>
       <div id="fgStudentList"></div>
     </div>
@@ -2532,6 +2535,26 @@
       }
       navigator.clipboard.writeText(rows.join('\n')).then(() => {
         const btn = document.getElementById('fgCopyBtn');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied ✓';
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
+      });
+    }
+
+    let lastOrderResult = null;
+
+    socket.on('order:result', (names) => {
+      lastOrderResult = names;
+      const el = document.getElementById('orderResultRow');
+      if (el) el.style.display = names && names.length ? '' : 'none';
+    });
+
+    function copyOrderToClipboard() {
+      if (!lastOrderResult || !lastOrderResult.length) return;
+      const text = lastOrderResult.map((name, i) => `${i + 1}\t${name}`).join('\n');
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('orderCopyBtn');
         const orig = btn.textContent;
         btn.textContent = 'Copied ✓';
         btn.disabled = true;

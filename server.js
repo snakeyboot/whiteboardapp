@@ -692,6 +692,7 @@ const state = {
   forcedGroups: {},    // rosterId → [[name,…],…] | deleted key = none
   lastGroupResult: null, // [[name,…],…] — last confirmed groups from display
   award: { mode: 'sotd', names: [], active: false, revealed: false },
+  lastOrderResult: null, // [name, name, …] from display Order widget
   activeBook: null, // currently displayed book
   books: [],        // library (loaded from DB on startup)
 };
@@ -1064,6 +1065,13 @@ io.on('connection', async (socket) => {
         "INSERT INTO app_config (key,value) VALUES ('active_book_id',NULL) ON CONFLICT (key) DO UPDATE SET value=NULL"
       );
     } catch (e) { console.error('clear active_book_id', e); }
+  });
+
+  // ── Order result (broadcast to controller for copy) ──
+  if (state.lastOrderResult) socket.emit('order:result', state.lastOrderResult);
+  socket.on('order:result', (names) => {
+    state.lastOrderResult = names;
+    io.emit('order:result', names);
   });
 
   // ── Class Orders ──

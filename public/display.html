@@ -2807,6 +2807,7 @@
   function doneOrder() {
     closeOrderModal();
     if (!orderList.length) return;
+    socket.emit('order:result', [...orderList]);
     if (loadWVis()['order'] === false) return;
     const wid = document.getElementById('orderWidget');
     wid.style.display = '';
