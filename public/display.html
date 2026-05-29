@@ -1548,6 +1548,7 @@
     <!-- Footer -->
     <div class="att-footer" style="border-top:1px solid #1e293b;gap:8px;">
       <button class="group-shuffle-btn" onclick="shuffleOrder()" style="flex:none;padding:8px 16px;">🔀 Shuffle</button>
+      <button onclick="clearOrder()" style="flex:none;padding:8px 14px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#94a3b8;font-size:13px;font-weight:700;cursor:pointer;">Clear</button>
       <button id="orderLastBtn" onclick="loadLastOrder()" style="flex:none;padding:8px 14px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#94a3b8;font-size:13px;font-weight:700;cursor:pointer;">Last</button>
       <button id="orderSaveBtn" onclick="saveOrder()" style="flex:none;padding:8px 14px;border-radius:8px;border:1px solid #1e40af;background:#1e3a5f;color:#93c5fd;font-size:13px;font-weight:700;cursor:pointer;">💾 Save</button>
       <button class="att-save-btn" onclick="doneOrder()" style="flex:1;">Done</button>
@@ -2690,6 +2691,11 @@
   function loadLastOrder() {
     if (!savedOrders.length) return;
     orderList = [...savedOrders[0].students];
+    renderOrderListModal(false);
+  }
+
+  function clearOrder() {
+    orderList = [];
     renderOrderListModal(false);
   }
 
