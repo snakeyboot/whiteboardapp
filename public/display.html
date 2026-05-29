@@ -923,6 +923,39 @@
       opacity: 0.8;
     }
 
+    /* ── Random Order modal ── */
+    .order-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 8px; border-radius: 8px;
+      background: #1e293b; border: 1px solid #334155;
+      cursor: default; user-select: none; opacity: 0;
+    }
+    @keyframes orderSlideIn {
+      from { opacity: 0; transform: translateX(-14px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .order-row.show    { animation: orderSlideIn 0.22s ease forwards; }
+    .order-row.instant { opacity: 1 !important; animation: none !important; }
+    .order-row.drag-over { border-color: #3b82f6; background: #1c2d45; }
+    .order-row.dragging-src { opacity: 0.3 !important; }
+    .order-drag-handle {
+      cursor: grab; color: #334155; font-size: 15px;
+      flex-shrink: 0; padding: 0 2px; line-height: 1;
+      transition: color 0.1s;
+    }
+    .order-drag-handle:hover { color: #64748b; }
+    .order-chip {
+      font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+      background: #1e293b; border: 1px solid #334155; color: #64748b;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      transition: background 0.1s, color 0.1s, border-color 0.1s;
+    }
+    .order-chip:hover { background: #263044; color: #94a3b8; border-color: #475569; }
+    .order-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; padding: 36px 16px; color: #475569; flex: 1;
+    }
+
     /* ── Forced groups reveal animation ── */
     @keyframes fgNameIn {
       from { opacity: 0; transform: translateY(-6px); }
@@ -1495,7 +1528,7 @@
 
 <!-- Random Order Overlay -->
 <div class="att-overlay" id="orderOverlay" onclick="if(event.target===this)closeOrderModal()">
-  <div class="att-modal" style="max-width:min(420px,96vw);max-height:88vh;display:flex;flex-direction:column;">
+  <div class="att-modal" style="max-width:min(440px,96vw);max-height:88vh;display:flex;flex-direction:column;">
     <div class="att-header">
       <div>
         <div class="att-title">Random Order</div>
@@ -1503,9 +1536,14 @@
       </div>
       <button class="att-close" onclick="closeOrderModal()">✕</button>
     </div>
-    <div id="orderList" style="flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:4px;"></div>
+    <!-- Saved orders chips -->
+    <div id="orderSavedRow" style="display:none;padding:8px 16px;gap:6px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #1e293b;"></div>
+    <!-- List or empty state -->
+    <div id="orderListWrap" style="flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:5px;"></div>
+    <!-- Footer -->
     <div class="att-footer" style="border-top:1px solid #1e293b;gap:8px;">
-      <button class="group-shuffle-btn" onclick="shuffleOrder()" style="flex:none;padding:8px 18px;">🔀 Shuffle</button>
+      <button class="group-shuffle-btn" onclick="shuffleOrder()" style="flex:none;padding:8px 16px;">🔀 Shuffle</button>
+      <button id="orderSaveBtn" onclick="saveOrder()" style="flex:none;padding:8px 16px;border-radius:8px;border:1px solid #1e40af;background:#1e3a5f;color:#93c5fd;font-size:13px;font-weight:700;cursor:pointer;">💾 Save</button>
       <button class="att-save-btn" onclick="doneOrder()" style="flex:1;">Done</button>
     </div>
   </div>
@@ -2139,6 +2177,11 @@
   });
 
   socket.on('roster:activated', ({ id }) => {
+    if (orderRosterId !== null && id !== orderRosterId) {
+      orderList = [];
+      orderRosterId = null;
+      renderOrderWidget();
+    }
     activeRosterId = id;
     displayMaterialsOverride = null;
     updateClassWidget();
@@ -2588,23 +2631,61 @@
   }
 
   // ── Random Order ──────────────────────────────────────────────────────────
-  let orderList = [];
+  let orderList        = [];    // name strings (not student objects)
+  let orderRosterId    = null;  // which class the current list belongs to
+  let orderRevealing   = false; // true during staggered reveal
+  let orderDragSrcIdx  = null;
+  let savedOrders      = [];
+  let orderWidgetReady = false;
 
   function openOrderModal() {
     const r = allRosters[activeRosterId];
     if (!r) return;
-    const students = parseRosterStudents(r.students).filter(s => (s.attendance || 'present') !== 'absent');
-    if (!students.length) return;
-    document.getElementById('orderSub').textContent = r.name + ' · ' + students.length + ' students';
-    orderList = [...students];
-    shuffleArray(orderList);
-    renderOrderList();
+    const present = parseRosterStudents(r.students).filter(s => (s.attendance || 'present') !== 'absent');
+    if (!present.length) return;
+    document.getElementById('orderSub').textContent = r.name + ' · ' + present.length + ' students';
+    // Reset if class changed
+    if (orderRosterId !== activeRosterId) {
+      orderList = [];
+      orderRosterId = activeRosterId;
+    }
+    renderOrderListModal(false);
+    loadSavedChips();
     document.getElementById('orderOverlay').classList.add('open');
   }
 
+  function loadSavedChips() {
+    socket.emit('orders:get', activeRosterId, (orders) => {
+      savedOrders = orders || [];
+      renderSavedChips();
+    });
+  }
+
+  function renderSavedChips() {
+    const row = document.getElementById('orderSavedRow');
+    if (!savedOrders.length) { row.style.display = 'none'; return; }
+    row.style.display = 'flex';
+    row.innerHTML = `
+      <span style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#475569;flex-shrink:0;line-height:26px;">Saved:</span>
+      ${savedOrders.map(o => `<button class="order-chip" data-id="${o.id}" onclick="loadSavedOrder('${o.id}')">${o.name}</button>`).join('')}
+    `;
+  }
+
+  function loadSavedOrder(id) {
+    const found = savedOrders.find(o => o.id === id);
+    if (!found) return;
+    orderList = [...found.students];
+    renderOrderListModal(false);
+  }
+
   function shuffleOrder() {
+    if (orderRevealing) return;
+    const r = allRosters[activeRosterId];
+    if (!r) return;
+    const present = parseRosterStudents(r.students).filter(s => (s.attendance || 'present') !== 'absent');
+    orderList = present.map(s => fullNameDisplay(s));
     shuffleArray(orderList);
-    renderOrderList();
+    renderOrderListModal(true);
   }
 
   function shuffleArray(arr) {
@@ -2614,20 +2695,93 @@
     }
   }
 
-  function renderOrderList() {
-    document.getElementById('orderList').innerHTML = orderList.map((s, i) => `
-      <div style="display:flex;align-items:center;gap:12px;padding:7px 10px;border-radius:8px;background:#1e293b;border:1px solid #334155;">
-        <span style="font-size:12px;font-weight:700;color:#475569;min-width:22px;text-align:right;">${i + 1}</span>
-        <span style="font-size:15px;font-weight:600;color:#e2e8f0;">${fullNameDisplay(s)}</span>
+  function renderOrderListModal(reveal = false) {
+    const wrap = document.getElementById('orderListWrap');
+    if (!orderList.length) {
+      wrap.innerHTML = `
+        <div class="order-empty">
+          <div style="font-size:40px;">🎲</div>
+          <div style="font-size:14px;color:#64748b;text-align:center;line-height:1.6;">
+            Click <strong style="color:#93c5fd;">Shuffle</strong> to generate<br>a random order
+          </div>
+        </div>`;
+      return;
+    }
+    wrap.innerHTML = orderList.map((name, i) => `
+      <div class="order-row${reveal ? '' : ' instant'}"
+           draggable="true"
+           data-idx="${i}"
+           ondragstart="orderDragStart(event,${i})"
+           ondragover="orderDragOver(event,${i})"
+           ondrop="orderDrop(event,${i})"
+           ondragend="orderDragEnd(event)">
+        <span class="order-drag-handle">⠿</span>
+        <span style="font-size:11px;font-weight:700;color:#475569;min-width:22px;text-align:right;flex-shrink:0;">${i + 1}</span>
+        <span style="font-size:15px;font-weight:600;color:#e2e8f0;flex:1;">${name}</span>
       </div>
     `).join('');
+    if (reveal) {
+      orderRevealing = true;
+      const rows = wrap.querySelectorAll('.order-row');
+      rows.forEach((row, i) => setTimeout(() => row.classList.add('show'), i * 110));
+      setTimeout(() => { orderRevealing = false; }, rows.length * 110 + 300);
+    }
   }
+
+  // ── Drag-and-drop ──
+  function orderDragStart(e, i) {
+    if (orderRevealing) { e.preventDefault(); return; }
+    orderDragSrcIdx = i;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => e.currentTarget && e.currentTarget.classList.add('dragging-src'), 0);
+  }
+
+  function orderDragOver(e, i) {
+    e.preventDefault();
+    if (orderRevealing || orderDragSrcIdx === null || orderDragSrcIdx === i) return;
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('#orderListWrap .order-row').forEach(r => r.classList.remove('drag-over'));
+    e.currentTarget.classList.add('drag-over');
+  }
+
+  function orderDrop(e, i) {
+    e.preventDefault();
+    if (orderRevealing || orderDragSrcIdx === null || orderDragSrcIdx === i) return;
+    const moved = orderList.splice(orderDragSrcIdx, 1)[0];
+    orderList.splice(i, 0, moved);
+    orderDragSrcIdx = null;
+    renderOrderListModal(false);
+  }
+
+  function orderDragEnd(e) {
+    orderDragSrcIdx = null;
+    document.querySelectorAll('#orderListWrap .order-row').forEach(r => r.classList.remove('drag-over', 'dragging-src'));
+  }
+
+  // ── Save ──
+  function saveOrder() {
+    if (!orderList.length) return;
+    const name = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    socket.emit('order:save', { rosterId: activeRosterId, name, students: [...orderList] });
+    const btn = document.getElementById('orderSaveBtn');
+    const [origText, origBg, origColor, origBorder] = [btn.textContent, btn.style.background, btn.style.color, btn.style.borderColor];
+    btn.textContent = '✓ Saved';
+    btn.style.background = '#14532d'; btn.style.color = '#86efac'; btn.style.borderColor = '#166534';
+    setTimeout(() => {
+      btn.textContent = origText;
+      btn.style.background = origBg; btn.style.color = origColor; btn.style.borderColor = origBorder;
+    }, 2000);
+  }
+
+  socket.on('orders:for-roster', ({ rosterId, orders }) => {
+    if (rosterId !== activeRosterId) return;
+    savedOrders = orders || [];
+    renderSavedChips();
+  });
 
   function closeOrderModal() {
     document.getElementById('orderOverlay').classList.remove('open');
   }
-
-  let orderWidgetReady = false;
 
   function doneOrder() {
     closeOrderModal();
@@ -2651,10 +2805,10 @@
   function renderOrderWidget() {
     document.getElementById('orderWidgetBody').innerHTML = `
       <div style="overflow-y:auto;max-height:55vh;padding:8px 10px;display:flex;flex-direction:column;gap:3px;">
-        ${orderList.map((s, i) => `
+        ${orderList.map((name, i) => `
           <div style="display:flex;align-items:center;gap:9px;padding:5px 6px;border-radius:6px;background:${i % 2 === 0 ? '#0f172a' : 'transparent'};">
             <span style="font-size:11px;font-weight:700;color:#475569;min-width:20px;text-align:right;flex-shrink:0;">${i + 1}</span>
-            <span style="font-size:13px;font-weight:600;color:#e2e8f0;">${fullNameDisplay(s)}</span>
+            <span style="font-size:13px;font-weight:600;color:#e2e8f0;">${name}</span>
           </div>
         `).join('')}
       </div>`;

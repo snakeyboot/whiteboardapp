@@ -372,6 +372,15 @@ async function initDB() {
     )
   `);
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS class_orders (
+      id TEXT PRIMARY KEY,
+      roster_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      students TEXT DEFAULT '[]',
+      created_at BIGINT DEFAULT 0
+    )
+  `);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS books (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -393,6 +402,17 @@ async function initDB() {
       [id, 'Period 1', '[]', '', 0]
     );
   }
+}
+
+async function getClassOrders(rosterId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM class_orders WHERE roster_id=$1 ORDER BY created_at DESC LIMIT 10',
+    [rosterId]
+  );
+  return rows.map(r => ({
+    id: r.id, rosterId: r.roster_id, name: r.name,
+    students: JSON.parse(r.students || '[]'), createdAt: r.created_at,
+  }));
 }
 
 async function getAllBooks() {
@@ -1033,6 +1053,25 @@ io.on('connection', async (socket) => {
   socket.on('book:clear-display', () => {
     state.activeBook = null;
     io.emit('book:display', null);
+  });
+
+  // ── Class Orders ──
+  socket.on('order:save', async ({ rosterId, name, students }) => {
+    try {
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
+      await pool.query(
+        'INSERT INTO class_orders (id, roster_id, name, students, created_at) VALUES ($1,$2,$3,$4,$5)',
+        [id, rosterId, name, JSON.stringify(students), Date.now()]
+      );
+      socket.emit('orders:for-roster', { rosterId, orders: await getClassOrders(rosterId) });
+    } catch (e) { console.error('order:save', e); }
+  });
+
+  socket.on('orders:get', async (rosterId, cb) => {
+    try {
+      const orders = await getClassOrders(rosterId);
+      if (typeof cb === 'function') cb(orders);
+    } catch (e) { if (typeof cb === 'function') cb([]); }
   });
 
   socket.on('groups:result', (groups) => {
