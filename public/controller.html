@@ -3410,6 +3410,8 @@
       [ DESK_W+DESK_GAP, -(DESK_H+DESK_GAP)],
       [-(DESK_W+DESK_GAP),-(DESK_H+DESK_GAP)],
     ];
+    const DEC_SIZES = { door:{w:26,h:58}, window:{w:16,h:72}, teacher:{w:102,h:78} };
+    function dispY(y, h) { return seatFlipped ? (CANVAS_H - h - y) : y; }
 
     function defaultDecorations() {
       return [
@@ -3539,14 +3541,15 @@
       // Front-of-room label bar
       const frontBar = document.createElement('div');
       frontBar.className = 'seat-room-bar';
-      frontBar.style.top = '0';
+      frontBar.style.top = seatFlipped ? (CANVAS_H - 22) + 'px' : '0';
       frontBar.textContent = seatFlipped ? 'BACK OF ROOM' : 'FRONT OF ROOM';
       inner.appendChild(frontBar);
 
-      // Pod backgrounds (draggable)
+      // Pod backgrounds (draggable) — use flip-aware Y
       const realPods = getPodGroups().filter(p => !p.podId.startsWith('_s_'));
       realPods.forEach((pod, pi) => {
-        const xs = pod.desks.map(d=>d.x), ys = pod.desks.map(d=>d.y);
+        const xs = pod.desks.map(d=>d.x);
+        const ys = pod.desks.map(d=>dispY(d.y, DESK_H));
         const minX=Math.min(...xs)-12, minY=Math.min(...ys)-12;
         const maxX=Math.max(...xs)+DESK_W+12, maxY=Math.max(...ys)+DESK_H+12;
         const bg = document.createElement('div');
@@ -3560,17 +3563,33 @@
 
       // Room decorations (doors, windows, teacher desk)
       seatDecorations.forEach(dec => {
+        const ds = DEC_SIZES[dec.type] || {w:30,h:60};
         const el = document.createElement('div');
         el.className = `seat-decor seat-decor-${dec.type}`;
         el.id = 'sdec_' + dec.id;
         el.style.left = dec.x + 'px';
-        el.style.top  = dec.y + 'px';
-        if (dec.type === 'teacher') el.textContent = 'Teacher';
+        el.style.top  = dispY(dec.y, ds.h) + 'px';
+        if (dec.type === 'teacher') {
+          if (dec.rotation) el.style.transform = `rotate(${dec.rotation}deg)`;
+          const cs = dec.rotation ? `transform:rotate(${-dec.rotation}deg)` : '';
+          const lbl = document.createElement('span');
+          lbl.textContent = 'Teacher';
+          lbl.style.cssText = `font-size:10px;font-weight:700;letter-spacing:.05em;pointer-events:none;${cs}`;
+          el.appendChild(lbl);
+          const rotBtn = document.createElement('button');
+          rotBtn.textContent = '↺';
+          rotBtn.title = 'Rotate';
+          rotBtn.style.cssText = 'position:absolute;top:2px;right:2px;background:none;border:none;color:#a07840;cursor:pointer;font-size:11px;padding:0;line-height:1;';
+          rotBtn.onmousedown = (e) => e.stopPropagation();
+          rotBtn.ontouchstart = (e) => e.stopPropagation();
+          rotBtn.onclick = (e) => { e.stopPropagation(); dec.rotation = ((dec.rotation||0)+90)%360; renderSeatCanvas(); };
+          el.appendChild(rotBtn);
+        }
         makeDecorDraggable(el, dec.id);
         inner.appendChild(el);
       });
 
-      // Desks
+      // Desks — flip Y, counter-rotate content
       seatDesks.forEach((desk, idx) => {
         const name   = seatAssignments[desk.id] || '';
         const parts  = name.split(' ');
@@ -3582,8 +3601,11 @@
         el.className = 'seat-desk-draggable' + (sel ? ' sel' : '');
         el.id        = 'sd_' + desk.id;
         el.style.left = desk.x + 'px';
-        el.style.top  = desk.y + 'px';
+        el.style.top  = dispY(desk.y, DESK_H) + 'px';
         if (desk.rotation) el.style.transform = `rotate(${desk.rotation}deg)`;
+
+        // Counter-rotate inner content so names/buttons stay upright
+        const cs = desk.rotation ? `style="transform:rotate(${-desk.rotation}deg)"` : '';
 
         const badgesHtml = (stu?.frontOfRoom || stu?.enlLevel) ? `
           <div class="seat-desk-badges">
@@ -3592,12 +3614,12 @@
           </div>` : '';
 
         el.innerHTML = `
-          <div class="seat-desk-inner">
+          <div class="seat-desk-inner" ${cs}>
             ${name
               ? `<span class="seat-desk-first">${escHtml(first)}</span><span class="seat-desk-last">${escHtml(last)}</span>${badgesHtml}`
               : `<span class="seat-desk-num">${idx+1}</span>`}
           </div>
-          <div class="seat-desk-btns">
+          <div class="seat-desk-btns" ${cs}>
             <button class="seat-desk-btn" title="Rotate"
               onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"
               onclick="rotateSeatDesk('${desk.id}',event)">↺</button>
@@ -3616,11 +3638,16 @@
       realPods.forEach(pod => {
         const bg = document.querySelector(`.seat-pod-bg[data-podid="${pod.podId}"]`);
         if (!bg) return;
-        const xs=pod.desks.map(d=>d.x), ys=pod.desks.map(d=>d.y);
+        const xs=[], ys=[];
+        pod.desks.forEach(d => {
+          const el = document.getElementById('sd_'+d.id);
+          xs.push(el ? parseInt(el.style.left) : d.x);
+          ys.push(el ? parseInt(el.style.top)  : dispY(d.y, DESK_H));
+        });
         const minX=Math.min(...xs)-12, minY=Math.min(...ys)-12;
-        bg.style.left   = minX+'px'; bg.style.top    = minY+'px';
-        bg.style.width  = (Math.max(...xs)+DESK_W+12-minX)+'px';
-        bg.style.height = (Math.max(...ys)+DESK_H+12-minY)+'px';
+        bg.style.left  = minX+'px'; bg.style.top    = minY+'px';
+        bg.style.width = (Math.max(...xs)+DESK_W+12-minX)+'px';
+        bg.style.height= (Math.max(...ys)+DESK_H+12-minY)+'px';
       });
     }
 
@@ -3639,13 +3666,14 @@
       }
       function onMove(e) {
         const pt=e.touches?e.touches[0]:e;
-        const dx=pt.clientX-startCX, dy=pt.clientY-startCY;
-        if (!moved && (Math.abs(dx)>4||Math.abs(dy)>4)) moved=true;
+        const dx=pt.clientX-startCX, rawDy=pt.clientY-startCY;
+        if (!moved && (Math.abs(dx)>4||Math.abs(rawDy)>4)) moved=true;
         if (!moved) return;
         const desk=getDesk(); if (!desk) return;
-        desk.x=Math.max(0,Math.min(900-DESK_W,origX+dx));
-        desk.y=Math.max(22,Math.min(560-DESK_H,origY+dy));
-        el.style.left=desk.x+'px'; el.style.top=desk.y+'px';
+        const ady = seatFlipped ? -rawDy : rawDy;
+        desk.x=Math.max(0,Math.min(CANVAS_W-DESK_W,origX+dx));
+        desk.y=Math.max(22,Math.min(CANVAS_H-DESK_H,origY+ady));
+        el.style.left=desk.x+'px'; el.style.top=dispY(desk.y,DESK_H)+'px';
         updatePodBgs(); e.preventDefault();
       }
       function onEnd() {
@@ -3672,13 +3700,14 @@
       }
       function onMove(e) {
         const pt=e.touches?e.touches[0]:e;
-        const dx=pt.clientX-startCX, dy=pt.clientY-startCY;
+        const dx=pt.clientX-startCX, rawDy=pt.clientY-startCY;
+        const ady = seatFlipped ? -rawDy : rawDy;
         origPositions.forEach(orig=>{
           const desk=seatDesks.find(d=>d.id===orig.id); if (!desk) return;
-          desk.x=Math.max(0,Math.min(900-DESK_W,orig.x+dx));
-          desk.y=Math.max(22,Math.min(560-DESK_H,orig.y+dy));
+          desk.x=Math.max(0,Math.min(CANVAS_W-DESK_W,orig.x+dx));
+          desk.y=Math.max(22,Math.min(CANVAS_H-DESK_H,orig.y+ady));
           const dEl=document.getElementById('sd_'+desk.id);
-          if (dEl) { dEl.style.left=desk.x+'px'; dEl.style.top=desk.y+'px'; }
+          if (dEl) { dEl.style.left=desk.x+'px'; dEl.style.top=dispY(desk.y,DESK_H)+'px'; }
         });
         updatePodBgs(); e.preventDefault();
       }
@@ -3705,9 +3734,11 @@
       function onMove(e) {
         const pt=e.touches?e.touches[0]:e;
         const dec=getDec(); if (!dec) return;
-        dec.x = Math.max(0, Math.min(CANVAS_W-80, origX + pt.clientX - startCX));
-        dec.y = Math.max(0, Math.min(CANVAS_H-70, origY + pt.clientY - startCY));
-        el.style.left=dec.x+'px'; el.style.top=dec.y+'px';
+        const ds=DEC_SIZES[dec.type]||{w:30,h:60};
+        const rawDy=pt.clientY-startCY, ady=seatFlipped?-rawDy:rawDy;
+        dec.x = Math.max(0, Math.min(CANVAS_W-ds.w, origX + pt.clientX - startCX));
+        dec.y = Math.max(0, Math.min(CANVAS_H-ds.h, origY + ady));
+        el.style.left=dec.x+'px'; el.style.top=dispY(dec.y,ds.h)+'px';
         e.preventDefault();
       }
       function onEnd() {

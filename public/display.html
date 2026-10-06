@@ -4047,16 +4047,18 @@
 
   // ── Seating Chart Display ────────────────────────────────
   function seatEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  let dispSeatDesks       = [];
-  let dispSeatAssignments = {};
-  let dispSeatFlipped     = false;
-  let dispSeatSelected    = null;
+  let dispSeatDesks        = [];
+  let dispSeatDecorations  = [];
+  let dispSeatAssignments  = {};
+  let dispSeatFlipped      = false;
+  let dispSeatSelected     = null;
 
   function openSeatingDisplay() {
     document.getElementById('seatingDisplayOverlay').classList.add('open');
     // Load layout + active chart
     socket.emit('seating:layout:get', (data) => {
-      dispSeatDesks = (Array.isArray(data) ? data : (data?.desks || []));
+      dispSeatDesks       = Array.isArray(data) ? data : (data?.desks || []);
+      dispSeatDecorations = Array.isArray(data) ? [] : (data?.decorations || []);
       renderDispSeatingChart();
     });
     socket.emit('seating:active:get', activeRosterId || '', (chart) => {
@@ -4119,13 +4121,16 @@
     const bh = body.clientHeight || (window.innerHeight - 70);
     const scale = Math.min((bw - 8) / CW, (bh - 8) / CH);
 
+    // Flip-aware Y helper
+    function dY(y, h) { return dispSeatFlipped ? (CH - h - y) : y; }
+
     const wrap = document.createElement('div');
     wrap.className = 'seating-canvas-wrap';
     wrap.style.cssText = `width:${CW}px;height:${CH}px;transform:scale(${scale.toFixed(4)});`;
 
     // Front-of-room label bar
     const lbl = document.createElement('div');
-    lbl.style.cssText = 'position:absolute;left:0;right:0;top:0;height:22px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#1e3a5f;border-bottom:1px dashed #1e293b;pointer-events:none;z-index:0;';
+    lbl.style.cssText = `position:absolute;left:0;right:0;top:${dispSeatFlipped?(CH-22)+'px':'0'};height:22px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#1e3a5f;border-bottom:1px dashed #1e293b;pointer-events:none;z-index:0;`;
     lbl.textContent = dispSeatFlipped ? 'BACK OF ROOM' : 'FRONT OF ROOM';
     wrap.appendChild(lbl);
 
@@ -4136,7 +4141,7 @@
       (podMap[k] = podMap[k] || {podId:k, desks:[]}).desks.push(d);
     });
     Object.values(podMap).filter(p => !p.podId.startsWith('_s_')).forEach((pod, pi) => {
-      const xs=pod.desks.map(d=>d.x), ys=pod.desks.map(d=>d.y);
+      const xs=pod.desks.map(d=>d.x), ys=pod.desks.map(d=>dY(d.y,DH));
       const minX=Math.min(...xs)-12, minY=Math.min(...ys)-12;
       const c = POD_COLORS[pi % POD_COLORS.length];
       const bg = document.createElement('div');
@@ -4144,16 +4149,42 @@
       wrap.appendChild(bg);
     });
 
-    // Desks
+    // Room decorations (doors, windows, teacher desk) — display-only, no drag
+    const DEC_SIZES_D = { door:{w:26,h:58}, window:{w:16,h:72}, teacher:{w:102,h:78} };
+    dispSeatDecorations.forEach(dec => {
+      const ds = DEC_SIZES_D[dec.type] || {w:30,h:60};
+      const el = document.createElement('div');
+      const decStyles = {
+        door:    'background:linear-gradient(160deg,#5a3010,#3d2009);border:2px solid #8b5e3c;border-radius:3px 8px 3px 3px;position:relative;',
+        window:  'background:#0e3a5c88;border:1.5px solid #38bdf8aa;position:relative;overflow:hidden;',
+        teacher: 'background:#1a1208;border:2px solid #78562a;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#a07840;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;',
+      };
+      el.style.cssText = `position:absolute;left:${dec.x}px;top:${dY(dec.y,ds.h)}px;width:${ds.w}px;height:${ds.h}px;z-index:1;pointer-events:none;${decStyles[dec.type]||''}`;
+      if (dec.rotation) el.style.transform = `rotate(${dec.rotation}deg)`;
+      if (dec.type === 'teacher') el.textContent = 'Teacher';
+      if (dec.type === 'window') {
+        const divider = document.createElement('div');
+        divider.style.cssText = 'position:absolute;top:50%;left:0;width:100%;height:1.5px;background:#38bdf888;';
+        el.appendChild(divider);
+      }
+      if (dec.type === 'door') {
+        const knob = document.createElement('div');
+        knob.style.cssText = 'position:absolute;bottom:9px;right:5px;width:5px;height:5px;border-radius:50%;background:#c8a060;';
+        el.appendChild(knob);
+      }
+      wrap.appendChild(el);
+    });
+
+    // Desks — no stats badges in student view
     dispSeatDesks.forEach(desk => {
       const name = dispSeatAssignments[desk.id] || '';
-      const stu  = stuByName[name];
       const parts = name.split(' ');
       const first = parts[0]||'', last = parts.slice(1).join(' ');
       const isEmpty = !name, sel = dispSeatSelected === desk.id;
+      const displayTop = dY(desk.y, DH);
 
       const el = document.createElement('div');
-      el.style.cssText = `position:absolute;left:${desk.x}px;top:${desk.y}px;width:${DW}px;height:${DH}px;`+
+      el.style.cssText = `position:absolute;left:${desk.x}px;top:${displayTop}px;width:${DW}px;height:${DH}px;`+
         `background:${sel?'#251e08':'#1e293b'};border:1.5px solid ${sel?'#f59e0b':'#334155'};border-radius:8px;`+
         `z-index:2;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;`+
         `cursor:${isEmpty?'default':'pointer'};overflow:hidden;`+
@@ -4161,16 +4192,14 @@
       if (desk.rotation) el.style.transform = `rotate(${desk.rotation}deg)`;
       if (!isEmpty) el.onclick = () => dispSeatDeskClick(desk.id);
 
+      const cs = desk.rotation ? `transform:rotate(${-desk.rotation}deg);display:flex;flex-direction:column;align-items:center;` : '';
       if (isEmpty) {
-        el.innerHTML = '<span style="font-size:13px;font-weight:700;color:#334155;">—</span>';
+        el.innerHTML = `<span style="font-size:13px;font-weight:700;color:#334155;">—</span>`;
       } else {
-        const badges = (stu?.frontOfRoom||stu?.enlLevel) ? `<div style="display:flex;gap:2px;margin-top:1px;">
-          ${stu.frontOfRoom?'<span style="font-size:7px;font-weight:700;background:#854d0e;color:#fde68a;border-radius:3px;padding:1px 3px;">Fr</span>':''}
-          ${stu.enlLevel?`<span style="font-size:7px;font-weight:700;background:#065f46;color:#6ee7b7;border-radius:3px;padding:1px 3px;">${seatEsc(stu.enlLevel.slice(0,2))}</span>`:''}
-        </div>` : '';
-        el.innerHTML = `<span style="font-size:11px;font-weight:700;color:#e2e8f0;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${seatEsc(first)}</span>`+
-          `<span style="font-size:9px;color:#64748b;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${seatEsc(last)}</span>`+
-          badges;
+        el.innerHTML = `<div style="${cs}">
+          <span style="font-size:11px;font-weight:700;color:#e2e8f0;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${seatEsc(first)}</span>
+          <span style="font-size:9px;color:#64748b;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${seatEsc(last)}</span>
+        </div>`;
       }
       wrap.appendChild(el);
     });
