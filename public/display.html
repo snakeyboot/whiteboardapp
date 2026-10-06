@@ -1447,10 +1447,7 @@
       <button class="pbtn-pick" style="flex:1;background:#1e40af;color:#bfdbfe;" onclick="openOrderModal()">Order</button>
     </div>
     <div style="display:flex;gap:8px;margin-top:8px;">
-      <button class="pbtn-pick" style="flex:1;background:#1e293b;color:#334155;border:1px solid #1e293b;cursor:not-allowed;" disabled>Cast</button>
       <button class="pbtn-pick" style="flex:1;background:#854d0e;color:#fde68a;border:1px solid #ca8a04;" onclick="openAwardFromPick()">🏆 Award</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:8px;">
       <button class="pbtn-pick" style="flex:1;background:#1e3a5f;color:#93c5fd;border:1px solid #1e4080;" onclick="openSeatingDisplay()">Seating Chart</button>
     </div>
   </div>
@@ -1467,7 +1464,7 @@
     <button class="handle-btn" onclick="openDisplayPresets()" title="Load Set">📂</button>
   </div>
   <div class="widget-body">
-    <div id="matsBody" style="height:220px;overflow-y:auto;">
+    <div id="matsBody" style="height:114px;overflow-y:auto;">
       <div class="mat-empty">No materials loaded</div>
     </div>
     <div style="display:flex;align-items:center;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(51,65,85,0.35);">
@@ -2005,7 +2002,7 @@
 
     // Materials uses the same direct-sizing mode; only its list scrolls (zoom row stays visible)
     mw.dataset.noTransform = 'true';
-    document.getElementById('matsBody').style.height = (parseInt(localStorage.getItem(MATS_H_KEY)) || 220) + 'px';
+    document.getElementById('matsBody').style.height = (parseInt(localStorage.getItem(MATS_H_KEY)) || 114) + 'px';
 
     const cy = Math.round((window.innerHeight - tw.offsetHeight) / 2);
     makeDraggable(tw, document.getElementById('timerHandle'),      'timer',    16, cy);
@@ -2022,7 +2019,7 @@
     applyWidgetVisibility();
     addResizeHandles();
     addVertResize('wordWallWidget', 'wwBody', WW_H_KEY, 268);   // vertical height drag handle
-    addVertResize('matsWidget', 'matsBody', MATS_H_KEY, 220);
+    addVertResize('matsWidget', 'matsBody', MATS_H_KEY, 114);
     WIDGET_DEFS.forEach(d => reapplyBodyScale(d.key));
     // One RAF deferred re-pass: browser finishes its first layout cycle first,
     // so offsetHeight / getBoundingClientRect values are fully settled.
