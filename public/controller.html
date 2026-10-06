@@ -793,7 +793,7 @@
     }
     .seat-pod-bg:active { cursor: grabbing; }
     .seat-desk-draggable {
-      position: absolute; width: 68px; height: 52px;
+      position: absolute; width: 68px; height: 52px; /* overridden inline for vertical */
       background: #1e293b; border: 1.5px solid #334155; border-radius: 8px;
       cursor: grab; user-select: none; touch-action: none;
       z-index: 2; box-sizing: border-box; overflow: hidden;
@@ -3402,14 +3402,12 @@
     const SNAP_DIST = 100, UNSNAP_DIST = 120;
     const CANVAS_W = 900, CANVAS_H = 560;
     const POD_COLORS = ['#1e3a5f','#0d3320','#3b1020','#2a200a','#1a1a40','#200a3a','#0a2a30','#301a0a'];
-    const SNAP_OFFSETS = [
-      [ DESK_W+DESK_GAP, 0], [-(DESK_W+DESK_GAP), 0],
-      [0,  DESK_H+DESK_GAP], [0, -(DESK_H+DESK_GAP)],
-      [ DESK_W+DESK_GAP,  DESK_H+DESK_GAP],
-      [-(DESK_W+DESK_GAP), DESK_H+DESK_GAP],
-      [ DESK_W+DESK_GAP, -(DESK_H+DESK_GAP)],
-      [-(DESK_W+DESK_GAP),-(DESK_H+DESK_GAP)],
-    ];
+    // Returns {w,h} for a desk based on rotation (only 0 or 90 supported)
+    function deskDims(desk) {
+      return (desk.rotation || 0) % 180 === 90
+        ? {w: DESK_H, h: DESK_W}
+        : {w: DESK_W, h: DESK_H};
+    }
     const DEC_SIZES = { door:{w:26,h:58}, window:{w:16,h:72}, teacher:{w:102,h:78} };
     function dispY(y, h) { return seatFlipped ? (CANVAS_H - h - y) : y; }
     function dispX(x, w) { return seatFlipped ? (CANVAS_W - w - x) : x; }
@@ -3474,53 +3472,100 @@
     }
 
     function podCentroid(pod) {
-      const xs = pod.desks.map(d => d.x + DESK_W/2), ys = pod.desks.map(d => d.y + DESK_H/2);
+      const xs = pod.desks.map(d => { const dd=deskDims(d); return d.x + dd.w/2; });
+      const ys = pod.desks.map(d => { const dd=deskDims(d); return d.y + dd.h/2; });
       return { x: xs.reduce((a,b)=>a+b,0)/xs.length, y: ys.reduce((a,b)=>a+b,0)/ys.length };
     }
 
     function snapSeatDesk(deskId) {
       const desk = seatDesks.find(d => d.id === deskId);
       if (!desk) return;
-      const cx = desk.x + DESK_W/2, cy = desk.y + DESK_H/2;
+      const dd = deskDims(desk);
+      const cx = desk.x + dd.w/2, cy = desk.y + dd.h/2;
 
-      // Find nearest other desk
+      // Find nearest other desk by centroid distance
       let nearest = null, nearestDist = SNAP_DIST;
       for (const other of seatDesks) {
         if (other.id === deskId) continue;
-        const d = Math.hypot(cx-(other.x+DESK_W/2), cy-(other.y+DESK_H/2));
+        const od = deskDims(other);
+        const d = Math.hypot(cx-(other.x+od.w/2), cy-(other.y+od.h/2));
         if (d < nearestDist) { nearest = other; nearestDist = d; }
       }
 
       if (nearest) {
-        // All desks in the target pod (reference points for snap slots)
         const refs = nearest.podId ? seatDesks.filter(d => d.podId === nearest.podId) : [nearest];
-        // All currently occupied positions (excl. the desk being snapped)
         const others = seatDesks.filter(d => d.id !== deskId);
+        const G = DESK_GAP;
+        const cands = [];
 
-        let best = null, bestDist = Infinity;
-        for (const ref of refs) {
-          for (const [ox, oy] of SNAP_OFFSETS) {
-            const nx = ref.x + ox, ny = ref.y + oy;
-            if (nx < 0 || ny < 22 || nx + DESK_W > CANVAS_W || ny + DESK_H > CANVAS_H) continue;
-            // No overlap: no other desk within desk dimensions
-            if (others.some(o => Math.abs(o.x - nx) < DESK_W && Math.abs(o.y - ny) < DESK_H)) continue;
-            const d = Math.hypot(cx - (nx + DESK_W/2), cy - (ny + DESK_H/2));
-            if (d < bestDist) { bestDist = d; best = { x: nx, y: ny }; }
+        // Per-ref candidates: 4 sides × 3 alignments (start / center / end)
+        for (const R of refs) {
+          const rd = deskDims(R);
+          // Right of R
+          cands.push({x: R.x + rd.w + G,                  y: R.y                        });
+          cands.push({x: R.x + rd.w + G,                  y: Math.round(R.y + (rd.h-dd.h)/2)});
+          cands.push({x: R.x + rd.w + G,                  y: R.y + rd.h - dd.h          });
+          // Left of R
+          cands.push({x: R.x - dd.w - G,                  y: R.y                        });
+          cands.push({x: R.x - dd.w - G,                  y: Math.round(R.y + (rd.h-dd.h)/2)});
+          cands.push({x: R.x - dd.w - G,                  y: R.y + rd.h - dd.h          });
+          // Below R
+          cands.push({x: R.x,                             y: R.y + rd.h + G             });
+          cands.push({x: Math.round(R.x + (rd.w-dd.w)/2), y: R.y + rd.h + G             });
+          cands.push({x: R.x + rd.w - dd.w,               y: R.y + rd.h + G             });
+          // Above R
+          cands.push({x: R.x,                             y: R.y - dd.h - G             });
+          cands.push({x: Math.round(R.x + (rd.w-dd.w)/2), y: R.y - dd.h - G             });
+          cands.push({x: R.x + rd.w - dd.w,               y: R.y - dd.h - G             });
+        }
+
+        // Pair candidates: centered between two adjacent same-orientation desks
+        for (let i = 0; i < refs.length; i++) {
+          for (let j = i+1; j < refs.length; j++) {
+            const R1 = refs[i], R2 = refs[j];
+            const r1 = deskDims(R1), r2 = deskDims(R2);
+            if (r1.w !== r2.w || r1.h !== r2.h) continue;
+            const G2 = G; // same gap
+            // Horizontal neighbors (R1 left of R2)
+            if (Math.abs(R1.y - R2.y) < 4 && Math.abs((R1.x + r1.w + G2) - R2.x) < 4) {
+              const px = Math.round(R1.x + (r1.w + G2 + r2.w)/2 - dd.w/2);
+              cands.push({x: px, y: R1.y + r1.h + G2}); // centered below pair
+              cands.push({x: px, y: R1.y - dd.h - G2}); // centered above pair
+            }
+            // Vertical neighbors (R1 above R2)
+            if (Math.abs(R1.x - R2.x) < 4 && Math.abs((R1.y + r1.h + G2) - R2.y) < 4) {
+              const py = Math.round(R1.y + (r1.h + G2 + r2.h)/2 - dd.h/2);
+              cands.push({x: R1.x + r1.w + G2, y: py}); // centered right of pair
+              cands.push({x: R1.x - dd.w - G2,  y: py}); // centered left of pair
+            }
           }
         }
 
-        if (best) {
+        let best = null, bestDist = Infinity;
+        for (const {x: nx, y: ny} of cands) {
+          if (nx < 0 || ny < 22 || nx + dd.w > CANVAS_W || ny + dd.h > CANVAS_H) continue;
+          // No overlap with any other desk (uses each desk's actual dims)
+          if (others.some(o => {
+            const od = deskDims(o);
+            return Math.abs(o.x - nx) < (dd.w + od.w)/2 && Math.abs(o.y - ny) < (dd.h + od.h)/2;
+          })) continue;
+          const d = Math.hypot(cx - (nx + dd.w/2), cy - (ny + dd.h/2));
+          if (d < bestDist) { bestDist = d; best = {x: nx, y: ny}; }
+        }
+
+        if (best && bestDist < SNAP_DIST) {
           desk.x = best.x; desk.y = best.y;
           if (nearest.podId) { desk.podId = nearest.podId; }
           else { const p = 'p_'+uid(); nearest.podId = p; desk.podId = p; }
         }
-        // No valid slot → desk stays where it dropped (no snap)
 
       } else if (desk.podId) {
         // Unsnap if dragged far from all pod-mates
         const mates = seatDesks.filter(d => d.id !== deskId && d.podId === desk.podId);
-        const farFromAll = mates.length === 0 || mates.every(m =>
-          Math.hypot(cx-(m.x+DESK_W/2), cy-(m.y+DESK_H/2)) > UNSNAP_DIST);
+        const farFromAll = mates.length === 0 || mates.every(m => {
+          const md = deskDims(m);
+          return Math.hypot(cx-(m.x+md.w/2), cy-(m.y+md.h/2)) > UNSNAP_DIST;
+        });
         if (farFromAll) {
           desk.podId = null;
           if (mates.length === 1) mates[0].podId = null;
@@ -3549,10 +3594,11 @@
       // Pod backgrounds (draggable) — use flip-aware Y
       const realPods = getPodGroups().filter(p => !p.podId.startsWith('_s_'));
       realPods.forEach((pod, pi) => {
-        const xs = pod.desks.map(d=>dispX(d.x, DESK_W));
-        const ys = pod.desks.map(d=>dispY(d.y, DESK_H));
+        const xs = pod.desks.map(d=>{ const dd=deskDims(d); return dispX(d.x, dd.w); });
+        const ys = pod.desks.map(d=>{ const dd=deskDims(d); return dispY(d.y, dd.h); });
         const minX=Math.min(...xs)-12, minY=Math.min(...ys)-12;
-        const maxX=Math.max(...xs)+DESK_W+12, maxY=Math.max(...ys)+DESK_H+12;
+        const maxX=Math.max(...xs)+Math.max(...pod.desks.map(d=>deskDims(d).w))+12;
+        const maxY=Math.max(...ys)+Math.max(...pod.desks.map(d=>deskDims(d).h))+12;
         const bg = document.createElement('div');
         bg.className = 'seat-pod-bg';
         bg.dataset.podid = pod.podId;
@@ -3600,13 +3646,12 @@
         const sel    = seatSelected === desk.id;
         const el     = document.createElement('div');
         el.className = 'seat-desk-draggable' + (sel ? ' sel' : '');
+        const dd = deskDims(desk);
         el.id        = 'sd_' + desk.id;
-        el.style.left = dispX(desk.x, DESK_W) + 'px';
-        el.style.top  = dispY(desk.y, DESK_H) + 'px';
-        if (desk.rotation) el.style.transform = `rotate(${desk.rotation}deg)`;
-
-        // Counter-rotate inner content so names/buttons stay upright
-        const cs = desk.rotation ? `style="transform:rotate(${-desk.rotation}deg)"` : '';
+        el.style.left   = dispX(desk.x, dd.w) + 'px';
+        el.style.top    = dispY(desk.y, dd.h) + 'px';
+        el.style.width  = dd.w + 'px';
+        el.style.height = dd.h + 'px';
 
         const badgesHtml = (stu?.frontOfRoom || stu?.enlLevel) ? `
           <div class="seat-desk-badges">
@@ -3615,12 +3660,12 @@
           </div>` : '';
 
         el.innerHTML = `
-          <div class="seat-desk-inner" ${cs}>
+          <div class="seat-desk-inner">
             ${name
               ? `<span class="seat-desk-first">${escHtml(first)}</span><span class="seat-desk-last">${escHtml(last)}</span>${badgesHtml}`
               : `<span class="seat-desk-num">${idx+1}</span>`}
           </div>
-          <div class="seat-desk-btns" ${cs}>
+          <div class="seat-desk-btns">
             <button class="seat-desk-btn" title="Rotate"
               onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"
               onclick="rotateSeatDesk('${desk.id}',event)">↺</button>
@@ -3639,16 +3684,20 @@
       realPods.forEach(pod => {
         const bg = document.querySelector(`.seat-pod-bg[data-podid="${pod.podId}"]`);
         if (!bg) return;
-        const xs=[], ys=[];
+        const xs=[], ys=[], ws=[], hs=[];
         pod.desks.forEach(d => {
+          const dde = deskDims(d);
           const el = document.getElementById('sd_'+d.id);
-          xs.push(el ? parseInt(el.style.left) : dispX(d.x, DESK_W));
-          ys.push(el ? parseInt(el.style.top)  : dispY(d.y, DESK_H));
+          xs.push(el ? parseInt(el.style.left) : dispX(d.x, dde.w));
+          ys.push(el ? parseInt(el.style.top)  : dispY(d.y, dde.h));
+          ws.push(dde.w); hs.push(dde.h);
         });
         const minX=Math.min(...xs)-12, minY=Math.min(...ys)-12;
+        const maxX=Math.max(...xs.map((x,i)=>x+ws[i]))+12;
+        const maxY=Math.max(...ys.map((y,i)=>y+hs[i]))+12;
         bg.style.left  = minX+'px'; bg.style.top    = minY+'px';
-        bg.style.width = (Math.max(...xs)+DESK_W+12-minX)+'px';
-        bg.style.height= (Math.max(...ys)+DESK_H+12-minY)+'px';
+        bg.style.width = (maxX-minX)+'px';
+        bg.style.height= (maxY-minY)+'px';
       });
     }
 
@@ -3671,11 +3720,12 @@
         if (!moved && (Math.abs(rawDx)>4||Math.abs(rawDy)>4)) moved=true;
         if (!moved) return;
         const desk=getDesk(); if (!desk) return;
+        const ddd=deskDims(desk);
         const adx = seatFlipped ? -rawDx : rawDx;
         const ady = seatFlipped ? -rawDy : rawDy;
-        desk.x=Math.max(0,Math.min(CANVAS_W-DESK_W,origX+adx));
-        desk.y=Math.max(22,Math.min(CANVAS_H-DESK_H,origY+ady));
-        el.style.left=dispX(desk.x,DESK_W)+'px'; el.style.top=dispY(desk.y,DESK_H)+'px';
+        desk.x=Math.max(0,Math.min(CANVAS_W-ddd.w,origX+adx));
+        desk.y=Math.max(22,Math.min(CANVAS_H-ddd.h,origY+ady));
+        el.style.left=dispX(desk.x,ddd.w)+'px'; el.style.top=dispY(desk.y,ddd.h)+'px';
         updatePodBgs(); e.preventDefault();
       }
       function onEnd() {
@@ -3707,10 +3757,11 @@
         const ady = seatFlipped ? -rawDy : rawDy;
         origPositions.forEach(orig=>{
           const desk=seatDesks.find(d=>d.id===orig.id); if (!desk) return;
-          desk.x=Math.max(0,Math.min(CANVAS_W-DESK_W,orig.x+adx));
-          desk.y=Math.max(22,Math.min(CANVAS_H-DESK_H,orig.y+ady));
+          const pddd=deskDims(desk);
+          desk.x=Math.max(0,Math.min(CANVAS_W-pddd.w,orig.x+adx));
+          desk.y=Math.max(22,Math.min(CANVAS_H-pddd.h,orig.y+ady));
           const dEl=document.getElementById('sd_'+desk.id);
-          if (dEl) { dEl.style.left=dispX(desk.x,DESK_W)+'px'; dEl.style.top=dispY(desk.y,DESK_H)+'px'; }
+          if (dEl) { dEl.style.left=dispX(desk.x,pddd.w)+'px'; dEl.style.top=dispY(desk.y,pddd.h)+'px'; }
         });
         updatePodBgs(); e.preventDefault();
       }
@@ -3779,7 +3830,7 @@
     function rotateSeatDesk(deskId, e) {
       e.stopPropagation();
       const desk=seatDesks.find(d=>d.id===deskId);
-      if (desk) desk.rotation=((desk.rotation||0)+90)%360;
+      if (desk) desk.rotation = (desk.rotation||0) === 0 ? 90 : 0;
       renderSeatCanvas();
     }
 

@@ -4121,9 +4121,12 @@
     const bh = body.clientHeight || (window.innerHeight - 70);
     const scale = Math.min((bw - 8) / CW, (bh - 8) / CH);
 
-    // Flip-aware Y helper
+    // Flip-aware helpers
     function dY(y, h) { return dispSeatFlipped ? (CH - h - y) : y; }
     function dX(x, w) { return dispSeatFlipped ? (CW - w - x) : x; }
+    function deskDimsD(desk) {
+      return (desk.rotation||0) % 180 === 90 ? {w:DH, h:DW} : {w:DW, h:DH};
+    }
 
     const wrap = document.createElement('div');
     wrap.className = 'seating-canvas-wrap';
@@ -4142,11 +4145,13 @@
       (podMap[k] = podMap[k] || {podId:k, desks:[]}).desks.push(d);
     });
     Object.values(podMap).filter(p => !p.podId.startsWith('_s_')).forEach((pod, pi) => {
-      const xs=pod.desks.map(d=>dX(d.x,DW)), ys=pod.desks.map(d=>dY(d.y,DH));
+      const xs=pod.desks.map(d=>{const dd=deskDimsD(d);return dX(d.x,dd.w);}), ys=pod.desks.map(d=>{const dd=deskDimsD(d);return dY(d.y,dd.h);});
       const minX=Math.min(...xs)-12, minY=Math.min(...ys)-12;
       const c = POD_COLORS[pi % POD_COLORS.length];
       const bg = document.createElement('div');
-      bg.style.cssText = `position:absolute;left:${minX}px;top:${minY}px;width:${Math.max(...xs)+DW+12-minX}px;height:${Math.max(...ys)+DH+12-minY}px;background:${c}44;border:1.5px solid ${c}99;border-radius:10px;z-index:1;`;
+      const maxX=Math.max(...pod.desks.map((d,i)=>xs[i]+deskDimsD(d).w))+12;
+      const maxY=Math.max(...pod.desks.map((d,i)=>ys[i]+deskDimsD(d).h))+12;
+      bg.style.cssText = `position:absolute;left:${minX}px;top:${minY}px;width:${maxX-minX}px;height:${maxY-minY}px;background:${c}44;border:1.5px solid ${c}99;border-radius:10px;z-index:1;`;
       wrap.appendChild(bg);
     });
 
@@ -4182,25 +4187,21 @@
       const parts = name.split(' ');
       const first = parts[0]||'', last = parts.slice(1).join(' ');
       const isEmpty = !name, sel = dispSeatSelected === desk.id;
-      const displayTop = dY(desk.y, DH);
+      const ddd = deskDimsD(desk);
 
       const el = document.createElement('div');
-      el.style.cssText = `position:absolute;left:${dX(desk.x,DW)}px;top:${displayTop}px;width:${DW}px;height:${DH}px;`+
+      el.style.cssText = `position:absolute;left:${dX(desk.x,ddd.w)}px;top:${dY(desk.y,ddd.h)}px;width:${ddd.w}px;height:${ddd.h}px;`+
         `background:${sel?'#251e08':'#1e293b'};border:1.5px solid ${sel?'#f59e0b':'#334155'};border-radius:8px;`+
         `z-index:2;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;`+
         `cursor:${isEmpty?'default':'pointer'};overflow:hidden;`+
         (sel?'box-shadow:0 0 0 2px #f59e0b44;':'');
-      if (desk.rotation) el.style.transform = `rotate(${desk.rotation}deg)`;
       if (!isEmpty) el.onclick = () => dispSeatDeskClick(desk.id);
 
-      const cs = desk.rotation ? `transform:rotate(${-desk.rotation}deg);display:flex;flex-direction:column;align-items:center;` : '';
       if (isEmpty) {
         el.innerHTML = `<span style="font-size:13px;font-weight:700;color:#334155;">—</span>`;
       } else {
-        el.innerHTML = `<div style="${cs}">
-          <span style="font-size:11px;font-weight:700;color:#e2e8f0;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${seatEsc(first)}</span>
-          <span style="font-size:9px;color:#64748b;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${seatEsc(last)}</span>
-        </div>`;
+        el.innerHTML = `<span style="font-size:11px;font-weight:700;color:#e2e8f0;max-width:${ddd.w-8}px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${seatEsc(first)}</span>`+
+          `<span style="font-size:9px;color:#64748b;max-width:${ddd.w-8}px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${seatEsc(last)}</span>`;
       }
       wrap.appendChild(el);
     });
