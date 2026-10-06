@@ -3412,6 +3412,7 @@
     ];
     const DEC_SIZES = { door:{w:26,h:58}, window:{w:16,h:72}, teacher:{w:102,h:78} };
     function dispY(y, h) { return seatFlipped ? (CANVAS_H - h - y) : y; }
+    function dispX(x, w) { return seatFlipped ? (CANVAS_W - w - x) : x; }
 
     function defaultDecorations() {
       return [
@@ -3548,7 +3549,7 @@
       // Pod backgrounds (draggable) — use flip-aware Y
       const realPods = getPodGroups().filter(p => !p.podId.startsWith('_s_'));
       realPods.forEach((pod, pi) => {
-        const xs = pod.desks.map(d=>d.x);
+        const xs = pod.desks.map(d=>dispX(d.x, DESK_W));
         const ys = pod.desks.map(d=>dispY(d.y, DESK_H));
         const minX=Math.min(...xs)-12, minY=Math.min(...ys)-12;
         const maxX=Math.max(...xs)+DESK_W+12, maxY=Math.max(...ys)+DESK_H+12;
@@ -3567,7 +3568,7 @@
         const el = document.createElement('div');
         el.className = `seat-decor seat-decor-${dec.type}`;
         el.id = 'sdec_' + dec.id;
-        el.style.left = dec.x + 'px';
+        el.style.left = dispX(dec.x, ds.w) + 'px';
         el.style.top  = dispY(dec.y, ds.h) + 'px';
         if (dec.type === 'teacher') {
           if (dec.rotation) el.style.transform = `rotate(${dec.rotation}deg)`;
@@ -3600,7 +3601,7 @@
         const el     = document.createElement('div');
         el.className = 'seat-desk-draggable' + (sel ? ' sel' : '');
         el.id        = 'sd_' + desk.id;
-        el.style.left = desk.x + 'px';
+        el.style.left = dispX(desk.x, DESK_W) + 'px';
         el.style.top  = dispY(desk.y, DESK_H) + 'px';
         if (desk.rotation) el.style.transform = `rotate(${desk.rotation}deg)`;
 
@@ -3641,7 +3642,7 @@
         const xs=[], ys=[];
         pod.desks.forEach(d => {
           const el = document.getElementById('sd_'+d.id);
-          xs.push(el ? parseInt(el.style.left) : d.x);
+          xs.push(el ? parseInt(el.style.left) : dispX(d.x, DESK_W));
           ys.push(el ? parseInt(el.style.top)  : dispY(d.y, DESK_H));
         });
         const minX=Math.min(...xs)-12, minY=Math.min(...ys)-12;
@@ -3666,14 +3667,15 @@
       }
       function onMove(e) {
         const pt=e.touches?e.touches[0]:e;
-        const dx=pt.clientX-startCX, rawDy=pt.clientY-startCY;
-        if (!moved && (Math.abs(dx)>4||Math.abs(rawDy)>4)) moved=true;
+        const rawDx=pt.clientX-startCX, rawDy=pt.clientY-startCY;
+        if (!moved && (Math.abs(rawDx)>4||Math.abs(rawDy)>4)) moved=true;
         if (!moved) return;
         const desk=getDesk(); if (!desk) return;
+        const adx = seatFlipped ? -rawDx : rawDx;
         const ady = seatFlipped ? -rawDy : rawDy;
-        desk.x=Math.max(0,Math.min(CANVAS_W-DESK_W,origX+dx));
+        desk.x=Math.max(0,Math.min(CANVAS_W-DESK_W,origX+adx));
         desk.y=Math.max(22,Math.min(CANVAS_H-DESK_H,origY+ady));
-        el.style.left=desk.x+'px'; el.style.top=dispY(desk.y,DESK_H)+'px';
+        el.style.left=dispX(desk.x,DESK_W)+'px'; el.style.top=dispY(desk.y,DESK_H)+'px';
         updatePodBgs(); e.preventDefault();
       }
       function onEnd() {
@@ -3700,14 +3702,15 @@
       }
       function onMove(e) {
         const pt=e.touches?e.touches[0]:e;
-        const dx=pt.clientX-startCX, rawDy=pt.clientY-startCY;
+        const rawDx=pt.clientX-startCX, rawDy=pt.clientY-startCY;
+        const adx = seatFlipped ? -rawDx : rawDx;
         const ady = seatFlipped ? -rawDy : rawDy;
         origPositions.forEach(orig=>{
           const desk=seatDesks.find(d=>d.id===orig.id); if (!desk) return;
-          desk.x=Math.max(0,Math.min(CANVAS_W-DESK_W,orig.x+dx));
+          desk.x=Math.max(0,Math.min(CANVAS_W-DESK_W,orig.x+adx));
           desk.y=Math.max(22,Math.min(CANVAS_H-DESK_H,orig.y+ady));
           const dEl=document.getElementById('sd_'+desk.id);
-          if (dEl) { dEl.style.left=desk.x+'px'; dEl.style.top=dispY(desk.y,DESK_H)+'px'; }
+          if (dEl) { dEl.style.left=dispX(desk.x,DESK_W)+'px'; dEl.style.top=dispY(desk.y,DESK_H)+'px'; }
         });
         updatePodBgs(); e.preventDefault();
       }
@@ -3735,10 +3738,11 @@
         const pt=e.touches?e.touches[0]:e;
         const dec=getDec(); if (!dec) return;
         const ds=DEC_SIZES[dec.type]||{w:30,h:60};
-        const rawDy=pt.clientY-startCY, ady=seatFlipped?-rawDy:rawDy;
-        dec.x = Math.max(0, Math.min(CANVAS_W-ds.w, origX + pt.clientX - startCX));
+        const rawDx=pt.clientX-startCX, rawDy=pt.clientY-startCY;
+        const adx=seatFlipped?-rawDx:rawDx, ady=seatFlipped?-rawDy:rawDy;
+        dec.x = Math.max(0, Math.min(CANVAS_W-ds.w, origX + adx));
         dec.y = Math.max(0, Math.min(CANVAS_H-ds.h, origY + ady));
-        el.style.left=dec.x+'px'; el.style.top=dispY(dec.y,ds.h)+'px';
+        el.style.left=dispX(dec.x,ds.w)+'px'; el.style.top=dispY(dec.y,ds.h)+'px';
         e.preventDefault();
       }
       function onEnd() {
