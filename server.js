@@ -1220,7 +1220,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('seating:chart:save', async ({ rosterId, id, name, assignments }, cb) => {
-    const chartId = id || uid();
+    const chartId = id || (Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
     try {
       await pool.query(
         "INSERT INTO seating_charts(id,roster_id,name,assignments,created_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO UPDATE SET name=$3,assignments=$4,created_at=$5",
