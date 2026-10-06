@@ -3433,6 +3433,10 @@
         } else {
           seatDesks = data.desks || [];
           seatDecorations = (data.decorations && data.decorations.length) ? data.decorations : defaultDecorations();
+          // Migrate: add teacher desk if not present
+          if (!seatDecorations.some(d => d.type === 'teacher')) {
+            seatDecorations.unshift({ id:'dec_teacher', type:'teacher', x:Math.round(CANVAS_W/2)-51, y:32 });
+          }
         }
         renderSeatCanvas();
       });
