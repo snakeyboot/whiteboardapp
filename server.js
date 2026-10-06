@@ -315,20 +315,26 @@ app.get('/api/fetch-title', async (req, res) => {
 
 app.get('/api/define', async (req, res) => {
   const { word } = req.query;
-  if (!word) return res.json({ definition: '', partOfSpeech: '' });
+  if (!word) return res.json({ definition: '', partOfSpeech: '', all: [] });
   try {
     const r = await fetch(
       `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.trim().toLowerCase())}`,
       { signal: AbortSignal.timeout(6000) }
     );
-    if (!r.ok) return res.json({ definition: '', partOfSpeech: '' });
+    if (!r.ok) return res.json({ definition: '', partOfSpeech: '', all: [] });
     const data = await r.json();
-    const meaning = data?.[0]?.meanings?.[0];
-    const definition  = meaning?.definitions?.[0]?.definition || '';
-    const partOfSpeech = meaning?.partOfSpeech || '';
-    res.json({ definition, partOfSpeech });
+    const all = [];
+    for (const entry of (data || [])) {
+      for (const meaning of (entry.meanings || [])) {
+        for (const def of (meaning.definitions || [])) {
+          all.push({ partOfSpeech: meaning.partOfSpeech, definition: def.definition });
+        }
+      }
+    }
+    const first = all[0] || {};
+    res.json({ definition: first.definition || '', partOfSpeech: first.partOfSpeech || '', all });
   } catch {
-    res.json({ definition: '', partOfSpeech: '' });
+    res.json({ definition: '', partOfSpeech: '', all: [] });
   }
 });
 
@@ -394,6 +400,22 @@ async function initDB() {
       added_at BIGINT DEFAULT 0
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS seating_layout (
+      id TEXT PRIMARY KEY,
+      desks TEXT DEFAULT '[]',
+      updated_at BIGINT DEFAULT 0
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS seating_charts (
+      id TEXT PRIMARY KEY,
+      roster_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      assignments TEXT DEFAULT '{}',
+      created_at BIGINT DEFAULT 0
+    )
+  `);
   const { rows } = await pool.query('SELECT COUNT(*) FROM rosters');
   if (parseInt(rows[0].count) === 0) {
     const id = Date.now().toString(36);
@@ -450,7 +472,7 @@ async function getAllRosters() {
 
 function parseStudents(raw) {
   if (!raw) return [];
-  const base = { firstName:'', lastName:'', attendance:'present', anchor:false, enl:false, introvert:false, gender:'', conflict:'', distractor:false, picks:0, lexile:'' };
+  const base = { firstName:'', lastName:'', attendance:'present', anchor:false, enl:false, introvert:false, gender:'', conflict:'', distractor:false, picks:0, lexile:'', frontOfRoom:false, enlLevel:'' };
   try {
     const p = JSON.parse(raw);
     if (Array.isArray(p)) return p.map(s => {
@@ -1166,6 +1188,82 @@ io.on('connection', async (socket) => {
   });
 
   // ── Force Pick ──
+  // ── Seating Chart ──────────────────────────────────────────
+  socket.on('seating:layout:get', async (cb) => {
+    try {
+      const { rows } = await pool.query("SELECT desks FROM seating_layout WHERE id='global'");
+      cb(rows.length ? JSON.parse(rows[0].desks || '[]') : []);
+    } catch(e) { console.error('seating:layout:get', e); cb([]); }
+  });
+
+  socket.on('seating:layout:save', async (desks, cb) => {
+    try {
+      await pool.query(
+        "INSERT INTO seating_layout(id,desks,updated_at) VALUES('global',$1,$2) ON CONFLICT(id) DO UPDATE SET desks=$1,updated_at=$2",
+        [JSON.stringify(desks), Date.now()]
+      );
+      if (cb) cb({ ok: true });
+    } catch(e) { console.error('seating:layout:save', e); if (cb) cb({ ok: false }); }
+  });
+
+  socket.on('seating:charts:list', async (rosterId, cb) => {
+    try {
+      const { rows } = await pool.query(
+        "SELECT id,name,created_at FROM seating_charts WHERE roster_id=$1 ORDER BY created_at DESC",
+        [rosterId]
+      );
+      cb(rows.map(r => ({ id: r.id, name: r.name, createdAt: r.created_at })));
+    } catch(e) { console.error('seating:charts:list', e); cb([]); }
+  });
+
+  socket.on('seating:chart:save', async ({ rosterId, id, name, assignments }, cb) => {
+    const chartId = id || uid();
+    try {
+      await pool.query(
+        "INSERT INTO seating_charts(id,roster_id,name,assignments,created_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO UPDATE SET name=$3,assignments=$4,created_at=$5",
+        [chartId, rosterId, name, JSON.stringify(assignments), Date.now()]
+      );
+      await pool.query(
+        "INSERT INTO app_config(key,value) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET value=$2",
+        [`active_chart_${rosterId}`, chartId]
+      );
+      io.emit('seating:active', { rosterId, chart: { id: chartId, name, assignments } });
+      if (cb) cb({ ok: true, id: chartId });
+    } catch(e) { console.error('seating:chart:save', e); if (cb) cb({ ok: false }); }
+  });
+
+  socket.on('seating:chart:delete', async (id, cb) => {
+    try {
+      await pool.query("DELETE FROM seating_charts WHERE id=$1", [id]);
+      if (cb) cb({ ok: true });
+    } catch(e) { console.error('seating:chart:delete', e); if (cb) cb({ ok: false }); }
+  });
+
+  socket.on('seating:active:get', async (rosterId, cb) => {
+    try {
+      const { rows: cfg } = await pool.query("SELECT value FROM app_config WHERE key=$1", [`active_chart_${rosterId}`]);
+      if (!cfg.length || !cfg[0].value) { cb(null); return; }
+      const { rows } = await pool.query("SELECT * FROM seating_charts WHERE id=$1", [cfg[0].value]);
+      if (!rows.length) { cb(null); return; }
+      const r = rows[0];
+      cb({ id: r.id, name: r.name, assignments: JSON.parse(r.assignments || '{}') });
+    } catch(e) { console.error('seating:active:get', e); cb(null); }
+  });
+
+  socket.on('seating:chart:activate', async ({ rosterId, chartId }, cb) => {
+    try {
+      const { rows } = await pool.query("SELECT * FROM seating_charts WHERE id=$1", [chartId]);
+      if (!rows.length) { if (cb) cb({ ok: false }); return; }
+      await pool.query(
+        "INSERT INTO app_config(key,value) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET value=$2",
+        [`active_chart_${rosterId}`, chartId]
+      );
+      const r = rows[0];
+      io.emit('seating:active', { rosterId, chart: { id: r.id, name: r.name, assignments: JSON.parse(r.assignments || '{}') } });
+      if (cb) cb({ ok: true });
+    } catch(e) { console.error('seating:chart:activate', e); if (cb) cb({ ok: false }); }
+  });
+
   socket.on('pick:force', async (name) => {
     try {
       const rosters = await getAllRosters();

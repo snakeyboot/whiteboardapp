@@ -1274,6 +1274,50 @@
       from { box-shadow: inset 0 0 0 6px rgba(239,68,68,0.5); }
       to   { box-shadow: inset 0 0 0 22px rgba(239,68,68,0.9); }
     }
+    /* ── Seating display ── */
+    .seating-display-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: #0a1220; flex-direction: column;
+    }
+    .seating-display-overlay.open { display: flex; }
+    .seating-display-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: 1px solid #1e293b; flex-shrink: 0;
+    }
+    .seating-display-title { font-size: 16px; font-weight: 700; color: #e2e8f0; }
+    .seating-display-sub   { font-size: 11px; color: #475569; }
+    .seating-close-btn {
+      background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+      color: #94a3b8; font-size: 14px; padding: 6px 12px; cursor: pointer;
+    }
+    .seating-display-body {
+      flex: 1; overflow-y: auto; padding: 14px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .seating-room-lbl {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: #334155; text-align: center;
+    }
+    .seating-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .seating-pod-disp {
+      background: #0f172a; border: 1px solid #1e293b; border-radius: 10px;
+      padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start;
+    }
+    .seating-card-disp {
+      width: 80px; height: 52px; background: #1e293b; border: 1.5px solid #334155;
+      border-radius: 8px; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; cursor: pointer; transition: all 0.12s; overflow: hidden;
+    }
+    .seating-card-disp:hover  { border-color: #3b82f6; }
+    .seating-card-disp.sel-a  { border-color: #f59e0b; background: #29200a; box-shadow: 0 0 0 2px #f59e0b44; }
+    .seating-card-disp.empty  { opacity: 0.3; cursor: default; }
+    .seating-dname { font-size: 13px; font-weight: 700; color: #e2e8f0; text-align: center; padding: 0 5px; }
+    .seating-dlast { font-size: 9px; color: #64748b; text-align: center; }
+    .seating-dbadges { display: flex; gap: 2px; margin-top: 2px; }
+    .seating-badge { font-size: 8px; font-weight: 700; border-radius: 3px; padding: 1px 3px; line-height: 1; }
+    .seating-badge.front { background: #854d0e; color: #fde68a; }
+    .seating-badge.enl   { background: #065f46; color: #6ee7b7; }
+    .seating-hint { font-size: 11px; color: #475569; text-align: center; padding: 4px 0; }
   </style>
 </head>
 <body>
@@ -1402,6 +1446,9 @@
     <div style="display:flex;gap:8px;margin-top:8px;">
       <button class="pbtn-pick" style="flex:1;background:#1e293b;color:#334155;border:1px solid #1e293b;cursor:not-allowed;" disabled>Cast</button>
       <button class="pbtn-pick" style="flex:1;background:#854d0e;color:#fde68a;border:1px solid #ca8a04;" onclick="openAwardFromPick()">🏆 Award</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="pbtn-pick" style="flex:1;background:#1e3a5f;color:#93c5fd;border:1px solid #1e4080;" onclick="openSeatingDisplay()">Seating Chart</button>
     </div>
   </div>
 </div>
@@ -4000,6 +4047,152 @@
   };
 
   socket.on('book:display', (data) => renderBookWidget(data));
+
+  // ── Seating Chart Display ────────────────────────────────
+  function seatEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  let dispSeatDesks       = [];
+  let dispSeatAssignments = {};
+  let dispSeatFlipped     = false;
+  let dispSeatSelected    = null;
+
+  function openSeatingDisplay() {
+    document.getElementById('seatingDisplayOverlay').classList.add('open');
+    // Load layout + active chart
+    socket.emit('seating:layout:get', (desks) => {
+      dispSeatDesks = desks || [];
+      renderDispSeatingChart();
+    });
+    socket.emit('seating:active:get', activeRosterId || '', (chart) => {
+      dispSeatAssignments = chart?.assignments || {};
+      renderDispSeatingChart();
+    });
+  }
+
+  function closeSeatingDisplay() {
+    document.getElementById('seatingDisplayOverlay').classList.remove('open');
+    dispSeatSelected = null;
+  }
+
+  function toggleDispSeatFlip() {
+    dispSeatFlipped = !dispSeatFlipped;
+    const btn = document.getElementById('dispSeatFlipBtn');
+    if (btn) btn.textContent = dispSeatFlipped ? '↕ Unflip' : '↕ Flip';
+    renderDispSeatingChart();
+  }
+
+  function getDispPodGroups() {
+    const map = {};
+    dispSeatDesks.forEach(d => {
+      const key = d.podId || ('_solo_' + d.id);
+      (map[key] = map[key] || { podId: key, desks: [] }).desks.push(d);
+    });
+    return Object.values(map);
+  }
+
+  function dispPodCentroid(pod) {
+    const xs = pod.desks.map(d => d.x + 32), ys = pod.desks.map(d => d.y + 22);
+    return { x: xs.reduce((a,b)=>a+b,0)/xs.length, y: ys.reduce((a,b)=>a+b,0)/ys.length };
+  }
+
+  function renderDispSeatingChart() {
+    const body = document.getElementById('seatingDisplayBody');
+    if (!body) return;
+    if (!dispSeatDesks.length || !Object.keys(dispSeatAssignments).length) {
+      body.innerHTML = '<p style="color:#334155;text-align:center;padding:40px;font-size:14px;">No seating chart active.</p>';
+      return;
+    }
+    const pods = getDispPodGroups();
+    pods.sort((a,b) => dispPodCentroid(a).y - dispPodCentroid(b).y);
+    if (dispSeatFlipped) pods.reverse();
+
+    // Build student lookup from state
+    const stuByName = {};
+    const roster = allRosters?.[activeRosterId];
+    if (roster) {
+      try {
+        JSON.parse(roster.students || '[]').forEach(s => {
+          const name = [s.firstName||'', s.lastName||''].filter(Boolean).join(' ') || s.name || '';
+          if (name) stuByName[name] = s;
+        });
+      } catch {}
+    }
+
+    body.innerHTML = `
+      <div class="seating-room-lbl">${dispSeatFlipped ? 'Back of Room' : 'Front of Room'}</div>
+      <div class="seating-grid" id="dispSeatGrid"></div>
+      <div class="seating-room-lbl" style="margin-top:4px;">${dispSeatFlipped ? 'Front of Room' : 'Back of Room'}</div>
+      ${dispSeatSelected ? '<div class="seating-hint">Tap another seat to swap</div>' : ''}
+    `;
+    const grid = document.getElementById('dispSeatGrid');
+    pods.forEach(pod => {
+      const podEl = document.createElement('div');
+      podEl.className = 'seating-pod-disp';
+      pod.desks.forEach(d => {
+        const name = dispSeatAssignments[d.id] || '';
+        const stu  = stuByName[name];
+        const parts = name.split(' ');
+        const first = parts[0] || '', last = parts.slice(1).join(' ');
+        const isEmpty = !name;
+        const sel = dispSeatSelected === d.id;
+        const card = document.createElement('div');
+        card.className = 'seating-card-disp' + (sel ? ' sel-a' : '') + (isEmpty ? ' empty' : '');
+        card.onclick = isEmpty ? null : () => dispSeatDeskClick(d.id);
+        card.innerHTML = `
+          <span class="seating-dname">${isEmpty ? '—' : seatEsc(first)}</span>
+          ${last ? `<span class="seating-dlast">${seatEsc(last)}</span>` : ''}
+          ${(stu?.frontOfRoom || stu?.enlLevel) ? `<div class="seating-dbadges">
+            ${stu.frontOfRoom ? '<span class="seating-badge front">Fr</span>' : ''}
+            ${stu.enlLevel    ? `<span class="seating-badge enl">${seatEsc(stu.enlLevel.slice(0,2))}</span>` : ''}
+          </div>` : ''}
+        `;
+        podEl.appendChild(card);
+      });
+      grid.appendChild(podEl);
+    });
+  }
+
+  function dispSeatDeskClick(deskId) {
+    if (!dispSeatSelected) {
+      dispSeatSelected = deskId;
+    } else if (dispSeatSelected === deskId) {
+      dispSeatSelected = null;
+    } else {
+      const a = dispSeatAssignments[dispSeatSelected];
+      const b = dispSeatAssignments[deskId];
+      dispSeatAssignments[dispSeatSelected] = b || '';
+      dispSeatAssignments[deskId]           = a || '';
+      if (!dispSeatAssignments[dispSeatSelected]) delete dispSeatAssignments[dispSeatSelected];
+      if (!dispSeatAssignments[deskId])           delete dispSeatAssignments[deskId];
+      dispSeatSelected = null;
+    }
+    renderDispSeatingChart();
+  }
+
+  socket.on('seating:active', ({ rosterId, chart }) => {
+    if (chart) {
+      dispSeatAssignments = chart.assignments || {};
+      if (document.getElementById('seatingDisplayOverlay')?.classList.contains('open')) {
+        renderDispSeatingChart();
+      }
+    }
+  });
+
 </script>
+
+<!-- Seating Display Overlay -->
+<div class="seating-display-overlay" id="seatingDisplayOverlay">
+  <div class="seating-display-header">
+    <div>
+      <div class="seating-display-title">Seating Chart</div>
+      <div class="seating-display-sub" id="dispSeatClassName"></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button id="dispSeatFlipBtn" class="seating-close-btn" onclick="toggleDispSeatFlip()">↕ Flip</button>
+      <button class="seating-close-btn" onclick="closeSeatingDisplay()">✕ Close</button>
+    </div>
+  </div>
+  <div class="seating-display-body" id="seatingDisplayBody"></div>
+</div>
+
 </body>
 </html>
