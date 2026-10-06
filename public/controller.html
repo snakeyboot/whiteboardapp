@@ -834,13 +834,19 @@
       width: 5px; height: 5px; border-radius: 50%; background: #c8a060;
     }
     .seat-decor-window {
-      width: 70px; height: 16px;
+      width: 16px; height: 72px;
       background: #0e3a5c88; border: 1.5px solid #38bdf8aa;
       position: relative; overflow: hidden;
     }
     .seat-decor-window::after {
       content: ''; position: absolute;
-      top: 0; left: 50%; width: 1.5px; height: 100%; background: #38bdf888;
+      top: 50%; left: 0; width: 100%; height: 1.5px; background: #38bdf888;
+    }
+    .seat-decor-teacher {
+      width: 102px; height: 78px;
+      background: #1a1208; border: 2px solid #78562a; border-radius: 8px;
+      color: #a07840; font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
 
     /* ── Spotify ── */
@@ -3407,12 +3413,13 @@
 
     function defaultDecorations() {
       return [
-        { id:'dec_d1', type:'door',   x:32,              y:460 },
-        { id:'dec_d2', type:'door',   x:CANVAS_W-58,     y:460 },
-        { id:'dec_w1', type:'window', x:8,               y:80  },
-        { id:'dec_w2', type:'window', x:8,               y:115 },
-        { id:'dec_w3', type:'window', x:CANVAS_W-78,     y:80  },
-        { id:'dec_w4', type:'window', x:CANVAS_W-78,     y:115 },
+        { id:'dec_teacher', type:'teacher', x:Math.round(CANVAS_W/2)-51, y:32 },
+        { id:'dec_d1',      type:'door',    x:32,           y:460 },
+        { id:'dec_d2',      type:'door',    x:CANVAS_W-58,  y:460 },
+        { id:'dec_w1',      type:'window',  x:8,            y:80  },
+        { id:'dec_w2',      type:'window',  x:8,            y:162 },
+        { id:'dec_w3',      type:'window',  x:CANVAS_W-24,  y:80  },
+        { id:'dec_w4',      type:'window',  x:CANVAS_W-24,  y:162 },
       ];
     }
 
@@ -3547,13 +3554,14 @@
         inner.appendChild(bg);
       });
 
-      // Room decorations (doors, windows)
+      // Room decorations (doors, windows, teacher desk)
       seatDecorations.forEach(dec => {
         const el = document.createElement('div');
         el.className = `seat-decor seat-decor-${dec.type}`;
         el.id = 'sdec_' + dec.id;
         el.style.left = dec.x + 'px';
         el.style.top  = dec.y + 'px';
+        if (dec.type === 'teacher') el.textContent = 'Teacher';
         makeDecorDraggable(el, dec.id);
         inner.appendChild(el);
       });
