@@ -760,115 +760,63 @@
 
     /* ── Seating Chart Modal ── */
     .seating-modal {
-      max-width: min(96vw, 860px);
-      max-height: 92vh;
-      display: flex;
-      flex-direction: column;
+      max-width: min(96vw, 900px); max-height: 92vh;
+      display: flex; flex-direction: column;
     }
-    .seat-tabs {
-      display: flex;
-      gap: 0;
-      border-bottom: 1px solid #334155;
-      padding: 0 14px;
-      flex-shrink: 0;
-    }
-    .seat-tab {
-      background: none; border: none; border-bottom: 2px solid transparent;
-      color: #64748b; font-size: 13px; font-weight: 600; padding: 8px 14px;
-      cursor: pointer; letter-spacing: 0.04em; transition: color 0.15s;
-      margin-bottom: -1px;
-    }
-    .seat-tab.active { color: #e2e8f0; border-bottom-color: #3b82f6; }
-    .seat-tab:hover:not(.active) { color: #94a3b8; }
     .seat-toolbar {
-      display: flex; align-items: center; gap: 7px;
-      padding: 10px 14px; border-bottom: 1px solid #1e293b; flex-shrink: 0; flex-wrap: wrap;
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-bottom: 1px solid #1e293b; flex-shrink: 0; flex-wrap: wrap;
     }
     .seat-saved-select {
       background: #0f172a; border: 1px solid #334155; border-radius: 7px;
       color: #e2e8f0; font-size: 12px; padding: 5px 8px; font-family: inherit;
-      flex: 1; min-width: 120px; max-width: 200px; cursor: pointer;
+      flex: 1; min-width: 110px; max-width: 180px; cursor: pointer;
     }
     .seat-saved-select:focus { outline: none; border-color: #3b82f6; }
-    .seat-status { font-size: 11px; color: #475569; margin-left: auto; }
+    .seat-status { font-size: 11px; color: #475569; }
     .seat-desk-count { font-size: 12px; color: #64748b; }
-
-    /* Chart pane */
-    .seat-chart-pane {
-      flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 0;
+    .seat-canvas-wrap {
+      flex: 1; overflow: auto; background: #0a1220; min-height: 0;
     }
-    .seat-room-label {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-      color: #475569; text-align: center; padding: 4px 0;
+    .seat-canvas-inner {
+      position: relative; width: 900px; height: 560px; min-width: 900px; min-height: 560px;
     }
-    .seat-chart-grid {
-      display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
-    }
-    .seat-pod {
-      background: #162032; border: 1px solid #2d3f55; border-radius: 10px;
-      padding: 8px; display: flex; flex-wrap: wrap; gap: 5px;
-      min-width: 80px; align-content: flex-start;
-    }
-    .seat-pod-label {
-      width: 100%; font-size: 9px; color: #475569; text-align: center;
-      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;
-    }
-    .seat-desk-card {
-      width: 62px; height: 44px; background: #1e293b; border: 1.5px solid #334155;
-      border-radius: 7px; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; cursor: pointer; transition: all 0.12s; position: relative;
-      overflow: hidden;
-    }
-    .seat-desk-card:hover { border-color: #3b82f6; background: #1e3a5f; }
-    .seat-desk-card.selected { border-color: #f59e0b; background: #292010; box-shadow: 0 0 0 2px #f59e0b44; }
-    .seat-desk-card.empty-desk { opacity: 0.35; cursor: default; }
-    .seat-desk-card.empty-desk:hover { border-color: #334155; background: #1e293b; }
-    .seat-name { font-size: 11px; font-weight: 600; color: #e2e8f0; text-align: center; padding: 0 4px; line-height: 1.2; word-break: break-word; }
-    .seat-empty-label { font-size: 10px; color: #334155; }
-    .seat-badges { display: flex; gap: 2px; margin-top: 2px; }
-    .seat-badge {
-      font-size: 8px; font-weight: 700; border-radius: 3px; padding: 1px 3px;
-      line-height: 1; letter-spacing: 0.04em;
-    }
-    .seat-badge.front { background: #854d0e; color: #fde68a; }
-    .seat-badge.enl   { background: #065f46; color: #6ee7b7; }
-
-    /* Layout pane */
-    .seat-layout-pane {
-      flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0;
-    }
-    .seat-layout-canvas {
-      flex: 1; overflow: auto; background: #0a1220;
-      border: 1px solid #1e293b; border-radius: 0 0 10px 10px;
-    }
-    .seat-layout-inner {
-      position: relative; width: 860px; height: 540px; min-width: 860px; min-height: 540px;
+    .seat-room-bar {
+      position: absolute; left: 0; right: 0; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #1e3a5f; border-bottom: 1px dashed #1e293b; pointer-events: none; z-index: 0;
     }
     .seat-pod-bg {
-      position: absolute; border-radius: 8px; pointer-events: none; transition: all 0.1s;
+      position: absolute; border-radius: 10px; cursor: grab; z-index: 1;
+      touch-action: none; user-select: none;
     }
+    .seat-pod-bg:active { cursor: grabbing; }
     .seat-desk-draggable {
-      position: absolute; width: 64px; height: 44px;
-      background: #1e293b; border: 1.5px solid #334155; border-radius: 7px;
-      display: flex; align-items: center; justify-content: center;
+      position: absolute; width: 68px; height: 52px;
+      background: #1e293b; border: 1.5px solid #334155; border-radius: 8px;
       cursor: grab; user-select: none; touch-action: none;
-      transition: border-color 0.1s; box-sizing: border-box;
+      z-index: 2; box-sizing: border-box; overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
-    .seat-desk-draggable:hover { border-color: #3b82f6; }
+    .seat-desk-draggable:hover  { border-color: #475569; }
+    .seat-desk-draggable.sel    { border-color: #f59e0b; background: #251e08; box-shadow: 0 0 0 2px #f59e0b44; }
     .seat-desk-draggable.dragging { border-color: #3b82f6; opacity: 0.85; z-index: 100; cursor: grabbing; }
-    .seat-desk-num { font-size: 12px; font-weight: 700; color: #94a3b8; pointer-events: none; }
-    .seat-desk-rotate {
-      position: absolute; top: 2px; right: 18px;
-      background: none; border: none; color: #475569; font-size: 11px;
-      cursor: pointer; padding: 0 2px; line-height: 1;
+    .seat-desk-inner { display: flex; flex-direction: column; align-items: center; gap: 0; pointer-events: none; padding: 0 4px; width: 100%; }
+    .seat-desk-first { font-size: 11px; font-weight: 700; color: #e2e8f0; text-align: center; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 58px; }
+    .seat-desk-last  { font-size: 9px; color: #64748b; text-align: center; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 58px; }
+    .seat-desk-num   { font-size: 13px; font-weight: 700; color: #334155; pointer-events: none; }
+    .seat-desk-badges { display: flex; gap: 2px; pointer-events: none; }
+    .seat-desk-badge { font-size: 7px; font-weight: 700; border-radius: 3px; padding: 1px 3px; line-height: 1; }
+    .seat-desk-badge.front { background: #854d0e; color: #fde68a; }
+    .seat-desk-badge.enl   { background: #065f46; color: #6ee7b7; }
+    .seat-desk-btns { position: absolute; top: 2px; right: 2px; display: flex; gap: 1px; }
+    .seat-desk-btn {
+      background: none; border: none; font-size: 11px; color: #334155;
+      cursor: pointer; padding: 1px 2px; line-height: 1;
     }
-    .seat-desk-rotate:hover { color: #3b82f6; }
-    .seat-desk-del {
-      position: absolute; top: 2px; right: 2px;
-      background: none; border: none; color: #475569; font-size: 12px;
-      cursor: pointer; padding: 0 2px; line-height: 1;
-    }
-    .seat-desk-del:hover { color: #ef4444; }
+    .seat-desk-btn:hover { color: #94a3b8; }
+    .seat-desk-btn.del:hover { color: #ef4444; }
 
     /* ── Spotify ── */
     .sp-progress-wrap {
@@ -3411,24 +3359,22 @@
     })();
 
     // ── Seating Chart ─────────────────────────────────────────
-    let seatDesks        = [];   // [{id,x,y,rotation,podId}]
-    let seatAssignments  = {};   // {deskId: studentName}
-    let seatFlipped      = false;
-    let seatSelected     = null; // deskId selected for swap
-    let seatSavedCharts  = [];   // [{id,name,createdAt}]
+    let seatDesks         = [];
+    let seatAssignments   = {};
+    let seatFlipped       = false;
+    let seatSelected      = null;
+    let seatSavedCharts   = [];
     let seatActiveChartId = null;
-    let currentSeatTab   = 'chart';
 
-    const DESK_W = 64, DESK_H = 44, SNAP_DIST = 80;
-    const POD_COLORS = ['#1e3a5f','#1a3a2a','#3b1a2a','#2a2a0a','#1a2a4a','#2a0a3a','#0a3a3a','#3a1a0a'];
+    const DESK_W = 68, DESK_H = 52, SNAP_DIST = 90, UNSNAP_DIST = 110;
+    const POD_COLORS = ['#1e3a5f','#0d3320','#3b1020','#2a200a','#1a1a40','#200a3a','#0a2a30','#301a0a'];
 
     function openSeatingModal() {
       document.getElementById('seatingModalClass').textContent = rosters[activeId]?.name || '';
       document.getElementById('seatingOverlay').classList.add('open');
-      switchSeatTab('chart');
       socket.emit('seating:layout:get', (desks) => {
         seatDesks = desks || [];
-        if (currentSeatTab === 'layout') renderLayoutCanvas();
+        renderSeatCanvas();
       });
       socket.emit('seating:charts:list', activeId, (charts) => {
         seatSavedCharts = charts || [];
@@ -3437,375 +3383,354 @@
       socket.emit('seating:active:get', activeId, (chart) => {
         if (chart) { seatAssignments = chart.assignments || {}; seatActiveChartId = chart.id; }
         else        { seatAssignments = {}; seatActiveChartId = null; }
-        renderSeatingChart();
+        renderSeatCanvas();
       });
     }
 
-    function closeSeatingModal() {
-      document.getElementById('seatingOverlay').classList.remove('open');
-    }
-
-    function seatingOverlayClick(e) {
-      if (e.target === document.getElementById('seatingOverlay')) closeSeatingModal();
-    }
-
-    function switchSeatTab(tab) {
-      currentSeatTab = tab;
-      document.getElementById('seatChartPane').style.display  = tab === 'chart'  ? 'flex' : 'none';
-      document.getElementById('seatLayoutPane').style.display = tab === 'layout' ? 'flex' : 'none';
-      document.getElementById('seatTabChart').classList.toggle('active',  tab === 'chart');
-      document.getElementById('seatTabLayout').classList.toggle('active', tab === 'layout');
-      if (tab === 'layout') renderLayoutCanvas();
-    }
+    function closeSeatingModal() { document.getElementById('seatingOverlay').classList.remove('open'); }
+    function seatingOverlayClick(e) { if (e.target === document.getElementById('seatingOverlay')) closeSeatingModal(); }
 
     function toggleSeatFlip() {
       seatFlipped = !seatFlipped;
       document.getElementById('seatFlipBtn').textContent = seatFlipped ? '↕ Unflip' : '↕ Flip';
-      renderSeatingChart();
+      renderSeatCanvas();
     }
 
-    // ── Seating generation ──────────────────────────────────
+    // ── Pod helpers ──────────────────────────────────────────
     function getPodGroups() {
       const map = {};
       seatDesks.forEach(d => {
-        const key = d.podId || ('_solo_' + d.id);
+        const key = d.podId || ('_s_' + d.id);
         (map[key] = map[key] || { podId: key, desks: [] }).desks.push(d);
       });
       return Object.values(map);
     }
 
     function podCentroid(pod) {
-      const xs = pod.desks.map(d => d.x + DESK_W / 2);
-      const ys = pod.desks.map(d => d.y + DESK_H / 2);
-      return { x: xs.reduce((a,b) => a+b, 0) / xs.length, y: ys.reduce((a,b) => a+b, 0) / ys.length };
+      const xs = pod.desks.map(d => d.x + DESK_W/2), ys = pod.desks.map(d => d.y + DESK_H/2);
+      return { x: xs.reduce((a,b)=>a+b,0)/xs.length, y: ys.reduce((a,b)=>a+b,0)/ys.length };
     }
 
-    function generateSeating() {
-      const r = rosters[activeId];
-      if (!r) return;
-      if (!seatDesks.length) { alert('Add desks in the Layout tab first.'); return; }
-      const students = parseStudentsClient(r.students)
-        .filter(s => (s.attendance || 'present') !== 'absent');
-      if (!students.length) return;
-
-      const pods = getPodGroups();
-      if (!pods.length) return;
-
-      // Sort pods by centroid Y (top = low Y = front)
-      pods.sort((a, b) => podCentroid(a).y - podCentroid(b).y);
-      const frontCount = Math.max(1, Math.ceil(pods.length * 0.35));
-      const frontPodIds = new Set(pods.slice(0, frontCount).map(p => p.podId));
-
-      // Separate students
-      const frontStu  = shuffleArr(students.filter(s => s.frontOfRoom));
-      const enlOrder  = ['Entering','Emerging','Transitioning','Expanding','Commanding'];
-      const enlStu    = students.filter(s => s.enlLevel && !s.frontOfRoom)
-                          .sort((a,b) => enlOrder.indexOf(a.enlLevel) - enlOrder.indexOf(b.enlLevel));
-      const regularStu = shuffleArr(students.filter(s => !s.frontOfRoom && !s.enlLevel));
-
-      // Interleave ENL levels so mixed levels sit together
-      const enlInterleaved = interleaveByLevel(enlStu, 'enlLevel', enlOrder);
-
-      // Build desk pools
-      const frontDesks   = seatDesks.filter(d => frontPodIds.has(d.podId || ('_solo_' + d.id)));
-      const nonFrontDesks = seatDesks.filter(d => !frontPodIds.has(d.podId || ('_solo_' + d.id)));
-
-      const assignments = {};
-      let fdi = 0, nfdi = 0;
-
-      // Assign front students to front pods
-      for (const s of frontStu) {
-        const name = fullNameClient(s);
-        if (fdi < frontDesks.length) { assignments[frontDesks[fdi++].id] = name; }
-        else if (nfdi < nonFrontDesks.length) { assignments[nonFrontDesks[nfdi++].id] = name; }
+    function snapSeatDesk(deskId) {
+      const desk = seatDesks.find(d => d.id === deskId);
+      if (!desk) return;
+      const cx = desk.x + DESK_W/2, cy = desk.y + DESK_H/2;
+      let nearest = null, nearestDist = SNAP_DIST;
+      for (const other of seatDesks) {
+        if (other.id === deskId) continue;
+        const dist = Math.hypot(cx - (other.x+DESK_W/2), cy - (other.y+DESK_H/2));
+        if (dist < nearestDist) { nearest = other; nearestDist = dist; }
       }
-
-      // Assign ENL students together in non-front pods (if possible)
-      for (const s of enlInterleaved) {
-        const name = fullNameClient(s);
-        if (nfdi < nonFrontDesks.length) { assignments[nonFrontDesks[nfdi++].id] = name; }
-        else if (fdi < frontDesks.length) { assignments[frontDesks[fdi++].id] = name; }
-      }
-
-      // Fill remaining with regular students
-      const remaining = [...frontDesks.slice(fdi), ...nonFrontDesks.slice(nfdi)];
-      const rStu = [...regularStu];
-      remaining.forEach(d => { if (rStu.length) assignments[d.id] = fullNameClient(rStu.shift()); });
-
-      seatAssignments = assignments;
-      seatSelected = null;
-      renderSeatingChart();
-      document.getElementById('seatSaveStatus').textContent = 'Unsaved';
-    }
-
-    function shuffleArr(arr) {
-      const a = [...arr];
-      for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-      return a;
-    }
-
-    function interleaveByLevel(students, field, order) {
-      const buckets = {};
-      order.forEach(l => { buckets[l] = []; });
-      students.forEach(s => { (buckets[s[field]] = buckets[s[field]] || []).push(s); });
-      const result = [];
-      let any = true;
-      while (any) {
-        any = false;
-        for (const l of order) { if (buckets[l]?.length) { result.push(buckets[l].shift()); any = true; } }
-      }
-      return result;
-    }
-
-    // ── Chart rendering ─────────────────────────────────────
-    function renderSeatingChart() {
-      const pane = document.getElementById('seatChartPane2');
-      if (!pane) return;
-      if (!seatDesks.length) {
-        pane.innerHTML = '<p style="color:#475569;font-size:13px;text-align:center;padding:30px;">No layout yet — go to Layout tab and add desks.</p>';
-        return;
-      }
-      const pods = getPodGroups();
-      pods.sort((a, b) => podCentroid(a).y - podCentroid(b).y);
-      if (seatFlipped) pods.reverse();
-
-      pane.innerHTML = `
-        <div class="seat-room-label">${seatFlipped ? 'Back of Room' : 'Front of Room (top)'}</div>
-        <div class="seat-chart-grid" id="seatChartGrid"></div>
-        <div class="seat-room-label" style="margin-top:6px;">${seatFlipped ? 'Front of Room' : 'Back of Room'}</div>
-      `;
-      const grid = document.getElementById('seatChartGrid');
-      const r = rosters[activeId];
-      const allStudents = r ? parseStudentsClient(r.students) : [];
-      const stuByName = {};
-      allStudents.forEach(s => { stuByName[fullNameClient(s)] = s; });
-
-      pods.forEach((pod, pi) => {
-        const podEl = document.createElement('div');
-        podEl.className = 'seat-pod';
-        pod.desks.forEach(d => {
-          const name = seatAssignments[d.id] || '';
-          const stu  = stuByName[name];
-          const isFront = stu?.frontOfRoom;
-          const enlLv   = stu?.enlLevel;
-          const sel     = seatSelected === d.id;
-          const isEmpty = !name;
-          const card = document.createElement('div');
-          card.className = 'seat-desk-card' + (sel ? ' selected' : '') + (isEmpty ? ' empty-desk' : '');
-          card.dataset.deskid = d.id;
-          card.onclick = () => seatDeskClick(d.id);
-          card.innerHTML = `
-            <span class="${isEmpty ? 'seat-empty-label' : 'seat-name'}">${isEmpty ? '—' : escHtml(name.split(' ')[0])}</span>
-            ${(isFront || enlLv) ? `<div class="seat-badges">${isFront ? '<span class="seat-badge front">Fr</span>' : ''}${enlLv ? `<span class="seat-badge enl">${escHtml(enlLv.slice(0,2))}</span>` : ''}</div>` : ''}
-          `;
-          podEl.appendChild(card);
-        });
-        grid.appendChild(podEl);
-      });
-    }
-
-    function seatDeskClick(deskId) {
-      if (!seatSelected) {
-        seatSelected = deskId;
-      } else if (seatSelected === deskId) {
-        seatSelected = null;
+      if (nearest) {
+        if (nearest.podId) { desk.podId = nearest.podId; }
+        else { const p = 'p_'+Math.random().toString(36).slice(2,8); nearest.podId=p; desk.podId=p; }
       } else {
-        const a = seatAssignments[seatSelected];
-        const b = seatAssignments[deskId];
-        seatAssignments[seatSelected] = b || '';
-        seatAssignments[deskId]       = a || '';
-        if (!seatAssignments[seatSelected]) delete seatAssignments[seatSelected];
-        if (!seatAssignments[deskId])       delete seatAssignments[deskId];
-        seatSelected = null;
-        document.getElementById('seatSaveStatus').textContent = 'Unsaved';
-      }
-      renderSeatingChart();
-    }
-
-    // ── Saved charts ──────────────────────────────────────────
-    function renderSeatSavedSelect() {
-      const sel = document.getElementById('seatSavedSelect');
-      if (!sel) return;
-      sel.innerHTML = '<option value="">Saved charts…</option>' +
-        seatSavedCharts.map(c => `<option value="${escAttr(c.id)}">${escHtml(c.name)}</option>`).join('');
-    }
-
-    function loadSavedChart(id) {
-      if (!id) return;
-      document.getElementById('seatSavedSelect').value = '';
-      socket.emit('seating:chart:activate', { rosterId: activeId, chartId: id }, () => {
-        // active:get will update us via seating:active event
-        socket.emit('seating:active:get', activeId, (chart) => {
-          if (!chart) return;
-          seatAssignments = chart.assignments || {};
-          seatActiveChartId = chart.id;
-          document.getElementById('seatSaveStatus').textContent = chart.name;
-          seatSelected = null;
-          renderSeatingChart();
-        });
-      });
-    }
-
-    function saveSeatingChart() {
-      if (!Object.keys(seatAssignments).length) return;
-      const today = new Date();
-      const name  = `${today.getMonth()+1}/${today.getDate()}/${String(today.getFullYear()).slice(2)}`;
-      socket.emit('seating:chart:save', {
-        rosterId: activeId, id: seatActiveChartId || undefined, name, assignments: seatAssignments
-      }, (res) => {
-        if (res?.ok) {
-          seatActiveChartId = res.id;
-          document.getElementById('seatSaveStatus').textContent = `Saved: ${name}`;
-          socket.emit('seating:charts:list', activeId, (charts) => {
-            seatSavedCharts = charts || [];
-            renderSeatSavedSelect();
-          });
+        // unsnap from current pod if far enough from all pod-mates
+        if (desk.podId) {
+          const mates = seatDesks.filter(d => d.id !== deskId && d.podId === desk.podId);
+          const closestMate = Math.min(...mates.map(m => Math.hypot(cx-(m.x+DESK_W/2), cy-(m.y+DESK_H/2))));
+          if (closestMate > UNSNAP_DIST || mates.length === 0) {
+            desk.podId = null;
+            // dissolve pod if only 1 member left
+            if (mates.length === 1) mates[0].podId = null;
+          }
         }
-      });
+      }
     }
 
-    // ── Layout editor ─────────────────────────────────────────
-    function renderLayoutCanvas() {
-      const inner = document.getElementById('seatLayoutInner');
+    // ── Unified canvas render ────────────────────────────────
+    function renderSeatCanvas() {
+      const inner = document.getElementById('seatCanvasInner');
       if (!inner) return;
       inner.innerHTML = '';
-      document.getElementById('seatDeskCount').textContent = `${seatDesks.length} desk${seatDesks.length !== 1 ? 's' : ''}`;
+      document.getElementById('seatDeskCount').textContent = `${seatDesks.length} desk${seatDesks.length!==1?'s':''}`;
 
-      // Draw pod backgrounds first
-      const pods = getPodGroups().filter(p => !p.podId.startsWith('_solo_'));
-      pods.forEach((pod, pi) => {
-        const xs = pod.desks.map(d => d.x);
-        const ys = pod.desks.map(d => d.y);
-        const minX = Math.min(...xs) - 10, minY = Math.min(...ys) - 10;
-        const maxX = Math.max(...xs) + DESK_W + 10, maxY = Math.max(...ys) + DESK_H + 10;
+      const r = rosters[activeId];
+      const stuByName = {};
+      if (r) { parseStudentsClient(r.students).forEach(s => { stuByName[fullNameClient(s)] = s; }); }
+
+      // Front-of-room label bar
+      const frontBar = document.createElement('div');
+      frontBar.className = 'seat-room-bar';
+      frontBar.style.top = '0';
+      frontBar.textContent = seatFlipped ? 'BACK OF ROOM' : 'FRONT OF ROOM';
+      inner.appendChild(frontBar);
+
+      // Pod backgrounds (draggable)
+      const realPods = getPodGroups().filter(p => !p.podId.startsWith('_s_'));
+      realPods.forEach((pod, pi) => {
+        const xs = pod.desks.map(d=>d.x), ys = pod.desks.map(d=>d.y);
+        const minX=Math.min(...xs)-12, minY=Math.min(...ys)-12;
+        const maxX=Math.max(...xs)+DESK_W+12, maxY=Math.max(...ys)+DESK_H+12;
         const bg = document.createElement('div');
         bg.className = 'seat-pod-bg';
-        bg.style.cssText = `left:${minX}px;top:${minY}px;width:${maxX-minX}px;height:${maxY-minY}px;` +
-          `background:${POD_COLORS[pi % POD_COLORS.length]}33;border:1px solid ${POD_COLORS[pi % POD_COLORS.length]}77;`;
+        bg.dataset.podid = pod.podId;
+        const c = POD_COLORS[pi % POD_COLORS.length];
+        bg.style.cssText = `left:${minX}px;top:${minY}px;width:${maxX-minX}px;height:${maxY-minY}px;background:${c}44;border:1.5px solid ${c}99;`;
+        makePodDraggable(bg, pod.podId);
         inner.appendChild(bg);
       });
 
-      // Draw desks
+      // Desks
       seatDesks.forEach((desk, idx) => {
-        const el = document.createElement('div');
-        el.className = 'seat-desk-draggable';
-        el.id = `layoutDesk_${desk.id}`;
+        const name   = seatAssignments[desk.id] || '';
+        const parts  = name.split(' ');
+        const first  = parts[0] || '';
+        const last   = parts.slice(1).join(' ');
+        const stu    = stuByName[name];
+        const sel    = seatSelected === desk.id;
+        const el     = document.createElement('div');
+        el.className = 'seat-desk-draggable' + (sel ? ' sel' : '');
+        el.id        = 'sd_' + desk.id;
         el.style.left = desk.x + 'px';
         el.style.top  = desk.y + 'px';
         if (desk.rotation) el.style.transform = `rotate(${desk.rotation}deg)`;
+
+        const badgesHtml = (stu?.frontOfRoom || stu?.enlLevel) ? `
+          <div class="seat-desk-badges">
+            ${stu.frontOfRoom ? '<span class="seat-desk-badge front">Fr</span>' : ''}
+            ${stu.enlLevel    ? `<span class="seat-desk-badge enl">${escHtml(stu.enlLevel.slice(0,2))}</span>` : ''}
+          </div>` : '';
+
         el.innerHTML = `
-          <span class="seat-desk-num">${idx + 1}</span>
-          <button class="seat-desk-rotate" title="Rotate" onclick="rotateSeatDesk('${desk.id}',event)">↺</button>
-          <button class="seat-desk-del"    title="Remove" onclick="deleteSeatDesk('${desk.id}',event)">×</button>
+          <div class="seat-desk-inner">
+            ${name
+              ? `<span class="seat-desk-first">${escHtml(first)}</span><span class="seat-desk-last">${escHtml(last)}</span>${badgesHtml}`
+              : `<span class="seat-desk-num">${idx+1}</span>`}
+          </div>
+          <div class="seat-desk-btns">
+            <button class="seat-desk-btn" title="Rotate"
+              onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"
+              onclick="rotateSeatDesk('${desk.id}',event)">↺</button>
+            <button class="seat-desk-btn del" title="Remove"
+              onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"
+              onclick="deleteSeatDesk('${desk.id}',event)">×</button>
+          </div>
         `;
         makeSeatDeskDraggable(el, desk.id);
         inner.appendChild(el);
       });
     }
 
+    function updatePodBgs() {
+      const realPods = getPodGroups().filter(p => !p.podId.startsWith('_s_'));
+      realPods.forEach(pod => {
+        const bg = document.querySelector(`.seat-pod-bg[data-podid="${pod.podId}"]`);
+        if (!bg) return;
+        const xs=pod.desks.map(d=>d.x), ys=pod.desks.map(d=>d.y);
+        const minX=Math.min(...xs)-12, minY=Math.min(...ys)-12;
+        bg.style.left   = minX+'px'; bg.style.top    = minY+'px';
+        bg.style.width  = (Math.max(...xs)+DESK_W+12-minX)+'px';
+        bg.style.height = (Math.max(...ys)+DESK_H+12-minY)+'px';
+      });
+    }
+
+    // ── Desk drag (click-vs-drag) ────────────────────────────
     function makeSeatDeskDraggable(el, deskId) {
-      let startCX, startCY, origX, origY;
-
-      function getDesk() { return seatDesks.find(d => d.id === deskId); }
-
+      let startCX, startCY, origX, origY, moved;
+      function getDesk() { return seatDesks.find(d=>d.id===deskId); }
       function onStart(e) {
-        const pt = e.touches ? e.touches[0] : e;
+        const pt = e.touches?e.touches[0]:e;
         const desk = getDesk(); if (!desk) return;
-        startCX = pt.clientX; startCY = pt.clientY;
-        origX = desk.x; origY = desk.y;
+        startCX=pt.clientX; startCY=pt.clientY; origX=desk.x; origY=desk.y; moved=false;
         el.classList.add('dragging');
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup',   onEnd);
-        document.addEventListener('touchmove', onMove, { passive: false });
-        document.addEventListener('touchend',  onEnd);
-        e.preventDefault();
+        document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onEnd);
+        document.addEventListener('touchmove',onMove,{passive:false}); document.addEventListener('touchend',onEnd);
+        e.stopPropagation(); e.preventDefault();
       }
-
       function onMove(e) {
-        const pt = e.touches ? e.touches[0] : e;
-        const desk = getDesk(); if (!desk) return;
-        desk.x = Math.max(0, Math.min(860 - DESK_W, origX + pt.clientX - startCX));
-        desk.y = Math.max(0, Math.min(540 - DESK_H, origY + pt.clientY - startCY));
-        el.style.left = desk.x + 'px';
-        el.style.top  = desk.y + 'px';
-        e.preventDefault();
+        const pt=e.touches?e.touches[0]:e;
+        const dx=pt.clientX-startCX, dy=pt.clientY-startCY;
+        if (!moved && (Math.abs(dx)>4||Math.abs(dy)>4)) moved=true;
+        if (!moved) return;
+        const desk=getDesk(); if (!desk) return;
+        desk.x=Math.max(0,Math.min(900-DESK_W,origX+dx));
+        desk.y=Math.max(22,Math.min(560-DESK_H,origY+dy));
+        el.style.left=desk.x+'px'; el.style.top=desk.y+'px';
+        updatePodBgs(); e.preventDefault();
       }
-
       function onEnd() {
         el.classList.remove('dragging');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup',   onEnd);
-        document.removeEventListener('touchmove', onMove);
-        document.removeEventListener('touchend',  onEnd);
-        snapSeatDesk(deskId);
-        renderLayoutCanvas();
+        document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onEnd);
+        document.removeEventListener('touchmove',onMove); document.removeEventListener('touchend',onEnd);
+        if (moved) { snapSeatDesk(deskId); renderSeatCanvas(); }
+        else        { seatDeskClick(deskId); }
       }
-
-      el.addEventListener('mousedown',  onStart);
-      el.addEventListener('touchstart', onStart, { passive: false });
+      el.addEventListener('mousedown',onStart); el.addEventListener('touchstart',onStart,{passive:false});
     }
 
-    function snapSeatDesk(deskId) {
-      const desk = seatDesks.find(d => d.id === deskId);
-      if (!desk) return;
-      const cx = desk.x + DESK_W / 2, cy = desk.y + DESK_H / 2;
-      let nearest = null, nearestDist = SNAP_DIST;
-      for (const other of seatDesks) {
-        if (other.id === deskId) continue;
-        const dist = Math.hypot(cx - (other.x + DESK_W/2), cy - (other.y + DESK_H/2));
-        if (dist < nearestDist) { nearest = other; nearestDist = dist; }
+    // ── Pod drag (moves whole pod) ───────────────────────────
+    function makePodDraggable(el, podId) {
+      let startCX, startCY, origPositions;
+      function onStart(e) {
+        const pt=e.touches?e.touches[0]:e;
+        startCX=pt.clientX; startCY=pt.clientY;
+        const podDesks=seatDesks.filter(d=>d.podId===podId);
+        origPositions=podDesks.map(d=>({id:d.id,x:d.x,y:d.y}));
+        document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onEnd);
+        document.addEventListener('touchmove',onMove,{passive:false}); document.addEventListener('touchend',onEnd);
+        e.preventDefault();
       }
-      if (nearest) {
-        if (nearest.podId) {
-          desk.podId = nearest.podId;
-        } else {
-          const newPod = 'p_' + Math.random().toString(36).slice(2, 8);
-          nearest.podId = newPod;
-          desk.podId    = newPod;
-        }
+      function onMove(e) {
+        const pt=e.touches?e.touches[0]:e;
+        const dx=pt.clientX-startCX, dy=pt.clientY-startCY;
+        origPositions.forEach(orig=>{
+          const desk=seatDesks.find(d=>d.id===orig.id); if (!desk) return;
+          desk.x=Math.max(0,Math.min(900-DESK_W,orig.x+dx));
+          desk.y=Math.max(22,Math.min(560-DESK_H,orig.y+dy));
+          const dEl=document.getElementById('sd_'+desk.id);
+          if (dEl) { dEl.style.left=desk.x+'px'; dEl.style.top=desk.y+'px'; }
+        });
+        updatePodBgs(); e.preventDefault();
+      }
+      function onEnd() {
+        document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onEnd);
+        document.removeEventListener('touchmove',onMove); document.removeEventListener('touchend',onEnd);
+        renderSeatCanvas();
+      }
+      el.addEventListener('mousedown',onStart); el.addEventListener('touchstart',onStart,{passive:false});
+    }
+
+    // ── Tap-to-swap ──────────────────────────────────────────
+    function seatDeskClick(deskId) {
+      if (!seatSelected) {
+        seatSelected = deskId;
+      } else if (seatSelected === deskId) {
+        seatSelected = null;
       } else {
-        desk.podId = null;
+        const a=seatAssignments[seatSelected], b=seatAssignments[deskId];
+        if (b) seatAssignments[seatSelected]=b; else delete seatAssignments[seatSelected];
+        if (a) seatAssignments[deskId]=a;       else delete seatAssignments[deskId];
+        seatSelected=null;
+        document.getElementById('seatSaveStatus').textContent='Unsaved';
       }
+      renderSeatCanvas();
     }
 
+    // ── Desk add/rotate/delete ───────────────────────────────
     function addSeatDesk() {
-      const id = 'd_' + Math.random().toString(36).slice(2, 8);
-      // Place in a free area
-      const offset = seatDesks.length * 10 % 400;
-      seatDesks.push({ id, x: 20 + offset, y: 20 + Math.floor(seatDesks.length / 10) * 60, rotation: 0, podId: null });
-      renderLayoutCanvas();
+      const id='d_'+Math.random().toString(36).slice(2,8);
+      const col=seatDesks.length%8, row=Math.floor(seatDesks.length/8);
+      seatDesks.push({id, x:20+col*80, y:30+row*70, rotation:0, podId:null});
+      renderSeatCanvas();
     }
 
     function rotateSeatDesk(deskId, e) {
       e.stopPropagation();
-      const desk = seatDesks.find(d => d.id === deskId);
-      if (desk) desk.rotation = ((desk.rotation || 0) + 90) % 360;
-      renderLayoutCanvas();
+      const desk=seatDesks.find(d=>d.id===deskId);
+      if (desk) desk.rotation=((desk.rotation||0)+90)%360;
+      renderSeatCanvas();
     }
 
     function deleteSeatDesk(deskId, e) {
       e.stopPropagation();
-      seatDesks = seatDesks.filter(d => d.id !== deskId);
-      // Dissolve pods with < 2 members
-      const podCounts = {};
-      seatDesks.forEach(d => { if (d.podId) podCounts[d.podId] = (podCounts[d.podId] || 0) + 1; });
-      seatDesks.forEach(d => { if (d.podId && podCounts[d.podId] < 2) d.podId = null; });
-      renderLayoutCanvas();
+      const desk=seatDesks.find(d=>d.id===deskId);
+      const oldPod=desk?.podId;
+      seatDesks=seatDesks.filter(d=>d.id!==deskId);
+      if (oldPod) {
+        const remaining=seatDesks.filter(d=>d.podId===oldPod);
+        if (remaining.length===1) remaining[0].podId=null;
+      }
+      delete seatAssignments[deskId];
+      renderSeatCanvas();
     }
 
-    function saveSeatLayout() {
-      socket.emit('seating:layout:save', seatDesks, (res) => {
-        const btn = document.querySelector('#seatLayoutPane .seat-toolbar button:last-child');
-        if (btn) { btn.textContent = 'Saved ✓'; setTimeout(() => { btn.textContent = 'Save Layout'; }, 1800); }
+    // ── Generate ─────────────────────────────────────────────
+    function generateSeating() {
+      const r=rosters[activeId]; if (!r) return;
+      if (!seatDesks.length) { alert('Add desks first using + Desk.'); return; }
+      const students=parseStudentsClient(r.students).filter(s=>(s.attendance||'present')!=='absent');
+      if (!students.length) return;
+
+      const pods=getPodGroups();
+      pods.sort((a,b)=>podCentroid(a).y-podCentroid(b).y);
+      if (seatFlipped) pods.reverse();
+      const frontCount=Math.max(1,Math.ceil(pods.length*0.35));
+      const frontPodIds=new Set(pods.slice(0,frontCount).map(p=>p.podId));
+
+      const frontStu=shuffleArr(students.filter(s=>s.frontOfRoom));
+      const enlOrder=['Entering','Emerging','Transitioning','Expanding','Commanding'];
+      const enlStu=students.filter(s=>s.enlLevel&&!s.frontOfRoom).sort((a,b)=>enlOrder.indexOf(a.enlLevel)-enlOrder.indexOf(b.enlLevel));
+      const regularStu=shuffleArr(students.filter(s=>!s.frontOfRoom&&!s.enlLevel));
+      const enlInterleaved=interleaveByLevel(enlStu,'enlLevel',enlOrder);
+
+      const frontDesks=seatDesks.filter(d=>frontPodIds.has(d.podId||('_s_'+d.id)));
+      const nonFrontDesks=seatDesks.filter(d=>!frontPodIds.has(d.podId||('_s_'+d.id)));
+      const assignments={}; let fdi=0,nfdi=0;
+
+      for (const s of frontStu) {
+        const n=fullNameClient(s);
+        if (fdi<frontDesks.length) assignments[frontDesks[fdi++].id]=n;
+        else if (nfdi<nonFrontDesks.length) assignments[nonFrontDesks[nfdi++].id]=n;
+      }
+      for (const s of enlInterleaved) {
+        const n=fullNameClient(s);
+        if (nfdi<nonFrontDesks.length) assignments[nonFrontDesks[nfdi++].id]=n;
+        else if (fdi<frontDesks.length) assignments[frontDesks[fdi++].id]=n;
+      }
+      const remaining=[...frontDesks.slice(fdi),...nonFrontDesks.slice(nfdi)];
+      const rStu=[...regularStu];
+      remaining.forEach(d=>{if(rStu.length) assignments[d.id]=fullNameClient(rStu.shift());});
+
+      seatAssignments=assignments; seatSelected=null;
+      document.getElementById('seatSaveStatus').textContent='Unsaved';
+      renderSeatCanvas();
+    }
+
+    function shuffleArr(arr) {
+      const a=[...arr];
+      for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+      return a;
+    }
+    function interleaveByLevel(students,field,order) {
+      const b={}; order.forEach(l=>{b[l]=[];}); students.forEach(s=>{(b[s[field]]=b[s[field]]||[]).push(s);});
+      const r=[]; let any=true;
+      while(any){any=false;for(const l of order){if(b[l]?.length){r.push(b[l].shift());any=true;}}}
+      return r;
+    }
+
+    // ── Save / Load ──────────────────────────────────────────
+    function renderSeatSavedSelect() {
+      const sel=document.getElementById('seatSavedSelect'); if (!sel) return;
+      sel.innerHTML='<option value="">Saved…</option>'+
+        seatSavedCharts.map(c=>`<option value="${escAttr(c.id)}">${escHtml(c.name)}</option>`).join('');
+    }
+
+    function loadSavedChart(id) {
+      if (!id) return;
+      document.getElementById('seatSavedSelect').value='';
+      socket.emit('seating:chart:activate',{rosterId:activeId,chartId:id},()=>{
+        socket.emit('seating:active:get',activeId,(chart)=>{
+          if (!chart) return;
+          seatAssignments=chart.assignments||{}; seatActiveChartId=chart.id;
+          document.getElementById('seatSaveStatus').textContent=chart.name;
+          seatSelected=null; renderSeatCanvas();
+        });
       });
     }
 
-    // Sync active chart to display when roster changes
-    socket.on('seating:active', ({ rosterId, chart }) => {
-      if (rosterId === activeId && chart) {
-        seatAssignments  = chart.assignments || {};
-        seatActiveChartId = chart.id;
-      }
+    function saveSeatingChart() {
+      if (!Object.keys(seatAssignments).length) return;
+      const today=new Date();
+      const name=`${today.getMonth()+1}/${today.getDate()}/${String(today.getFullYear()).slice(2)}`;
+      socket.emit('seating:chart:save',{rosterId:activeId,id:seatActiveChartId||undefined,name,assignments:seatAssignments},(res)=>{
+        if (res?.ok) {
+          seatActiveChartId=res.id;
+          document.getElementById('seatSaveStatus').textContent=`Saved: ${name}`;
+          socket.emit('seating:charts:list',activeId,(charts)=>{seatSavedCharts=charts||[];renderSeatSavedSelect();});
+        }
+      });
+    }
+
+    function saveSeatLayout() {
+      socket.emit('seating:layout:save',seatDesks,(res)=>{
+        const btn=document.getElementById('seatSaveLayoutBtn');
+        if (btn){btn.textContent='Saved ✓';setTimeout(()=>{btn.textContent='Save Layout';},1800);}
+      });
+    }
+
+    socket.on('seating:active',({rosterId,chart})=>{
+      if (rosterId===activeId&&chart){seatAssignments=chart.assignments||{};seatActiveChartId=chart.id;}
     });
 
   </script>
@@ -3818,35 +3743,21 @@
         <span class="modal-title">Seating — <span id="seatingModalClass"></span></span>
         <button class="modal-close" onclick="closeSeatingModal()">✕</button>
       </div>
-      <div class="seat-tabs">
-        <button class="seat-tab active" id="seatTabChart"  onclick="switchSeatTab('chart')">Chart</button>
-        <button class="seat-tab"        id="seatTabLayout" onclick="switchSeatTab('layout')">Layout</button>
+      <div class="seat-toolbar">
+        <button class="btn btn-blue btn-sm"  onclick="generateSeating()">Generate</button>
+        <button class="btn btn-gray btn-sm"  id="seatFlipBtn" onclick="toggleSeatFlip()">↕ Flip</button>
+        <select class="seat-saved-select" id="seatSavedSelect" onchange="loadSavedChart(this.value)">
+          <option value="">Saved…</option>
+        </select>
+        <button class="btn btn-gray btn-sm" onclick="saveSeatingChart()">Save</button>
+        <span style="width:1px;height:18px;background:#334155;flex-shrink:0;"></span>
+        <button class="btn btn-gray btn-sm" onclick="addSeatDesk()">+ Desk</button>
+        <span class="seat-desk-count" id="seatDeskCount">0 desks</span>
+        <button class="btn btn-gray btn-sm" id="seatSaveLayoutBtn" onclick="saveSeatLayout()">Save Layout</button>
+        <span class="seat-status" id="seatSaveStatus"></span>
       </div>
-      <!-- Chart pane -->
-      <div id="seatChartPane" style="flex:1;display:flex;flex-direction:column;min-height:0;">
-        <div class="seat-toolbar">
-          <button class="btn btn-blue btn-sm"  onclick="generateSeating()">Generate</button>
-          <button class="btn btn-gray btn-sm"  id="seatFlipBtn" onclick="toggleSeatFlip()">↕ Flip</button>
-          <select class="seat-saved-select" id="seatSavedSelect" onchange="loadSavedChart(this.value)">
-            <option value="">Saved charts…</option>
-          </select>
-          <button class="btn btn-gray btn-sm"  onclick="saveSeatingChart()">Save</button>
-          <span class="seat-status" id="seatSaveStatus"></span>
-        </div>
-        <div class="seat-chart-pane" id="seatChartPane2"></div>
-      </div>
-      <!-- Layout pane -->
-      <div id="seatLayoutPane" style="flex:1;display:none;flex-direction:column;min-height:0;">
-        <div class="seat-toolbar">
-          <button class="btn btn-blue btn-sm" onclick="addSeatDesk()">+ Desk</button>
-          <span class="seat-desk-count" id="seatDeskCount">0 desks</span>
-          <button class="btn btn-gray btn-sm" style="margin-left:auto;" onclick="saveSeatLayout()">Save Layout</button>
-        </div>
-        <div class="seat-layout-pane">
-          <div class="seat-layout-canvas" id="seatLayoutCanvas">
-            <div class="seat-layout-inner" id="seatLayoutInner"></div>
-          </div>
-        </div>
+      <div class="seat-canvas-wrap">
+        <div class="seat-canvas-inner" id="seatCanvasInner"></div>
       </div>
     </div>
   </div>
