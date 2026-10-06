@@ -1199,12 +1199,13 @@
 
     /* ── Book widget ── */
     #bookCover {
-      display: block; width: 84px; margin: 0 auto; border-radius: 4px;
+      display: block; width: 72px; flex: none; border-radius: 4px;
       cursor: pointer; transition: filter 0.15s, transform 0.15s;
       box-shadow: 2px 4px 12px rgba(0,0,0,0.5);
     }
-    #bookInfo { text-align: center; margin-top: 8px; }
-    #bookInfoTitle  { font-size: 13px; font-weight: 700; color: #e2e8f0; line-height: 1.25; }
+    #bookRow { display: flex; align-items: center; gap: 10px; }
+    #bookInfo { flex: 1; min-width: 0; text-align: left; }
+    #bookInfoTitle  { font-size: 13px; overflow-wrap: anywhere; font-weight: 700; color: #e2e8f0; line-height: 1.25; }
     #bookInfoAuthor { font-size: 11px; color: #94a3b8; margin-top: 2px; }
     #bookInfoGenre  { display: inline-block; margin-top: 5px; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; border: 1px solid #334155; border-radius: 999px; padding: 1px 7px; }
     #bookCover:hover { filter: brightness(1.1); transform: scale(1.03); }
@@ -1738,11 +1739,13 @@
       </svg>
       <span>No book set</span>
     </div>
-    <img id="bookCover" src="" alt="Book cover" style="display:none;" onclick="openBookModal()">
-    <div id="bookInfo" style="display:none;">
-      <div id="bookInfoTitle"></div>
-      <div id="bookInfoAuthor"></div>
-      <div id="bookInfoGenre"></div>
+    <div id="bookRow">
+      <img id="bookCover" src="" alt="Book cover" style="display:none;" onclick="openBookModal()">
+      <div id="bookInfo" style="display:none;">
+        <div id="bookInfoTitle"></div>
+        <div id="bookInfoAuthor"></div>
+        <div id="bookInfoGenre"></div>
+      </div>
     </div>
   </div>
 </div>
