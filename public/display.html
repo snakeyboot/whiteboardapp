@@ -4058,8 +4058,8 @@
   function openSeatingDisplay() {
     document.getElementById('seatingDisplayOverlay').classList.add('open');
     // Load layout + active chart
-    socket.emit('seating:layout:get', (desks) => {
-      dispSeatDesks = desks || [];
+    socket.emit('seating:layout:get', (data) => {
+      dispSeatDesks = (Array.isArray(data) ? data : (data?.desks || []));
       renderDispSeatingChart();
     });
     socket.emit('seating:active:get', activeRosterId || '', (chart) => {
