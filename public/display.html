@@ -1199,10 +1199,14 @@
 
     /* ── Book widget ── */
     #bookCover {
-      display: block; width: 100%; border-radius: 4px;
+      display: block; width: 84px; margin: 0 auto; border-radius: 4px;
       cursor: pointer; transition: filter 0.15s, transform 0.15s;
       box-shadow: 2px 4px 12px rgba(0,0,0,0.5);
     }
+    #bookInfo { text-align: center; margin-top: 8px; }
+    #bookInfoTitle  { font-size: 13px; font-weight: 700; color: #e2e8f0; line-height: 1.25; }
+    #bookInfoAuthor { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    #bookInfoGenre  { display: inline-block; margin-top: 5px; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; border: 1px solid #334155; border-radius: 999px; padding: 1px 7px; }
     #bookCover:hover { filter: brightness(1.1); transform: scale(1.03); }
     .book-widget-empty {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -1735,6 +1739,11 @@
       <span>No book set</span>
     </div>
     <img id="bookCover" src="" alt="Book cover" style="display:none;" onclick="openBookModal()">
+    <div id="bookInfo" style="display:none;">
+      <div id="bookInfoTitle"></div>
+      <div id="bookInfoAuthor"></div>
+      <div id="bookInfoGenre"></div>
+    </div>
   </div>
 </div>
 
@@ -4009,19 +4018,29 @@
     const cover   = document.getElementById('bookCover');
     const empty   = document.getElementById('bookWidgetEmpty');
     const bw      = document.getElementById('bookWidget');
-    if (book && book.cover) {
-      cover.style.display = '';
+    const info = document.getElementById('bookInfo');
+    if (book && (book.cover || book.title)) {
+      cover.style.display = book.cover ? '' : 'none';
       empty.style.display = 'none';
+      info.style.display = '';
+      document.getElementById('bookInfoTitle').textContent  = book.title || '';
+      document.getElementById('bookInfoAuthor').textContent = (book.authors || []).join(', ');
+      const genre = (book.categories || [])[0] || '';
+      const gEl = document.getElementById('bookInfoGenre');
+      gEl.textContent = genre;
+      gEl.style.display = genre ? '' : 'none';
+      placeWidget(bw, parseInt(bw.style.left) || 0, parseInt(bw.style.top) || 0);
       // Re-clamp position once the image has loaded and the widget has its real height
       cover.onload = () => {
         const x = parseInt(bw.style.left) || 0;
         const y = parseInt(bw.style.top)  || 0;
         placeWidget(bw, x, y);
       };
-      cover.src = book.cover;
+      if (book.cover) cover.src = book.cover;
     } else {
       cover.onload = null;
       cover.style.display = 'none';
+      info.style.display = 'none';
       empty.style.display = '';
     }
   }

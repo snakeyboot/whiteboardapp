@@ -909,6 +909,15 @@ io.on('connection', async (socket) => {
     } catch (e) { console.error('roster:delete', e); }
   });
 
+  socket.on('rosters:apply-all', async ({ field, value }) => {
+    const col = { materials: 'materials', wordWall: 'word_wall' }[field];
+    if (!col || typeof value !== 'string') return;
+    try {
+      await pool.query(`UPDATE rosters SET ${col}=$1 WHERE COALESCE(archived,FALSE)=FALSE`, [value]);
+      io.emit('roster:all', await getAllRosters());
+    } catch (e) { console.error('rosters:apply-all', e); }
+  });
+
   socket.on('roster:archive', async ({ id, archived }) => {
     try {
       await pool.query('UPDATE rosters SET archived=$1 WHERE id=$2', [!!archived, id]);
