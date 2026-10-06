@@ -1467,7 +1467,7 @@
     <button class="handle-btn" onclick="openDisplayPresets()" title="Load Set">📂</button>
   </div>
   <div class="widget-body">
-    <div id="matsBody">
+    <div id="matsBody" style="height:220px;overflow-y:auto;">
       <div class="mat-empty">No materials loaded</div>
     </div>
     <div style="display:flex;align-items:center;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(51,65,85,0.35);">
@@ -2003,6 +2003,10 @@
     const savedWwH = parseInt(localStorage.getItem(WW_H_KEY)) || 268;
     document.getElementById('wwBody').style.height = savedWwH + 'px';
 
+    // Materials uses the same direct-sizing mode; only its list scrolls (zoom row stays visible)
+    mw.dataset.noTransform = 'true';
+    document.getElementById('matsBody').style.height = (parseInt(localStorage.getItem(MATS_H_KEY)) || 220) + 'px';
+
     const cy = Math.round((window.innerHeight - tw.offsetHeight) / 2);
     makeDraggable(tw, document.getElementById('timerHandle'),      'timer',    16, cy);
     makeDraggable(pw, document.getElementById('pickerHandle'),     'picker',   window.innerWidth - pw.offsetWidth - 16, cy);
@@ -2017,7 +2021,8 @@
     tickClock();           // populate clock content before measuring heights
     applyWidgetVisibility();
     addResizeHandles();
-    addWwVertResize();     // vertical height drag handle for word wall
+    addVertResize('wordWallWidget', 'wwBody', WW_H_KEY, 268);   // vertical height drag handle
+    addVertResize('matsWidget', 'matsBody', MATS_H_KEY, 220);
     WIDGET_DEFS.forEach(d => reapplyBodyScale(d.key));
     // One RAF deferred re-pass: browser finishes its first layout cycle first,
     // so offsetHeight / getBoundingClientRect values are fully settled.
@@ -3532,6 +3537,7 @@
   const SCALE_KEY = 'croom_widget_scales_v1';
   const LOCK_KEY  = 'croom_lock_sizes_v1';
   const WW_H_KEY     = 'croom_ww_height_v1';
+  const MATS_H_KEY   = 'croom_mats_height_v1';
   const WW_MIN_H     = 60;
   const WW_MAX_H     = 900;
   const GROUPS_H_KEY = 'croom_groups_height_v1';
@@ -3687,7 +3693,6 @@
   }
 
   let resizeDrag = null;
-  let wwVDrag    = null;
 
   function addResizeHandles() {
     WIDGET_DEFS.forEach(def => {
@@ -3726,29 +3731,34 @@
   }, { passive: false });
   document.addEventListener('touchend', () => { resizeDrag = null; });
 
-  function addWwVertResize() {
-    const el     = document.getElementById('wordWallWidget');
-    const bodyEl = document.getElementById('wwBody');
-    if (!el || !bodyEl) return;
+  function addVertResize(widgetId, sizedId, storeKey, defaultH) {
+    const el      = document.getElementById(widgetId);
+    const sizedEl = document.getElementById(sizedId);
+    if (!el || !sizedEl) return;
 
     const vh = document.createElement('div');
     vh.className = 'resize-handle-vert';
     el.appendChild(vh);
 
+    let drag = null;
+    function syncWidgetHeight() {
+      const handleH = el.querySelector('.widget-handle')?.offsetHeight || 0;
+      const bodyH   = el.querySelector('.widget-body')?.offsetHeight || 0;
+      el.style.height = (handleH + bodyH) + 'px';
+    }
     function startVDrag(clientY) {
-      wwVDrag = { startY: clientY, startH: parseInt(bodyEl.style.height) || bodyEl.offsetHeight || 268 };
+      drag = { startY: clientY, startH: parseInt(sizedEl.style.height) || sizedEl.offsetHeight || defaultH };
     }
     function doVMove(clientY) {
-      if (!wwVDrag) return;
-      const newH = Math.max(WW_MIN_H, Math.min(WW_MAX_H, wwVDrag.startH + clientY - wwVDrag.startY));
-      bodyEl.style.height = newH + 'px';
-      const handleH = el.querySelector('.widget-handle')?.offsetHeight || 0;
-      el.style.height = (handleH + newH) + 'px';
+      if (!drag) return;
+      const newH = Math.max(WW_MIN_H, Math.min(WW_MAX_H, drag.startH + clientY - drag.startY));
+      sizedEl.style.height = newH + 'px';
+      syncWidgetHeight();
     }
     function endVDrag() {
-      if (!wwVDrag) return;
-      localStorage.setItem(WW_H_KEY, parseInt(bodyEl.style.height) || 268);
-      wwVDrag = null;
+      if (!drag) return;
+      localStorage.setItem(storeKey, parseInt(sizedEl.style.height) || defaultH);
+      drag = null;
     }
 
     vh.addEventListener('mousedown', e => {
@@ -3763,7 +3773,7 @@
     document.addEventListener('mousemove',  e => doVMove(e.clientY));
     document.addEventListener('mouseup',    endVDrag);
     document.addEventListener('touchmove',  e => {
-      if (!wwVDrag) return;
+      if (!drag) return;
       e.preventDefault();
       doVMove(e.touches[0].clientY);
     }, { passive: false });
