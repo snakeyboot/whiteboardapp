@@ -314,27 +314,31 @@ app.get('/api/fetch-title', async (req, res) => {
 });
 
 app.get('/api/define', async (req, res) => {
-  const { word } = req.query;
-  if (!word) return res.json({ definition: '', partOfSpeech: '', all: [] });
+  const empty = { definition: '', partOfSpeech: '', all: [] };
+  const word = (req.query.word || '').trim().toLowerCase();
+  if (!word) return res.json(empty);
+  const key = process.env.MW_LEARNERS_KEY;
+  if (!key) { console.error('define: MW_LEARNERS_KEY not set'); return res.json(empty); }
   try {
     const r = await fetch(
-      `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.trim().toLowerCase())}`,
+      `https://www.dictionaryapi.com/api/v3/references/learners/json/${encodeURIComponent(word)}?key=${encodeURIComponent(key)}`,
       { signal: AbortSignal.timeout(6000) }
     );
-    if (!r.ok) return res.json({ definition: '', partOfSpeech: '', all: [] });
+    if (!r.ok) { console.error('define: MW status', r.status); return res.json(empty); }
     const data = await r.json();
+    // Not found => array of suggestion strings; keep only entry objects
+    const entries = (Array.isArray(data) ? data : []).filter(e => e && typeof e === 'object');
+    const headword = e => (e.hwi?.hw || e.meta?.id || '').replace(/\*/g, '').split(':')[0].toLowerCase();
+    const exact = entries.filter(e => headword(e) === word);
     const all = [];
-    for (const entry of (data || [])) {
-      for (const meaning of (entry.meanings || [])) {
-        for (const def of (meaning.definitions || [])) {
-          all.push({ partOfSpeech: meaning.partOfSpeech, definition: def.definition });
-        }
-      }
+    for (const e of (exact.length ? exact : entries)) {
+      for (const d of (e.shortdef || [])) all.push({ partOfSpeech: e.fl || '', definition: d });
     }
     const first = all[0] || {};
     res.json({ definition: first.definition || '', partOfSpeech: first.partOfSpeech || '', all });
-  } catch {
-    res.json({ definition: '', partOfSpeech: '', all: [] });
+  } catch (e) {
+    console.error('define:', e.message);
+    res.json(empty);
   }
 });
 
