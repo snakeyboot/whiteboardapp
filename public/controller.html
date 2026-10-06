@@ -817,6 +817,31 @@
     }
     .seat-desk-btn:hover { color: #94a3b8; }
     .seat-desk-btn.del:hover { color: #ef4444; }
+    .seat-decor {
+      position: absolute; cursor: grab; z-index: 3;
+      touch-action: none; user-select: none; border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .seat-decor:active { cursor: grabbing; }
+    .seat-decor-door {
+      width: 26px; height: 58px;
+      background: linear-gradient(160deg,#5a3010,#3d2009);
+      border: 2px solid #8b5e3c; border-radius: 3px 8px 3px 3px;
+      position: relative;
+    }
+    .seat-decor-door::after {
+      content: ''; position: absolute; bottom: 9px; right: 5px;
+      width: 5px; height: 5px; border-radius: 50%; background: #c8a060;
+    }
+    .seat-decor-window {
+      width: 70px; height: 16px;
+      background: #0e3a5c88; border: 1.5px solid #38bdf8aa;
+      position: relative; overflow: hidden;
+    }
+    .seat-decor-window::after {
+      content: ''; position: absolute;
+      top: 0; left: 50%; width: 1.5px; height: 100%; background: #38bdf888;
+    }
 
     /* ── Spotify ── */
     .sp-progress-wrap {
@@ -3360,20 +3385,48 @@
 
     // ── Seating Chart ─────────────────────────────────────────
     let seatDesks         = [];
+    let seatDecorations   = [];
     let seatAssignments   = {};
     let seatFlipped       = false;
     let seatSelected      = null;
     let seatSavedCharts   = [];
     let seatActiveChartId = null;
 
-    const DESK_W = 68, DESK_H = 52, SNAP_DIST = 90, UNSNAP_DIST = 110;
+    const DESK_W = 68, DESK_H = 52, DESK_GAP = 5;
+    const SNAP_DIST = 100, UNSNAP_DIST = 120;
+    const CANVAS_W = 900, CANVAS_H = 560;
     const POD_COLORS = ['#1e3a5f','#0d3320','#3b1020','#2a200a','#1a1a40','#200a3a','#0a2a30','#301a0a'];
+    const SNAP_OFFSETS = [
+      [ DESK_W+DESK_GAP, 0], [-(DESK_W+DESK_GAP), 0],
+      [0,  DESK_H+DESK_GAP], [0, -(DESK_H+DESK_GAP)],
+      [ DESK_W+DESK_GAP,  DESK_H+DESK_GAP],
+      [-(DESK_W+DESK_GAP), DESK_H+DESK_GAP],
+      [ DESK_W+DESK_GAP, -(DESK_H+DESK_GAP)],
+      [-(DESK_W+DESK_GAP),-(DESK_H+DESK_GAP)],
+    ];
+
+    function defaultDecorations() {
+      return [
+        { id:'dec_d1', type:'door',   x:32,              y:460 },
+        { id:'dec_d2', type:'door',   x:CANVAS_W-58,     y:460 },
+        { id:'dec_w1', type:'window', x:8,               y:80  },
+        { id:'dec_w2', type:'window', x:8,               y:115 },
+        { id:'dec_w3', type:'window', x:CANVAS_W-78,     y:80  },
+        { id:'dec_w4', type:'window', x:CANVAS_W-78,     y:115 },
+      ];
+    }
 
     function openSeatingModal() {
       document.getElementById('seatingModalClass').textContent = rosters[activeId]?.name || '';
       document.getElementById('seatingOverlay').classList.add('open');
-      socket.emit('seating:layout:get', (desks) => {
-        seatDesks = desks || [];
+      socket.emit('seating:layout:get', (data) => {
+        if (Array.isArray(data)) {
+          seatDesks = data;
+          seatDecorations = defaultDecorations();
+        } else {
+          seatDesks = data.desks || [];
+          seatDecorations = (data.decorations && data.decorations.length) ? data.decorations : defaultDecorations();
+        }
         renderSeatCanvas();
       });
       socket.emit('seating:charts:list', activeId, (charts) => {
@@ -3415,25 +3468,48 @@
       const desk = seatDesks.find(d => d.id === deskId);
       if (!desk) return;
       const cx = desk.x + DESK_W/2, cy = desk.y + DESK_H/2;
+
+      // Find nearest other desk
       let nearest = null, nearestDist = SNAP_DIST;
       for (const other of seatDesks) {
         if (other.id === deskId) continue;
-        const dist = Math.hypot(cx - (other.x+DESK_W/2), cy - (other.y+DESK_H/2));
-        if (dist < nearestDist) { nearest = other; nearestDist = dist; }
+        const d = Math.hypot(cx-(other.x+DESK_W/2), cy-(other.y+DESK_H/2));
+        if (d < nearestDist) { nearest = other; nearestDist = d; }
       }
+
       if (nearest) {
-        if (nearest.podId) { desk.podId = nearest.podId; }
-        else { const p = 'p_'+Math.random().toString(36).slice(2,8); nearest.podId=p; desk.podId=p; }
-      } else {
-        // unsnap from current pod if far enough from all pod-mates
-        if (desk.podId) {
-          const mates = seatDesks.filter(d => d.id !== deskId && d.podId === desk.podId);
-          const closestMate = Math.min(...mates.map(m => Math.hypot(cx-(m.x+DESK_W/2), cy-(m.y+DESK_H/2))));
-          if (closestMate > UNSNAP_DIST || mates.length === 0) {
-            desk.podId = null;
-            // dissolve pod if only 1 member left
-            if (mates.length === 1) mates[0].podId = null;
+        // All desks in the target pod (reference points for snap slots)
+        const refs = nearest.podId ? seatDesks.filter(d => d.podId === nearest.podId) : [nearest];
+        // All currently occupied positions (excl. the desk being snapped)
+        const others = seatDesks.filter(d => d.id !== deskId);
+
+        let best = null, bestDist = Infinity;
+        for (const ref of refs) {
+          for (const [ox, oy] of SNAP_OFFSETS) {
+            const nx = ref.x + ox, ny = ref.y + oy;
+            if (nx < 0 || ny < 22 || nx + DESK_W > CANVAS_W || ny + DESK_H > CANVAS_H) continue;
+            // No overlap: no other desk within desk dimensions
+            if (others.some(o => Math.abs(o.x - nx) < DESK_W && Math.abs(o.y - ny) < DESK_H)) continue;
+            const d = Math.hypot(cx - (nx + DESK_W/2), cy - (ny + DESK_H/2));
+            if (d < bestDist) { bestDist = d; best = { x: nx, y: ny }; }
           }
+        }
+
+        if (best) {
+          desk.x = best.x; desk.y = best.y;
+          if (nearest.podId) { desk.podId = nearest.podId; }
+          else { const p = 'p_'+uid(); nearest.podId = p; desk.podId = p; }
+        }
+        // No valid slot → desk stays where it dropped (no snap)
+
+      } else if (desk.podId) {
+        // Unsnap if dragged far from all pod-mates
+        const mates = seatDesks.filter(d => d.id !== deskId && d.podId === desk.podId);
+        const farFromAll = mates.length === 0 || mates.every(m =>
+          Math.hypot(cx-(m.x+DESK_W/2), cy-(m.y+DESK_H/2)) > UNSNAP_DIST);
+        if (farFromAll) {
+          desk.podId = null;
+          if (mates.length === 1) mates[0].podId = null;
         }
       }
     }
@@ -3469,6 +3545,17 @@
         bg.style.cssText = `left:${minX}px;top:${minY}px;width:${maxX-minX}px;height:${maxY-minY}px;background:${c}44;border:1.5px solid ${c}99;`;
         makePodDraggable(bg, pod.podId);
         inner.appendChild(bg);
+      });
+
+      // Room decorations (doors, windows)
+      seatDecorations.forEach(dec => {
+        const el = document.createElement('div');
+        el.className = `seat-decor seat-decor-${dec.type}`;
+        el.id = 'sdec_' + dec.id;
+        el.style.left = dec.x + 'px';
+        el.style.top  = dec.y + 'px';
+        makeDecorDraggable(el, dec.id);
+        inner.appendChild(el);
       });
 
       // Desks
@@ -3591,6 +3678,33 @@
       el.addEventListener('mousedown',onStart); el.addEventListener('touchstart',onStart,{passive:false});
     }
 
+    // ── Decoration drag ──────────────────────────────────────
+    function makeDecorDraggable(el, decId) {
+      let startCX, startCY, origX, origY;
+      function getDec() { return seatDecorations.find(d => d.id === decId); }
+      function onStart(e) {
+        const pt = e.touches?e.touches[0]:e;
+        const dec = getDec(); if (!dec) return;
+        startCX=pt.clientX; startCY=pt.clientY; origX=dec.x; origY=dec.y;
+        document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onEnd);
+        document.addEventListener('touchmove',onMove,{passive:false}); document.addEventListener('touchend',onEnd);
+        e.stopPropagation(); e.preventDefault();
+      }
+      function onMove(e) {
+        const pt=e.touches?e.touches[0]:e;
+        const dec=getDec(); if (!dec) return;
+        dec.x = Math.max(0, Math.min(CANVAS_W-80, origX + pt.clientX - startCX));
+        dec.y = Math.max(0, Math.min(CANVAS_H-70, origY + pt.clientY - startCY));
+        el.style.left=dec.x+'px'; el.style.top=dec.y+'px';
+        e.preventDefault();
+      }
+      function onEnd() {
+        document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onEnd);
+        document.removeEventListener('touchmove',onMove); document.removeEventListener('touchend',onEnd);
+      }
+      el.addEventListener('mousedown',onStart); el.addEventListener('touchstart',onStart,{passive:false});
+    }
+
     // ── Tap-to-swap ──────────────────────────────────────────
     function seatDeskClick(deskId) {
       if (!seatSelected) {
@@ -3642,35 +3756,25 @@
       const students=parseStudentsClient(r.students).filter(s=>(s.attendance||'present')!=='absent');
       if (!students.length) return;
 
-      const pods=getPodGroups();
-      pods.sort((a,b)=>podCentroid(a).y-podCentroid(b).y);
-      if (seatFlipped) pods.reverse();
-      const frontCount=Math.max(1,Math.ceil(pods.length*0.35));
-      const frontPodIds=new Set(pods.slice(0,frontCount).map(p=>p.podId));
+      // Sort desks front-to-back so front seats are always filled first
+      const sortedDesks=[...seatDesks].sort((a,b)=>{
+        const ay=a.y+DESK_H/2, by=b.y+DESK_H/2;
+        return seatFlipped ? by-ay : ay-by;
+      });
 
-      const frontStu=shuffleArr(students.filter(s=>s.frontOfRoom));
       const enlOrder=['Entering','Emerging','Transitioning','Expanding','Commanding'];
-      const enlStu=students.filter(s=>s.enlLevel&&!s.frontOfRoom).sort((a,b)=>enlOrder.indexOf(a.enlLevel)-enlOrder.indexOf(b.enlLevel));
-      const regularStu=shuffleArr(students.filter(s=>!s.frontOfRoom&&!s.enlLevel));
+      const frontStu=shuffleArr(students.filter(s=>s.frontOfRoom));
+      const enlStu=students.filter(s=>s.enlLevel&&!s.frontOfRoom)
+        .sort((a,b)=>enlOrder.indexOf(a.enlLevel)-enlOrder.indexOf(b.enlLevel));
       const enlInterleaved=interleaveByLevel(enlStu,'enlLevel',enlOrder);
+      const regularStu=shuffleArr(students.filter(s=>!s.frontOfRoom&&!s.enlLevel));
 
-      const frontDesks=seatDesks.filter(d=>frontPodIds.has(d.podId||('_s_'+d.id)));
-      const nonFrontDesks=seatDesks.filter(d=>!frontPodIds.has(d.podId||('_s_'+d.id)));
-      const assignments={}; let fdi=0,nfdi=0;
+      // Ordered student list: front-flagged → ENL interleaved → regular
+      const ordered=[...frontStu,...enlInterleaved,...regularStu];
 
-      for (const s of frontStu) {
-        const n=fullNameClient(s);
-        if (fdi<frontDesks.length) assignments[frontDesks[fdi++].id]=n;
-        else if (nfdi<nonFrontDesks.length) assignments[nonFrontDesks[nfdi++].id]=n;
-      }
-      for (const s of enlInterleaved) {
-        const n=fullNameClient(s);
-        if (nfdi<nonFrontDesks.length) assignments[nonFrontDesks[nfdi++].id]=n;
-        else if (fdi<frontDesks.length) assignments[frontDesks[fdi++].id]=n;
-      }
-      const remaining=[...frontDesks.slice(fdi),...nonFrontDesks.slice(nfdi)];
-      const rStu=[...regularStu];
-      remaining.forEach(d=>{if(rStu.length) assignments[d.id]=fullNameClient(rStu.shift());});
+      const assignments={};
+      for (let i=0;i<Math.min(ordered.length,sortedDesks.length);i++)
+        assignments[sortedDesks[i].id]=fullNameClient(ordered[i]);
 
       seatAssignments=assignments; seatSelected=null;
       document.getElementById('seatSaveStatus').textContent='Unsaved';
@@ -3723,7 +3827,7 @@
     }
 
     function saveSeatLayout() {
-      socket.emit('seating:layout:save',seatDesks,(res)=>{
+      socket.emit('seating:layout:save',{desks:seatDesks,decorations:seatDecorations},(res)=>{
         const btn=document.getElementById('seatSaveLayoutBtn');
         if (btn){btn.textContent='Saved ✓';setTimeout(()=>{btn.textContent='Save Layout';},1800);}
       });

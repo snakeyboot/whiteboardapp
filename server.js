@@ -1192,15 +1192,18 @@ io.on('connection', async (socket) => {
   socket.on('seating:layout:get', async (cb) => {
     try {
       const { rows } = await pool.query("SELECT desks FROM seating_layout WHERE id='global'");
-      cb(rows.length ? JSON.parse(rows[0].desks || '[]') : []);
-    } catch(e) { console.error('seating:layout:get', e); cb([]); }
+      if (!rows.length) return cb({ desks: [], decorations: [] });
+      const raw = JSON.parse(rows[0].desks || '[]');
+      cb(Array.isArray(raw) ? { desks: raw, decorations: [] } : raw);
+    } catch(e) { console.error('seating:layout:get', e); cb({ desks: [], decorations: [] }); }
   });
 
-  socket.on('seating:layout:save', async (desks, cb) => {
+  socket.on('seating:layout:save', async (payload, cb) => {
     try {
+      const data = Array.isArray(payload) ? { desks: payload, decorations: [] } : payload;
       await pool.query(
         "INSERT INTO seating_layout(id,desks,updated_at) VALUES('global',$1,$2) ON CONFLICT(id) DO UPDATE SET desks=$1,updated_at=$2",
-        [JSON.stringify(desks), Date.now()]
+        [JSON.stringify(data), Date.now()]
       );
       if (cb) cb({ ok: true });
     } catch(e) { console.error('seating:layout:save', e); if (cb) cb({ ok: false }); }
