@@ -375,6 +375,7 @@ async function initDB() {
     )
   `);
   await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS word_wall TEXT DEFAULT '[]'`);
+  await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT FALSE`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS app_config (
       key TEXT PRIMARY KEY,
@@ -470,8 +471,13 @@ async function getAllPresets() {
 async function getAllRosters() {
   const { rows } = await pool.query('SELECT * FROM rosters ORDER BY sort_order, name');
   const out = {};
-  rows.forEach(r => { out[r.id] = { name: r.name, students: r.students, slidesUrl: r.slides_url, grades: r.grades || '{}', materials: r.materials || '[]', wordWall: r.word_wall || '[]' }; });
+  rows.forEach(r => { out[r.id] = { name: r.name, students: r.students, slidesUrl: r.slides_url, grades: r.grades || '{}', materials: r.materials || '[]', wordWall: r.word_wall || '[]', archived: !!r.archived }; });
   return out;
+}
+
+function firstActiveRosterId(rosters) {
+  const ids = Object.keys(rosters);
+  return ids.find(i => !rosters[i].archived) || ids[0] || null;
 }
 
 function parseStudents(raw) {
@@ -762,8 +768,8 @@ function startTicking() {
 // ── Sockets ───────────────────────────────────────────────
 io.on('connection', async (socket) => {
   const rosters = await getAllRosters();
-  if (!state.activeRosterId || !rosters[state.activeRosterId]) {
-    state.activeRosterId   = Object.keys(rosters)[0] || null;
+  if (!state.activeRosterId || !rosters[state.activeRosterId] || rosters[state.activeRosterId].archived) {
+    state.activeRosterId   = firstActiveRosterId(rosters);
     state.activeRosterName = state.activeRosterId ? (rosters[state.activeRosterId]?.name || '') : '';
     if (state.activeRosterId && pickDeck.length === 0) await buildDeck(state.activeRosterId);
   }
@@ -894,13 +900,34 @@ io.on('connection', async (socket) => {
       await pool.query('DELETE FROM rosters WHERE id=$1', [id]);
       const updated = await getAllRosters();
       if (!updated[state.activeRosterId]) {
-        state.activeRosterId   = Object.keys(updated)[0] || null;
+        state.activeRosterId   = firstActiveRosterId(updated);
         state.activeRosterName = state.activeRosterId ? (updated[state.activeRosterId]?.name || '') : '';
         await buildDeck(state.activeRosterId);
       }
       io.emit('roster:all', updated);
       io.emit('roster:activated', { id: state.activeRosterId, name: state.activeRosterName });
     } catch (e) { console.error('roster:delete', e); }
+  });
+
+  socket.on('roster:archive', async ({ id, archived }) => {
+    try {
+      await pool.query('UPDATE rosters SET archived=$1 WHERE id=$2', [!!archived, id]);
+      const updated = await getAllRosters();
+      const switched = archived && state.activeRosterId === id;
+      if (switched) {
+        state.activeRosterId   = firstActiveRosterId(updated);
+        state.activeRosterName = state.activeRosterId ? (updated[state.activeRosterId]?.name || '') : '';
+        if (state.activeRosterId) {
+          await buildDeck(state.activeRosterId);
+          try {
+            state.wordWall = { words: JSON.parse(updated[state.activeRosterId].wordWall || '[]'), listName: '' };
+            io.emit('wordwall:update', state.wordWall);
+          } catch {}
+        }
+      }
+      io.emit('roster:all', updated);
+      if (switched) io.emit('roster:activated', { id: state.activeRosterId, name: state.activeRosterName });
+    } catch (e) { console.error('roster:archive', e); }
   });
 
   socket.on('roster:activate', async (id) => {
@@ -919,13 +946,6 @@ io.on('connection', async (socket) => {
     } catch {}
     if (changed) await buildDeck(id);
     io.emit('roster:activated', { id, name: state.activeRosterName });
-  });
-
-  // ── Grades ──
-  socket.on('grades:save', async ({ id, grades }) => {
-    try {
-      await pool.query('UPDATE rosters SET grades=$1 WHERE id=$2', [grades, id]);
-    } catch (e) { console.error('grades:save', e); }
   });
 
   // ── Slides ──

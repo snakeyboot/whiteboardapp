@@ -255,65 +255,6 @@
     }
 
 
-    /* ── Gradebook ── */
-    .gb-header-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-    .gb-class-label { font-size: 12px; font-weight: 600; color: #94a3b8; margin-top: 2px; }
-    .gb-scroll { overflow-x: auto; border-radius: 8px; margin-bottom: 6px; }
-    .gb-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-      white-space: nowrap;
-    }
-    .gb-table th {
-      padding: 7px 8px;
-      background: #0f172a;
-      color: #64748b;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      border: 1px solid #334155;
-      text-align: center;
-    }
-    .gb-table td { padding: 3px 5px; border: 1px solid #1e293b; text-align: center; }
-    .gb-table tbody tr:hover td { background: rgba(255,255,255,0.03); }
-    .gb-name-th { text-align: left !important; min-width: 100px; }
-    .gb-name-td {
-      text-align: left !important;
-      padding: 5px 8px !important;
-      cursor: pointer;
-      user-select: none;
-      font-weight: 600;
-      transition: background 0.15s;
-    }
-    .gb-name-td:active { background: rgba(255,255,255,0.05); }
-    .gb-name-td.att-present { color: #22c55e; }
-    .gb-name-td.att-tardy   { color: #fbbf24; }
-    .gb-name-td.att-absent  { color: #ef4444; text-decoration: line-through; }
-    .gb-col-header { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-    .gb-col-name { color: #94a3b8; }
-    .gb-col-max  { font-size: 9px; color: #475569; font-weight: 400; }
-    .gb-col-top  { display: flex; align-items: center; gap: 3px; }
-    .gb-del-btn {
-      background: none; border: none; color: #475569; font-size: 10px;
-      cursor: pointer; padding: 0 2px; transition: color 0.15s; line-height: 1;
-    }
-    .gb-del-btn:hover { color: #ef4444; }
-    .gb-input {
-      width: 50px; padding: 4px 3px; background: transparent;
-      border: 1px solid transparent; border-radius: 4px;
-      color: #94a3b8; font-size: 12px; text-align: center; font-family: inherit;
-    }
-    .gb-input:focus { outline: none; border-color: #3b82f6; background: #0f172a; color: #e2e8f0; }
-    .gb-empty { text-align: center; padding: 20px; color: #475569; font-size: 12px; }
-
     /* ── Forced Groups ── */
     .fg-row {
       display: flex; align-items: center; gap: 8px;
@@ -463,23 +404,6 @@
       display: flex;
       gap: 8px;
     }
-
-    /* ── Quick Grade modal ── */
-    .qg-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.1s;
-      gap: 12px;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .qg-row:active { background: #0f172a; }
-    .qg-name { font-size: 15px; color: #e2e8f0; flex: 1; }
-    .qg-grade { font-size: 17px; font-weight: 700; min-width: 30px; text-align: center; color: #fbbf24; }
-    .qg-grade.empty { color: #334155; font-size: 13px; }
 
     /* ── Manage Students modal ── */
     .manage-textarea {
@@ -1054,7 +978,12 @@
             <button class="btn btn-purple btn-sm" onclick="pickRandom()">Pick</button>
             <button class="btn btn-gray btn-sm"   onclick="clearPick()">Clear</button>
           </div>
-          <button class="btn btn-gray btn-sm" style="width:100%;margin-top:6px;" onclick="openForcePick()">Force Pick</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+            <button class="btn btn-gray btn-sm" onclick="openForcePick()">Force Pick</button>
+            <button class="btn btn-gray btn-sm" onclick="openGroupsModal()">Groups</button>
+            <button class="btn btn-gray btn-sm" onclick="openSeatingModal()">Seating</button>
+            <button class="btn btn-gray btn-sm" onclick="openAwardsModal()">🏆 Awards</button>
+          </div>
           <div class="deck-badge" id="deckBadge"></div>
         </div>
 
@@ -1072,59 +1001,6 @@
       </div><!-- end picker-col -->
 
     </div><!-- end side-row -->
-
-    <!-- Forced Groups -->
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <div class="card-title" style="margin-bottom:0;">Groups</div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <div class="fg-stepper">
-            <button class="fg-step-btn" onclick="fgAdjCount(-1)">−</button>
-            <span class="fg-count-val" id="fgCountVal">4</span>
-            <button class="fg-step-btn" onclick="fgAdjCount(1)">+</button>
-          </div>
-          <button class="btn btn-gray btn-sm" onclick="clearForcedGroups()" style="padding:4px 8px;">Clear</button>
-          <button class="btn btn-blue btn-sm" id="fgSendBtn" onclick="sendForcedGroups()" style="padding:4px 8px;">Send</button>
-        </div>
-      </div>
-      <div id="fgResultRow" style="display:none;margin-bottom:8px;">
-        <button class="btn btn-gray btn-sm" id="fgCopyBtn" onclick="copyGroupsToClipboard()" style="width:100%;">Copy Groups for Sheets</button>
-      </div>
-      <div id="orderResultRow" style="display:none;margin-bottom:8px;">
-        <button class="btn btn-gray btn-sm" id="orderCopyBtn" onclick="copyOrderToClipboard()" style="width:100%;">Copy Order for Sheets</button>
-      </div>
-      <div id="fgStatus" style="font-size:11px;color:#475569;margin-bottom:8px;min-height:14px;"></div>
-      <div id="fgStudentList"></div>
-    </div>
-
-    <!-- Seating Chart -->
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <div class="card-title" style="margin-bottom:0;">Seating</div>
-      </div>
-      <button class="btn btn-blue" style="width:100%;" onclick="openSeatingModal()">Seating Chart</button>
-    </div>
-
-    <!-- Gradebook -->
-    <div class="card">
-      <div class="gb-header-row">
-        <div>
-          <div class="card-title" style="margin-bottom:2px">Grade Book</div>
-          <div class="gb-class-label" id="gbClassName"></div>
-        </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button class="btn btn-teal btn-sm" style="flex:none;" onclick="openQuickGrade()">Quick Grade</button>
-          <button class="btn btn-gray btn-sm" style="flex:none;" onclick="addAssignment()">+ Assignment</button>
-        </div>
-      </div>
-      <div class="gb-scroll">
-        <table class="gb-table" id="gbTable">
-          <thead><tr id="gbThead"></tr></thead>
-          <tbody id="gbTbody"></tbody>
-        </table>
-      </div>
-      <div class="save-status" id="gbSaveStatus"></div>
-    </div>
 
     <!-- Materials -->
     <div class="card">
@@ -1250,11 +1126,49 @@
       <div id="bookLoadStatus" style="font-size:11px;color:#475569;margin-top:5px;min-height:14px;"></div>
     </div>
 
-    <!-- Awards -->
-    <div class="card">
-      <div style="display:flex;align-items:center;margin-bottom:10px;">
-        <div class="card-title" style="margin-bottom:0;">🏆 Awards</div>
+  </div><!-- end sections -->
+
+  <!-- Groups Modal -->
+  <div class="overlay" id="groupsOverlay" onclick="if(event.target===this)closeGroupsModal()">
+    <div class="modal" style="max-width:min(96vw,560px);">
+      <div class="modal-header">
+        <span class="modal-title">Groups</span>
+        <button class="modal-close" onclick="closeGroupsModal()">✕</button>
       </div>
+      <div class="modal-body">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div></div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <div class="fg-stepper">
+            <button class="fg-step-btn" onclick="fgAdjCount(-1)">−</button>
+            <span class="fg-count-val" id="fgCountVal">4</span>
+            <button class="fg-step-btn" onclick="fgAdjCount(1)">+</button>
+          </div>
+          <button class="btn btn-gray btn-sm" onclick="clearForcedGroups()" style="padding:4px 8px;">Clear</button>
+          <button class="btn btn-blue btn-sm" id="fgSendBtn" onclick="sendForcedGroups()" style="padding:4px 8px;">Send</button>
+        </div>
+      </div>
+      <div id="fgResultRow" style="display:none;margin-bottom:8px;">
+        <button class="btn btn-gray btn-sm" id="fgCopyBtn" onclick="copyGroupsToClipboard()" style="width:100%;">Copy Groups for Sheets</button>
+      </div>
+      <div id="orderResultRow" style="display:none;margin-bottom:8px;">
+        <button class="btn btn-gray btn-sm" id="orderCopyBtn" onclick="copyOrderToClipboard()" style="width:100%;">Copy Order for Sheets</button>
+      </div>
+      <div id="fgStatus" style="font-size:11px;color:#475569;margin-bottom:8px;min-height:14px;"></div>
+      <div id="fgStudentList"></div>
+    
+      </div>
+    </div>
+  </div>
+
+  <!-- Awards Modal -->
+  <div class="overlay" id="awardsOverlay" onclick="if(event.target===this)closeAwardsModal()">
+    <div class="modal" style="max-width:min(96vw,560px);">
+      <div class="modal-header">
+        <span class="modal-title">🏆 Awards</span>
+        <button class="modal-close" onclick="closeAwardsModal()">✕</button>
+      </div>
+      <div class="modal-body">
       <div style="font-size:10px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#475569;margin-bottom:5px;">Award Type</div>
       <div class="award-mode-row">
         <button class="award-mode-btn active" id="awardModeSotd" onclick="setAwardMode('sotd')">📚 Student of the Day</button>
@@ -1266,9 +1180,21 @@
         <div id="awardStatus" class="award-status" style="margin-top:0;flex:1;"></div>
         <button class="btn btn-gray btn-sm" style="flex:none;padding:8px 10px;" id="awardCloseCtrlBtn" onclick="closeAwardCtrl()" title="Close display">✕</button>
       </div>
+    
+      </div>
     </div>
+  </div>
 
-  </div><!-- end sections -->
+  <!-- Archived Classes Modal -->
+  <div class="overlay" id="archivedOverlay" onclick="if(event.target===this)closeArchivedModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Archived Classes</span>
+        <button class="modal-close" onclick="closeArchivedModal()">✕</button>
+      </div>
+      <div class="modal-body"><div id="archivedList"></div></div>
+    </div>
+  </div>
 
   <!-- Roster Modal -->
   <div class="overlay" id="rosterOverlay" onclick="rosterOverlayClick(event)">
@@ -1333,27 +1259,6 @@
     </div>
   </div>
 
-  <!-- Quick Grade Modal -->
-  <div class="overlay" id="qgOverlay" onclick="qgOverlayClick(event)">
-    <div class="modal">
-      <div class="modal-header">
-        <span class="modal-title" id="qgTitle">Quick Grade</span>
-        <button class="modal-close" onclick="closeQuickGrade()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-          <label style="font-size:11px;color:#64748b;white-space:nowrap;text-transform:uppercase;letter-spacing:0.08em;">Assignment</label>
-          <input type="text" id="qgAssignmentName" style="flex:1;padding:7px 10px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#e2e8f0;font-size:13px;font-family:inherit;">
-        </div>
-        <div id="qgList"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-gray btn-sm" onclick="clearAllQuickGrades()">Clear All</button>
-        <button class="btn btn-teal" onclick="doneQuickGrade()">Done → Gradebook</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Word Sets Modal -->
   <div class="overlay" id="wordSetsOverlay" onclick="wordSetsOverlayClick(event)">
     <div class="modal">
@@ -1387,7 +1292,8 @@
         <textarea class="manage-textarea" id="manageTextarea" placeholder="One student per line"></textarea>
         <div class="manage-hint">One name per line. Existing attendance/picks are preserved when names match.</div>
         <div class="danger-row">
-          <button class="btn btn-red btn-sm" onclick="deleteRoster()" style="width:100%;">Delete This Class</button>
+          <div style="display:flex;gap:6px;"><button class="btn btn-gray btn-sm" onclick="archiveRoster()" style="flex:1;">Archive This Class</button>
+          <button class="btn btn-red btn-sm" onclick="deleteRoster()" style="flex:1;">Delete This Class</button></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -1601,10 +1507,9 @@
       rosterOrder = Object.entries(rosters)
         .sort(([,a],[,b]) => (a.sortOrder || 0) - (b.sortOrder || 0))
         .map(([id]) => id);
-      activeId = (serverId && rosters[serverId]) ? serverId : rosterOrder[0];
+      activeId = (serverId && rosters[serverId] && !rosters[serverId].archived) ? serverId : (rosterOrder.find(id => !rosters[id].archived) || rosterOrder[0]);
       if (activeId) socket.emit('roster:activate', activeId);
       renderClassTabs();
-      loadGradebook(activeId);
 
       renderMaterials();
     }
@@ -1614,7 +1519,7 @@
       container.innerHTML = '';
       rosterOrder.forEach(id => {
         const r = rosters[id];
-        if (!r) return;
+        if (!r || r.archived) return;
 
         const wrap = document.createElement('span');
         wrap.className = 'tab-wrap';
@@ -1678,13 +1583,21 @@
       add.textContent = '+ New';
       add.onclick = addRoster;
       container.appendChild(add);
+
+      const nArch = rosterOrder.filter(id => rosters[id]?.archived).length;
+      if (nArch) {
+        const ab = document.createElement('button');
+        ab.className = 'tab-btn add-tab';
+        ab.textContent = `Archived (${nArch})`;
+        ab.onclick = openArchivedModal;
+        container.appendChild(ab);
+      }
     }
 
     function switchRoster(id) {
       activeId = id;
       socket.emit('roster:activate', id);
       renderClassTabs();
-      loadGradebook(id);
 
       renderMaterials();
     }
@@ -1698,7 +1611,6 @@
       socket.emit('roster:activate', id);
       saveCurrentRoster();
       renderClassTabs();
-      loadGradebook(id);
 
       renderMaterials();
       // Open manage so user can name it and add students
@@ -1722,9 +1634,9 @@
       const prev = activeId;
       rosters  = data;
       syncRosterOrder(data);
-      activeId = data[prev] ? prev : rosterOrder[0];
+      activeId = (data[prev] && !data[prev].archived) ? prev : (rosterOrder.find(id => !data[id].archived) || rosterOrder[0]);
       renderClassTabs();
-      loadGradebook(activeId);
+      if (document.getElementById('archivedOverlay').classList.contains('open')) renderArchivedList();
       renderMaterials();
       renderForcedGroupsCard();
     });
@@ -1733,8 +1645,7 @@
       if (id && rosters[id] && id !== activeId) {
         activeId = id;
         renderClassTabs();
-        loadGradebook(id);
-        renderMaterials();
+          renderMaterials();
         fgLoadFromServer(id);
       }
     });
@@ -1783,7 +1694,6 @@
       rosters[manageId].students = buildStudentsJson(manageId, lines);
       saveCurrentRosterById(manageId);
       renderClassTabs();
-      loadGradebook(manageId);
 
       closeManage();
     }
@@ -1821,6 +1731,54 @@
         materials: r.materials || '[]',
       });
     }
+
+    // ── Archive ────────────────────────────────────────────
+    function archiveRoster() {
+      if (!manageId) return;
+      const others = rosterOrder.filter(id => id !== manageId && !rosters[id]?.archived);
+      if (!others.length) { alert('Cannot archive the only active class.'); return; }
+      if (!confirm(`Archive "${rosters[manageId]?.name}"? You can restore it later.`)) return;
+      socket.emit('roster:archive', { id: manageId, archived: true });
+      closeManage();
+    }
+
+    function openArchivedModal() {
+      renderArchivedList();
+      document.getElementById('archivedOverlay').classList.add('open');
+    }
+    function closeArchivedModal() { document.getElementById('archivedOverlay').classList.remove('open'); }
+
+    function renderArchivedList() {
+      const el = document.getElementById('archivedList');
+      const ids = rosterOrder.filter(id => rosters[id]?.archived);
+      if (!ids.length) { el.innerHTML = '<div style="color:#475569;font-size:13px;">No archived classes.</div>'; return; }
+      el.innerHTML = ids.map(id => {
+        const n = parseStudentsClient(rosters[id].students).length;
+        return `<div class="preset-row">
+          <div class="preset-info">
+            <div class="preset-name">${escHtml(rosters[id].name)}</div>
+            <div class="preset-meta">${n} student${n !== 1 ? 's' : ''}</div>
+          </div>
+          <button class="btn btn-blue btn-sm" style="flex:none;" onclick="restoreRoster('${escAttr(id)}')">Restore</button>
+          <button class="btn btn-gray btn-sm" style="flex:none;" onclick="deleteArchivedRoster('${escAttr(id)}')">✕</button>
+        </div>`;
+      }).join('');
+    }
+
+    function restoreRoster(id) {
+      socket.emit('roster:archive', { id, archived: false });
+    }
+
+    function deleteArchivedRoster(id) {
+      if (!confirm(`Permanently delete "${rosters[id]?.name}"? This cannot be undone.`)) return;
+      socket.emit('roster:delete', id);
+    }
+
+    // ── Groups / Awards modals ─────────────────────────────
+    function openGroupsModal()  { renderForcedGroupsCard(); document.getElementById('groupsOverlay').classList.add('open'); }
+    function closeGroupsModal() { document.getElementById('groupsOverlay').classList.remove('open'); }
+    function openAwardsModal()  { renderAwardStudentList(); document.getElementById('awardsOverlay').classList.add('open'); }
+    function closeAwardsModal() { document.getElementById('awardsOverlay').classList.remove('open'); }
 
     // ── Picker ─────────────────────────────────────────────
     function updateDeckBadge(remaining, total) {
@@ -1936,223 +1894,6 @@
     function doForcePick(name) {
       socket.emit('pick:force', name);
       closeForcePick();
-    }
-
-    // ── Quick Grade ────────────────────────────────────────
-    const QG_STATES  = ['', '✓', '✓+', '✓–'];
-    const QG_GRADES  = [null, 85, 100, 70]; // index → numeric grade
-
-    function openQuickGrade() {
-      const r = rosters[activeId];
-      if (!r) return;
-      const students = parseStudentsClient(r.students).filter(s => s.attendance !== 'absent');
-      const qg = (gbData.quickGrades || {});
-      document.getElementById('qgTitle').textContent = `Quick Grade — ${r.name}`;
-      const d = new Date();
-      document.getElementById('qgAssignmentName').value = `${d.getMonth()+1}/${d.getDate()}`;
-      const list = document.getElementById('qgList');
-      list.innerHTML = students.map(s => {
-        const name = fullNameClient(s);
-        const idx  = qg[name] || 0;
-        return `<div class="qg-row" data-name="${escAttr(name)}" onclick="qgToggle(this)">
-          <span class="qg-name">${escHtml(name)}</span>
-          <span class="qg-grade${idx === 0 ? ' empty' : ''}">${QG_STATES[idx]}</span>
-        </div>`;
-      }).join('');
-      document.getElementById('qgOverlay').classList.add('open');
-    }
-
-    function closeQuickGrade() {
-      document.getElementById('qgOverlay').classList.remove('open');
-    }
-
-    function qgOverlayClick(e) {
-      if (e.target === document.getElementById('qgOverlay')) closeQuickGrade();
-    }
-
-    function qgToggle(rowEl) {
-      const name = rowEl.dataset.name;
-      const qg   = (gbData.quickGrades = gbData.quickGrades || {});
-      const next = ((qg[name] || 0) + 1) % QG_STATES.length;
-      if (next === 0) delete qg[name]; else qg[name] = next;
-      const gradeEl = rowEl.querySelector('.qg-grade');
-      gradeEl.textContent  = QG_STATES[next];
-      gradeEl.className    = 'qg-grade' + (next === 0 ? ' empty' : '');
-    }
-
-    function clearAllQuickGrades() {
-      gbData.quickGrades = {};
-      document.querySelectorAll('.qg-row').forEach(row => {
-        const g = row.querySelector('.qg-grade');
-        g.textContent = '';
-        g.className = 'qg-grade empty';
-      });
-    }
-
-    function doneQuickGrade() {
-      const colName = document.getElementById('qgAssignmentName').value.trim() || (() => { const d = new Date(); return `${d.getMonth()+1}/${d.getDate()}`; })();
-
-      // Find or create column
-      let col = gbData.columns.find(c => c.name === colName);
-      if (!col) {
-        col = { id: 'c' + Date.now().toString(36), name: colName, max: 100 };
-        gbData.columns.push(col);
-      }
-
-      // Apply grades
-      const qg = gbData.quickGrades || {};
-      Object.entries(qg).forEach(([name, idx]) => {
-        const grade = QG_GRADES[idx];
-        if (grade == null) return;
-        if (!gbData.rows[name]) gbData.rows[name] = {};
-        gbData.rows[name][col.id] = String(grade);
-      });
-
-      closeQuickGrade();
-      renderGradebook();
-      scheduleGbSave();
-    }
-
-    // ── Attendance (in Gradebook) ──────────────────────────
-    function toggleAttendance(name) {
-      const r = rosters[activeId];
-      if (!r) return;
-      const students = parseStudentsClient(r.students);
-      const idx = students.findIndex(s => fullNameClient(s) === name);
-      if (idx < 0) return;
-      const cur = students[idx].attendance || 'present';
-      const next = cur === 'present' ? 'absent' : cur === 'absent' ? 'tardy' : 'present';
-      students[idx].attendance = next;
-      rosters[activeId].students = JSON.stringify(students);
-      // Save (debounced)
-      scheduleAttSave();
-      // Re-render just this cell
-      const cell = document.querySelector(`.gb-name-td[data-name="${escAttr(name)}"]`);
-      if (cell) {
-        cell.className = `gb-name-td att-${next}`;
-      }
-    }
-
-    let attSaveTimer = null;
-    function scheduleAttSave() {
-      clearTimeout(attSaveTimer);
-      attSaveTimer = setTimeout(() => saveCurrentRoster(), 600);
-    }
-
-    // ── Grade Book ─────────────────────────────────────────
-    let gbData      = { columns: [], rows: {}, quickGrades: {} };
-    let gbSaveTimer  = null;
-
-    function parseStudentsForGb(raw) {
-      if (!raw) return [];
-      try {
-        const p = JSON.parse(raw);
-        if (Array.isArray(p)) return p.map(s => fullNameClient(s));
-      } catch {}
-      return raw.split('\n').map(s => s.trim()).filter(Boolean);
-    }
-
-    function loadGradebook(rosterId) {
-      const r = rosters[rosterId];
-      document.getElementById('gbClassName').textContent = r ? r.name : '';
-      if (!r) { gbData = { columns:[], rows:{}, quickGrades:{} }; renderGradebook([]); return; }
-      try {
-        gbData = JSON.parse(r.grades || '{}');
-        if (!gbData.columns)     gbData.columns     = [];
-        if (!gbData.rows)        gbData.rows        = {};
-        if (!gbData.quickGrades) gbData.quickGrades = {};
-      } catch { gbData = { columns:[], rows:{}, quickGrades:{} }; }
-      renderGradebook(parseStudentsForGb(r.students));
-    }
-
-    function renderGradebook(students) {
-      if (!students) students = parseStudentsForGb(rosters[activeId]?.students || '[]');
-      const allStudents = parseStudentsClient(rosters[activeId]?.students || '[]');
-      const attMap = {};
-      allStudents.forEach(s => { attMap[fullNameClient(s)] = s.attendance || 'present'; });
-
-      const thead = document.getElementById('gbThead');
-      const tbody = document.getElementById('gbTbody');
-
-      let thHtml = '<th class="gb-name-th">Student</th>';
-      gbData.columns.forEach(col => {
-        thHtml += `<th>
-          <div class="gb-col-header">
-            <div class="gb-col-top">
-              <span class="gb-col-name">${escHtml(col.name)}</span>
-              <button class="gb-del-btn" onclick="deleteAssignment('${col.id}')" title="Remove">✕</button>
-            </div>
-            <span class="gb-col-max">/ ${col.max||100}</span>
-          </div>
-        </th>`;
-      });
-      thead.innerHTML = thHtml;
-
-      tbody.innerHTML = '';
-      if (!students.length) {
-        tbody.innerHTML = `<tr><td colspan="${gbData.columns.length+1}" class="gb-empty">No students — tap ✏ to add.</td></tr>`;
-        return;
-      }
-      students.forEach(name => {
-        const att = attMap[name] || 'present';
-        const tr  = document.createElement('tr');
-        const nameTd = document.createElement('td');
-        nameTd.className = `gb-name-td att-${att}`;
-        nameTd.dataset.name = name;
-        nameTd.textContent = name;
-        nameTd.title = 'Tap to toggle attendance';
-        nameTd.onclick = () => toggleAttendance(name);
-        tr.appendChild(nameTd);
-        gbData.columns.forEach(col => {
-          const td    = document.createElement('td');
-          const input = document.createElement('input');
-          input.className = 'gb-input';
-          input.type = 'text';
-          input.value = gbData.rows[name]?.[col.id] ?? '';
-          input.placeholder = '—';
-          input.addEventListener('input', () => {
-            if (!gbData.rows[name]) gbData.rows[name] = {};
-            gbData.rows[name][col.id] = input.value;
-            scheduleGbSave();
-          });
-          td.appendChild(input);
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      });
-    }
-
-    function addAssignment() {
-      const name = prompt('Assignment name:');
-      if (!name?.trim()) return;
-      const maxStr = prompt('Max score:', '100');
-      const max = parseInt(maxStr) || 100;
-      const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-      gbData.columns.push({ id, name: name.trim(), max });
-      renderGradebook();
-      scheduleGbSave();
-    }
-
-    function deleteAssignment(colId) {
-      if (!confirm('Remove this assignment column?')) return;
-      gbData.columns = gbData.columns.filter(c => c.id !== colId);
-      Object.values(gbData.rows).forEach(r => delete r[colId]);
-      renderGradebook();
-      scheduleGbSave();
-    }
-
-    function scheduleGbSave() {
-      const status = document.getElementById('gbSaveStatus');
-      status.textContent = 'Saving…';
-      status.className = 'save-status';
-      clearTimeout(gbSaveTimer);
-      gbSaveTimer = setTimeout(() => {
-        socket.emit('grades:save', { id: activeId, grades: JSON.stringify(gbData) });
-        if (rosters[activeId]) rosters[activeId].grades = JSON.stringify(gbData);
-        status.textContent = 'Saved';
-        status.className = 'save-status saved';
-        setTimeout(() => { status.textContent = ''; }, 2000);
-      }, 800);
     }
 
     // ── Materials ──────────────────────────────────────────

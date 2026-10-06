@@ -2216,7 +2216,7 @@
     if (s.pick.name) showPick(s.pick.name, false);
     if (s.slides.url && !activeRawUrl) switchToMaterial(s.slides.url);
     allRosters     = s.rosters || {};
-    rosterIds      = Object.keys(allRosters);
+    rosterIds      = Object.keys(allRosters).filter(k => !allRosters[k].archived);
     activeRosterId = s.activeRosterId;
     updateClassWidget();
     updateDeckInfo(s.deckRemaining, s.deckTotal);
@@ -2229,7 +2229,7 @@
 
   socket.on('roster:all', data => {
     allRosters = data;
-    rosterIds  = Object.keys(data);
+    rosterIds  = Object.keys(data).filter(k => !data[k].archived);
     updateClassWidget();
     renderMaterialsWidget();
   });
