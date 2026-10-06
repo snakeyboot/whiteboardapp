@@ -4032,19 +4032,16 @@
       const gEl = document.getElementById('bookInfoGenre');
       gEl.textContent = genre;
       gEl.style.display = genre ? '' : 'none';
-      placeWidget(bw, parseInt(bw.style.left) || 0, parseInt(bw.style.top) || 0);
+      reapplyBodyScale('book');
       // Re-clamp position once the image has loaded and the widget has its real height
-      cover.onload = () => {
-        const x = parseInt(bw.style.left) || 0;
-        const y = parseInt(bw.style.top)  || 0;
-        placeWidget(bw, x, y);
-      };
+      cover.onload = () => reapplyBodyScale('book');
       if (book.cover) cover.src = book.cover;
     } else {
       cover.onload = null;
       cover.style.display = 'none';
       info.style.display = 'none';
       empty.style.display = '';
+      reapplyBodyScale('book');
     }
   }
 
