@@ -1007,7 +1007,7 @@
     .sp-disp-btn.sp-disp-play:hover { background: #1ed760; }
 
     /* ── Settings button ── */
-    #settingsBtn, #snapBtn, #fsBtn {
+    #settingsBtn, #snapBtn, #fsBtn, #appBtn {
       position: fixed;
       bottom: 16px;
       z-index: 50;
@@ -1030,7 +1030,8 @@
     #settingsBtn { right: 16px; }
     #snapBtn     { right: 54px; }
     #fsBtn       { right: 92px; }
-    #settingsBtn:hover, #snapBtn:hover, #fsBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
+    #appBtn      { right: 130px; }
+    #settingsBtn:hover, #snapBtn:hover, #fsBtn:hover, #appBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
     #settingsBtn.active { color: #94a3b8; border-color: #64748b; background: rgba(15,23,42,0.95); }
 
     #settingsPanel {
@@ -1759,6 +1760,12 @@
 <button id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">
   <svg id="fsBtnIcon" width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
     <path d="M1 1h4v1.5H2.5V4H1V1zm7 0h4v3h-1.5V2.5H8V1zM1 9h1.5v1.5H4V12H1V9zm8 2.5V13h4v-3h-1.5v1.5H9z"/>
+  </svg>
+</button>
+
+<button id="appBtn" onclick="openAppWindow()" title="Open in app window (no address bar)">
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4">
+    <rect x="1" y="2" width="11" height="9" rx="1.5"/><path d="M1 4.5h11"/>
   </svg>
 </button>
 
@@ -3337,6 +3344,14 @@
 
   let settingsOpen = false;
   let dragSrcKey   = null;
+
+  function openAppWindow() {
+    const w = screen.availWidth, h = screen.availHeight;
+    const win = window.open(location.href, 'whiteboardDisplay',
+      `popup=yes,width=${w},height=${h},left=0,top=0,toolbar=no,menubar=no,location=no,status=no`);
+    if (!win) alert('Popup blocked. Allow popups for this site and try again.');
+  }
+  if (window.opener) { const b = document.getElementById('appBtn'); if (b) b.style.display = 'none'; }
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
