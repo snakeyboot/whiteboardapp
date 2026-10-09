@@ -1,6 +1,6 @@
 {
-  "name": "Homeroom",
-  "short_name": "Homeroom",
+  "name": "SmarterBoard",
+  "short_name": "SmarterBoard",
   "start_url": "/display.html",
   "display": "standalone",
   "background_color": "#0f172a",
