@@ -51,8 +51,8 @@
       gap: 14px;
     }
 
-    .slides-placeholder svg { width: 56px; height: 56px; opacity: 0.2; }
-    .slides-placeholder p { font-size: 15px; color: #334155; }
+    .slides-placeholder img { max-height: 42vh; max-width: 40vw; width: auto; height: auto; object-fit: contain; }
+    .slides-placeholder p { font-size: clamp(22px, 3.2vw, 44px); font-weight: 700; color: #475569; letter-spacing: 0.01em; }
 
     /* ── Widget base ── */
     .widget {
@@ -1358,11 +1358,8 @@
 <div class="slides-bg">
   <div class="slides-inner" id="slidesInner">
     <div class="slides-placeholder" id="slidesPlaceholder">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-        <rect x="2" y="3" width="20" height="14" rx="2"/>
-        <path d="M8 21h8M12 17v4"/>
-      </svg>
-      <p>Waiting for slides…</p>
+      <img src="/images/oops.png" alt="">
+      <p>Oops! No slideshow loaded</p>
     </div>
   </div>
 </div>
