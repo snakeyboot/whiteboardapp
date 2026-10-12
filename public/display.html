@@ -3277,7 +3277,14 @@
       const fs = getWordFontSize(w.word, textMaxW);
       return `<button class="ww-word-btn" style="font-size:${fs}px" onclick="openWwDef(${i})">${w.word}</button>`;
     }).join('');
+    // Default height: exactly the last 5 rows (a user-dragged height overrides it)
+    if (!localStorage.getItem(WW_H_KEY)) {
+      const btns = [...body.querySelectorAll('.ww-word-btn')].slice(-5);
+      const rows = btns.reduce((sum, b) => sum + b.offsetHeight, 0) + 4 * (btns.length - 1);
+      if (btns.length) body.style.height = (rows + 16) + 'px';
+    }
     reapplyBodyScale('wordwall');
+    body.scrollTop = body.scrollHeight;
   }
 
   function openWwDef(i) {

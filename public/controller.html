@@ -2592,26 +2592,41 @@
       socket.emit('wordwall:set-words', { words: clean, listName: listName || '' });
     }
 
+    function parseWordInput(text) {
+      const out = [], seen = new Set(wwWords.map(w => w.word.toLowerCase()));
+      const re = /"([^"]+)"|[\u201C\u201D]([^\u201C\u201D]+)[\u201C\u201D]|([^\s,;]+)/g;
+      let m;
+      while ((m = re.exec(text))) {
+        const w = (m[1] || m[2] || m[3] || '').trim();
+        if (w && !seen.has(w.toLowerCase())) { seen.add(w.toLowerCase()); out.push(w); }
+      }
+      return out;
+    }
+
     async function addWordWallWord() {
       const input = document.getElementById('wwWordInput');
-      const word  = input.value.trim();
-      if (!word) return;
+      const words = parseWordInput(input.value);
+      if (!words.length) { input.value = ''; return; }
       input.value = '';
 
       const status = document.getElementById('wwFetchStatus');
+      status.textContent = words.length > 1 ? `Fetching ${words.length} definitions…` : 'Fetching definition…';
       status.style.display = '';
 
-      let definition = '', partOfSpeech = '', allDefs = [];
-      try {
-        const res = await fetch(`/api/define?word=${encodeURIComponent(word)}`);
-        const data = await res.json();
-        definition  = data.definition  || '';
-        partOfSpeech = data.partOfSpeech || '';
-        allDefs = data.all || [];
-      } catch {}
+      const entries = await Promise.all(words.map(async word => {
+        let definition = '', partOfSpeech = '', allDefs = [];
+        try {
+          const res = await fetch(`/api/define?word=${encodeURIComponent(word)}`);
+          const data = await res.json();
+          definition   = data.definition   || '';
+          partOfSpeech = data.partOfSpeech || '';
+          allDefs      = data.all          || [];
+        } catch {}
+        return { word, definition, partOfSpeech, _allDefs: allDefs };
+      }));
 
       status.style.display = 'none';
-      wwWords.push({ word, definition, partOfSpeech, _allDefs: allDefs });
+      wwWords.push(...entries);
       emitWwWords();
     }
 
