@@ -650,6 +650,17 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    .mat-swipe { position: relative; overflow: hidden; border-radius: 8px; margin-bottom: 5px; }
+    .mat-swipe:last-child { margin-bottom: 0; }
+    .mat-swipe .mat-row { margin-bottom: 0; }
+    .mat-row-slide { position: relative; z-index: 1; background: #0f172a; transition: transform 0.2s ease; touch-action: pan-y; }
+    .mat-del-action {
+      position: absolute; top: 0; right: 0; bottom: 0; width: 76px; z-index: 0;
+      border: none; background: #ef4444; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer;
+    }
+    .mat-grip { flex: none; display: flex; align-items: center; padding: 0 2px; color: #475569; cursor: grab; touch-action: none; user-select: none; font-size: 13px; letter-spacing: -2px; }
+    .mat-swipe.dragging { opacity: 0.6; }
+
     .mat-row { display: flex; gap: 4px; align-items: stretch; margin-bottom: 5px; }
     .mat-row:last-child { margin-bottom: 0; }
     .mat-btn { flex: 1; margin-bottom: 0; }
@@ -1519,9 +1530,16 @@
         <div class="ww-def-word" id="wwDefWord"></div>
         <div class="ww-def-pos" id="wwDefPos"></div>
       </div>
+      <button class="att-close" id="wwDefEditBtn" style="width:auto;padding:0 14px;font-size:13px;margin-right:8px;" onclick="toggleWwDefEdit()">✎ Edit</button>
       <button class="att-close" onclick="closeWwDef()">✕</button>
     </div>
     <div class="ww-def-text" id="wwDefText"></div>
+    <div id="wwDefEdit" style="display:none;padding:0 24px 22px;">
+      <div id="wwDefAlts" style="margin-bottom:10px;"></div>
+      <textarea id="wwDefTextarea" rows="3" placeholder="Type a definition…" oninput="wwDefTyped()"
+        style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#e2e8f0;font-size:18px;font-family:inherit;resize:vertical;"></textarea>
+      <div style="font-size:11px;color:#475569;margin-top:6px;">Saves automatically</div>
+    </div>
   </div>
 </div>
 
@@ -2215,7 +2233,19 @@
     }
   }
 
-  function addTime(s) { socket.emit('timer:add', s); }
+  function addTime(s) {
+    if (dispNumpadActive && !running) {
+      const total = Math.max(0, Math.min(359999, dispNumpadToSecs() + s));
+      const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), sec = total % 60;
+      dispNumpadBuf = [Math.floor(h/10), h%10, Math.floor(m/10), m%10, Math.floor(sec/10), sec%10];
+      if (total === 0) { dispNumpadClear(); return; }
+      const text = dispNumpadFmt();
+      timerNum.textContent = text;
+      scaleTimerFont(text);
+      return;
+    }
+    socket.emit('timer:add', s);
+  }
 
   function updateDeckInfo(remaining, total) {
     const el = document.getElementById('deckInfo');
@@ -2236,7 +2266,7 @@
     updateClassWidget();
     updateDeckInfo(s.deckRemaining, s.deckTotal);
     renderMaterialsWidget();
-    if (s.wordWall) { wwWords = s.wordWall.words || []; renderWwWidget(); }
+    if (s.wordWall) { wwWords = s.wordWall.words || []; wwListName = s.wordWall.listName || ''; renderWwWidget(); }
     if (s.activeBook !== undefined) renderBookWidget(s.activeBook);
   });
 
@@ -2473,12 +2503,47 @@
     { key: 'web',     label: 'Web',     bg: '#f8fafc', color: '#1a1a1a' },
   ];
 
-  function renderMaterialsWidget() {
-    const r    = allRosters[activeRosterId];
-    const body = document.getElementById('matsBody');
-    let mats   = displayMaterialsOverride;
-    if (!mats) try { mats = JSON.parse(r?.materials || '[]'); } catch { mats = []; }
+  function currentDisplayMats() {
+    if (displayMaterialsOverride) return displayMaterialsOverride;
+    try { return JSON.parse(allRosters[activeRosterId]?.materials || '[]'); } catch { return []; }
+  }
 
+  function commitMaterials(list) {
+    if (displayMaterialsOverride) {
+      displayMaterialsOverride = list;
+    } else {
+      const r = allRosters[activeRosterId];
+      if (!r) return;
+      r.materials = JSON.stringify(list);
+      socket.emit('materials:set', { id: activeRosterId, materials: r.materials });
+    }
+    renderMaterialsWidget();
+  }
+
+  function deleteMaterialAt(i) {
+    const list = currentDisplayMats();
+    const [gone] = list.splice(i, 1);
+    if (gone && iframeMap[gone.url]) {
+      iframeMap[gone.url].remove();
+      delete iframeMap[gone.url];
+      if (activeRawUrl === gone.url) {
+        activeRawUrl = '';
+        document.getElementById('slidesPlaceholder').style.display = '';
+      }
+    }
+    commitMaterials(list);
+  }
+
+  let openSwipeRow = null;
+  function closeOpenSwipe() {
+    if (openSwipeRow) { openSwipeRow.style.transform = ''; openSwipeRow = null; }
+  }
+  const SWIPE_W = 76;
+
+  function renderMaterialsWidget() {
+    const body = document.getElementById('matsBody');
+    const mats = currentDisplayMats();
+    openSwipeRow = null;
     body.innerHTML = '';
 
     if (!mats.length) {
@@ -2487,46 +2552,129 @@
       return;
     }
 
-    const byType = {};
-    mats.forEach(m => {
+    const typeTotal = {}, typeSeen = {};
+    mats.forEach(m => { const k = (m.type || 'web').toLowerCase(); typeTotal[k] = (typeTotal[k] || 0) + 1; });
+
+    mats.forEach((m, i) => {
       const k = (m.type || 'web').toLowerCase();
-      if (!byType[k]) byType[k] = [];
-      byType[k].push(m);
-    });
+      const { label, bg, color } = MAT_TYPES.find(t => t.key === k) || MAT_TYPES[MAT_TYPES.length - 1];
+      typeSeen[k] = (typeSeen[k] || 0) + 1;
+      const btnLabel = typeTotal[k] > 1 ? `${label} ${typeSeen[k]}` : label;
+      const t = (m.title || '').trim();
+      const isUrl = !t || t.startsWith('http') || t.startsWith('www.') || t.includes('://');
+      const display = isUrl ? btnLabel : t;
 
-    MAT_TYPES.forEach(({ key, label, bg, color }) => {
-      const items = byType[key] || [];
-      items.forEach((m, i) => {
-        const btnLabel = items.length > 1 ? `${label} ${i + 1}` : label;
-        const t = (m.title || '').trim();
-        const isUrl = !t || t.startsWith('http') || t.startsWith('www.') || t.includes('://');
-        const display = isUrl ? btnLabel : t;
-        const row = document.createElement('div');
-        row.className = 'mat-row';
+      const wrap = document.createElement('div');
+      wrap.className = 'mat-swipe';
+      wrap.dataset.i = i;
 
-        const btn = document.createElement('button');
-        btn.className = 'mat-btn' + (m.url === activeRawUrl ? ' mat-active' : '');
-        btn.style.cssText = `background:${bg};color:${color};border-color:${bg}`;
-        btn.textContent = display;
-        btn.onclick = () => {
-          switchToMaterial(m.url);
-          socket.emit('slides:push', m.url);
-          document.querySelectorAll('.mat-btn').forEach(b => b.classList.remove('mat-active'));
-          btn.classList.add('mat-active');
-        };
+      const del = document.createElement('button');
+      del.className = 'mat-del-action';
+      del.textContent = 'Delete';
+      del.onclick = (e) => { e.stopPropagation(); deleteMaterialAt(i); };
 
-        const rl = document.createElement('button');
-        rl.className = 'mat-reload-btn';
-        rl.textContent = '↺';
-        rl.title = 'Reload';
-        rl.onclick = () => reloadMaterial(m.url);
+      const row = document.createElement('div');
+      row.className = 'mat-row mat-row-slide';
 
-        row.appendChild(btn);
-        row.appendChild(rl);
-        body.appendChild(row);
-      });
+      const grip = document.createElement('span');
+      grip.className = 'mat-grip';
+      grip.textContent = '⋮⋮';
+
+      const btn = document.createElement('button');
+      btn.className = 'mat-btn' + (m.url === activeRawUrl ? ' mat-active' : '');
+      btn.style.cssText = `background:${bg};color:${color};border-color:${bg}`;
+      btn.textContent = display;
+      btn.onclick = () => {
+        switchToMaterial(m.url);
+        socket.emit('slides:push', m.url);
+        document.querySelectorAll('.mat-btn').forEach(b => b.classList.remove('mat-active'));
+        btn.classList.add('mat-active');
+      };
+
+      const rl = document.createElement('button');
+      rl.className = 'mat-reload-btn';
+      rl.textContent = '↺';
+      rl.title = 'Reload';
+      rl.onclick = () => reloadMaterial(m.url);
+
+      row.append(grip, btn, rl);
+      wrap.append(del, row);
+      body.appendChild(wrap);
+
+      // Keep the widget from starting a drag while interacting with a row
+      wrap.addEventListener('mousedown',  e => e.stopPropagation());
+      wrap.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+      attachSwipe(wrap, row);
+      attachReorder(grip, wrap, body);
     });
     reapplyBodyScale('mats');
+  }
+
+  document.addEventListener('pointerdown', e => {
+    if (openSwipeRow && !e.target.closest('.mat-swipe')) closeOpenSwipe();
+  });
+
+  function attachSwipe(wrap, row) {
+    let sx = 0, sy = 0, base = 0, mode = null, id = null;
+    row.addEventListener('pointerdown', e => {
+      if (e.target.closest('.mat-grip')) return;
+      if (openSwipeRow && openSwipeRow !== row) closeOpenSwipe();
+      sx = e.clientX; sy = e.clientY; base = openSwipeRow === row ? -SWIPE_W : 0; mode = null; id = e.pointerId;
+    });
+    row.addEventListener('pointermove', e => {
+      if (e.pointerId !== id) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!mode) {
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { mode = 'swipe'; row.setPointerCapture(id); row.style.transition = 'none'; }
+        else if (Math.abs(dy) > 8) { mode = 'scroll'; id = null; return; }
+        else return;
+      }
+      if (mode === 'swipe') row.style.transform = `translateX(${Math.max(-SWIPE_W, Math.min(0, base + dx))}px)`;
+    });
+    const end = e => {
+      if (e.pointerId !== id || mode !== 'swipe') { id = null; return; }
+      const dx = e.clientX - sx;
+      row.style.transition = '';
+      if (base + dx < -SWIPE_W / 2) { row.style.transform = `translateX(${-SWIPE_W}px)`; openSwipeRow = row; }
+      else { row.style.transform = ''; if (openSwipeRow === row) openSwipeRow = null; }
+      row.dataset.justSwiped = '1';
+      setTimeout(() => delete row.dataset.justSwiped, 80);
+      id = null; mode = null;
+    };
+    row.addEventListener('pointerup', end);
+    row.addEventListener('pointercancel', end);
+    // A tap on an open row only closes it; a swipe never counts as a button click
+    row.addEventListener('click', e => {
+      if (row.dataset.justSwiped) { e.stopPropagation(); e.preventDefault(); return; }
+      if (openSwipeRow === row) { e.stopPropagation(); e.preventDefault(); closeOpenSwipe(); }
+    }, true);
+  }
+
+  function attachReorder(grip, wrap, body) {
+    grip.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      closeOpenSwipe();
+      grip.setPointerCapture(e.pointerId);
+      wrap.classList.add('dragging');
+      const move = ev => {
+        const others = [...body.querySelectorAll('.mat-swipe')].filter(r => r !== wrap);
+        const after = others.find(r => ev.clientY < r.getBoundingClientRect().top + r.offsetHeight / 2);
+        if (after) body.insertBefore(wrap, after); else body.appendChild(wrap);
+      };
+      const up = () => {
+        grip.removeEventListener('pointermove', move);
+        grip.removeEventListener('pointerup', up);
+        grip.removeEventListener('pointercancel', up);
+        wrap.classList.remove('dragging');
+        const cur = currentDisplayMats();
+        const order = [...body.querySelectorAll('.mat-swipe')].map(r => +r.dataset.i);
+        if (order.some((v, k) => v !== k)) commitMaterials(order.map(k => cur[k]));
+        else renderMaterialsWidget();
+      };
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', up);
+      grip.addEventListener('pointercancel', up);
+    });
   }
 
   // ── Attendance ─────────────────────────────────────────────
@@ -3239,6 +3387,7 @@
 
   socket.on('wordwall:update', ww => {
     wwWords = ww.words || [];
+    wwListName = ww.listName || '';
     renderWwWidget();
   });
 
@@ -3284,9 +3433,65 @@
     body.scrollTop = body.scrollHeight;
   }
 
+  let wwDefIndex = -1, wwListName = '', wwDefTimer = null;
+
+  function wwSendWords() {
+    socket.emit('wordwall:set-words', { words: wwWords.map(({ _allDefs, ...r }) => r), listName: wwListName });
+  }
+
+  function wwRefreshDefView() {
+    const w = wwWords[wwDefIndex]; if (!w) return;
+    document.getElementById('wwDefPos').textContent = w.partOfSpeech || '';
+    const textEl = document.getElementById('wwDefText');
+    textEl.textContent = w.definition || 'No definition available.';
+    textEl.className   = w.definition ? 'ww-def-text' : 'ww-no-def';
+  }
+
+  function wwApplyDef(def, pos) {
+    const w = wwWords[wwDefIndex]; if (!w) return;
+    w.definition = def;
+    if (pos) w.partOfSpeech = pos;
+    wwRefreshDefView();
+    wwSendWords();
+  }
+
+  function wwDefTyped() {
+    clearTimeout(wwDefTimer);
+    wwDefTimer = setTimeout(() => wwApplyDef(document.getElementById('wwDefTextarea').value.trim()), 300);
+  }
+
+  async function toggleWwDefEdit() {
+    const panel = document.getElementById('wwDefEdit');
+    const show  = panel.style.display === 'none';
+    panel.style.display = show ? '' : 'none';
+    document.getElementById('wwDefEditBtn').textContent = show ? '✓ Done' : '✎ Edit';
+    if (!show) return;
+    const w = wwWords[wwDefIndex]; if (!w) return;
+    const ta = document.getElementById('wwDefTextarea');
+    ta.value = w.definition || '';
+    ta.focus();
+    const alts = document.getElementById('wwDefAlts');
+    alts.innerHTML = '';
+    try {
+      const idx  = wwDefIndex;
+      const data = await (await fetch(`/api/define?word=${encodeURIComponent(w.word)}`)).json();
+      if (idx !== wwDefIndex) return;
+      (data.all || []).slice(0, 6).forEach(d => {
+        const b = document.createElement('button');
+        b.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:6px;padding:8px 12px;border-radius:9px;border:1px solid #334155;background:#1e293b;color:#cbd5e1;font-size:15px;font-family:inherit;cursor:pointer;';
+        b.textContent = (d.partOfSpeech ? d.partOfSpeech + ' — ' : '') + d.definition;
+        b.onclick = () => { ta.value = d.definition; wwApplyDef(d.definition, d.partOfSpeech); };
+        alts.appendChild(b);
+      });
+    } catch {}
+  }
+
   function openWwDef(i) {
     const w = wwWords[i];
     if (!w) return;
+    wwDefIndex = i;
+    document.getElementById('wwDefEdit').style.display = 'none';
+    document.getElementById('wwDefEditBtn').textContent = '✎ Edit';
     document.getElementById('wwDefWord').textContent = w.word;
     document.getElementById('wwDefPos').textContent  = w.partOfSpeech || '';
     const textEl = document.getElementById('wwDefText');
@@ -3301,6 +3506,11 @@
   }
 
   function closeWwDef() {
+    clearTimeout(wwDefTimer);
+    const ta = document.getElementById('wwDefTextarea');
+    if (document.getElementById('wwDefEdit').style.display !== 'none' && wwWords[wwDefIndex] && ta.value.trim() !== (wwWords[wwDefIndex].definition || '')) {
+      wwApplyDef(ta.value.trim());
+    }
     document.getElementById('wwDefOverlay').classList.remove('open');
   }
 

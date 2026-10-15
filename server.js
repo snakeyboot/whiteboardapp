@@ -765,9 +765,28 @@ function startTicking() {
   }, 1000);
 }
 
+function rememberActiveRoster(id) {
+  if (!id) return;
+  pool.query("INSERT INTO app_config (key,value) VALUES ('active_roster_id',$1) ON CONFLICT (key) DO UPDATE SET value=$1", [id])
+    .catch(e => console.error('save active roster', e));
+}
+
+let wwSaveChain = Promise.resolve();
+
 // ── Sockets ───────────────────────────────────────────────
 io.on('connection', async (socket) => {
   const rosters = await getAllRosters();
+  if (!state.activeRosterId) {
+    try {
+      const { rows } = await pool.query("SELECT value FROM app_config WHERE key='active_roster_id'");
+      const savedId = rows[0]?.value;
+      if (savedId && rosters[savedId] && !rosters[savedId].archived) {
+        state.activeRosterId   = savedId;
+        state.activeRosterName = rosters[savedId].name || '';
+        if (pickDeck.length === 0) await buildDeck(savedId);
+      }
+    } catch (e) { console.error('restore active roster', e); }
+  }
   if (!state.activeRosterId || !rosters[state.activeRosterId] || rosters[state.activeRosterId].archived) {
     state.activeRosterId   = firstActiveRosterId(rosters);
     state.activeRosterName = state.activeRosterId ? (rosters[state.activeRosterId]?.name || '') : '';
@@ -901,6 +920,7 @@ io.on('connection', async (socket) => {
       const updated = await getAllRosters();
       if (!updated[state.activeRosterId]) {
         state.activeRosterId   = firstActiveRosterId(updated);
+        rememberActiveRoster(state.activeRosterId);
         state.activeRosterName = state.activeRosterId ? (updated[state.activeRosterId]?.name || '') : '';
         await buildDeck(state.activeRosterId);
       }
@@ -925,6 +945,7 @@ io.on('connection', async (socket) => {
       const switched = archived && state.activeRosterId === id;
       if (switched) {
         state.activeRosterId   = firstActiveRosterId(updated);
+        rememberActiveRoster(state.activeRosterId);
         state.activeRosterName = state.activeRosterId ? (updated[state.activeRosterId]?.name || '') : '';
         if (state.activeRosterId) {
           await buildDeck(state.activeRosterId);
@@ -939,9 +960,18 @@ io.on('connection', async (socket) => {
     } catch (e) { console.error('roster:archive', e); }
   });
 
+  socket.on('materials:set', async ({ id, materials }) => {
+    if (!id || typeof materials !== 'string') return;
+    try {
+      await pool.query('UPDATE rosters SET materials=$1 WHERE id=$2', [materials, id]);
+      io.emit('roster:all', await getAllRosters());
+    } catch (e) { console.error('materials:set', e); }
+  });
+
   socket.on('roster:activate', async (id) => {
     const changed = id !== state.activeRosterId;
     state.activeRosterId = id;
+    if (changed) rememberActiveRoster(id);
     try {
       const rosters = await getAllRosters();
       state.activeRosterName = rosters[id]?.name || '';
@@ -1001,13 +1031,13 @@ io.on('connection', async (socket) => {
   // ── Word Wall ──
   socket.on('wordwall:set-words', async (payload) => {
     state.wordWall = { words: payload.words || [], listName: payload.listName || '' };
-    io.emit('wordwall:update', state.wordWall);
-    if (state.activeRosterId) {
-      try {
-        await pool.query('UPDATE rosters SET word_wall=$1 WHERE id=$2',
-          [JSON.stringify(payload.words || []), state.activeRosterId]);
-      } catch (e) { console.error('wordwall persist', e); }
+    const rosterId = state.activeRosterId, json = JSON.stringify(state.wordWall.words);
+    if (rosterId) {
+      wwSaveChain = wwSaveChain.then(() => pool.query('UPDATE rosters SET word_wall=$1 WHERE id=$2', [json, rosterId]))
+        .catch(e => { console.error('wordwall persist', e); socket.emit('wordwall:save-failed'); });
+      await wwSaveChain;
     }
+    io.emit('wordwall:update', state.wordWall);
   });
 
   socket.on('wordwall:save-list', async ({ id, name, words }) => {

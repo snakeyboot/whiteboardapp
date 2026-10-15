@@ -223,6 +223,9 @@
     }
 
 
+    .mat-grip { cursor: grab; color: #475569; padding: 0 6px 0 0; touch-action: none; user-select: none; font-size: 13px; letter-spacing: -2px; flex: none; }
+    .material-row.dragging { opacity: 0.55; background: #1e293b; }
+
     /* ── Forced Groups ── */
     .fg-row {
       display: flex; align-items: center; gap: 8px;
@@ -1407,7 +1410,17 @@
       socket.emit('timer:reset');
     }
 
-    function addTime(secs) { socket.emit('timer:add', secs); }
+    function addTime(secs) {
+      if (numpadActive && !timerRunning) {
+        const total = Math.max(0, Math.min(359999, numpadToSeconds() + secs));
+        const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+        numpadBuf = [Math.floor(h/10), h%10, Math.floor(m/10), m%10, Math.floor(s/10), s%10];
+        numpadActive = total > 0;
+        updateTimerDisplay();
+        return;
+      }
+      socket.emit('timer:add', secs);
+    }
 
     socket.on('state', (s) => {
       timerDuration  = s.timer.duration;
@@ -1920,7 +1933,8 @@
       const el    = document.getElementById('materialsListEl');
       if (!list.length) { el.innerHTML = '<p style="color:#475569;font-size:12px;padding:4px 0">No materials yet.</p>'; return; }
       el.innerHTML = list.map((m, i) => `
-        <div class="material-row">
+        <div class="material-row" data-i="${i}">
+          <span class="mat-grip" title="Drag to reorder">⋮⋮</span>
           <span class="mat-type-badge mat-${m.type}">${m.type.toUpperCase()}</span>
           <span class="mat-title">${escHtml(m.title || m.url)}</span>
           <div class="mat-btns">
@@ -1932,6 +1946,34 @@
           </div>
         </div>`).join('');
     }
+
+    // Drag the grip to reorder; commits the new order on release
+    document.addEventListener('pointerdown', (e) => {
+      const grip = e.target.closest('.mat-grip');
+      if (!grip) return;
+      const row = grip.closest('.material-row'), list = row.parentElement;
+      e.preventDefault();
+      grip.setPointerCapture(e.pointerId);
+      row.classList.add('dragging');
+      const move = (ev) => {
+        const rows = [...list.querySelectorAll('.material-row')].filter(r => r !== row);
+        const after = rows.find(r => ev.clientY < r.getBoundingClientRect().top + r.offsetHeight / 2);
+        if (after) list.insertBefore(row, after); else list.appendChild(row);
+      };
+      const up = () => {
+        grip.removeEventListener('pointermove', move);
+        grip.removeEventListener('pointerup', up);
+        grip.removeEventListener('pointercancel', up);
+        row.classList.remove('dragging');
+        const cur = getMaterials();
+        const order = [...list.querySelectorAll('.material-row')].map(r => +r.dataset.i);
+        if (order.some((v, k) => v !== k)) saveMaterials(order.map(k => cur[k]));
+        renderMaterials();
+      };
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', up);
+      grip.addEventListener('pointercancel', up);
+    });
 
     function copyMatUrl(i) {
       const list = getMaterials();
@@ -2500,9 +2542,14 @@
     }
 
     socket.on('wordwall:update', (ww) => {
-      wwWords = ww.words || [];
-      renderWwWordList();
+      const old = wwWords;
+      wwWords = (ww.words || []).map(w => {
+        const prev = old.find(o => o.word === w.word);
+        return prev?._allDefs ? { ...w, _allDefs: prev._allDefs } : w;
+      });
+      if (wwEditingIndex < 0) renderWwWordList();
     });
+    socket.on('wordwall:save-failed', () => alert('Could not save the word wall. Please try again.'));
 
     socket.on('wordlists:all', (lists) => {
       allWordLists = lists || [];
@@ -2540,10 +2587,10 @@
       return `
         <div class="ww-def-panel" id="wwDefPanel_${i}">
           ${opts.length ? `<div class="ww-def-options">${opts}</div>` : ''}
-          <textarea class="ww-def-custom" id="wwDefCustom_${i}" placeholder="Custom definition…">${escHtml(w.definition || '')}</textarea>
+          <textarea class="ww-def-custom" id="wwDefCustom_${i}" placeholder="Custom definition…" oninput="wwDefTyped(${i})">${escHtml(w.definition || '')}</textarea>
           <div class="ww-def-panel-btns">
-            <button class="btn btn-gray btn-sm" onclick="closeDefEditor()">Cancel</button>
-            <button class="btn btn-blue btn-sm" onclick="saveDefEditor(${i})">Save</button>
+            <span style="flex:1;font-size:11px;color:#475569;align-self:center;">Saves automatically</span>
+            <button class="btn btn-blue btn-sm" onclick="saveDefEditor(${i})">Done</button>
           </div>
         </div>
       `;
@@ -2577,14 +2624,32 @@
       document.querySelectorAll(`#wwDefPanel_${i} .ww-def-option`).forEach((el, idx) => {
         el.classList.toggle('selected', idx === j);
       });
+      clearTimeout(wwDefTimer);
+      wwWords[i].definition = d.definition;
+      if (d.partOfSpeech) wwWords[i].partOfSpeech = d.partOfSpeech;
+      emitWwWords();
+    }
+
+    let wwDefTimer = null;
+    function wwDefTyped(i) {
+      clearTimeout(wwDefTimer);
+      wwDefTimer = setTimeout(() => {
+        const ta = document.getElementById(`wwDefCustom_${i}`);
+        if (!ta || !wwWords[i]) return;
+        wwWords[i].definition = ta.value.trim();
+        emitWwWords();
+      }, 300);
     }
 
     function saveDefEditor(i) {
+      clearTimeout(wwDefTimer);
       const ta = document.getElementById(`wwDefCustom_${i}`);
-      if (!ta) return;
-      wwWords[i].definition = ta.value.trim();
+      if (ta && wwWords[i]) {
+        wwWords[i].definition = ta.value.trim();
+        emitWwWords();
+      }
       wwEditingIndex = -1;
-      emitWwWords();
+      renderWwWordList();
     }
 
     function emitWwWords(listName) {
