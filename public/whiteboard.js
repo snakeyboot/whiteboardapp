@@ -84,12 +84,13 @@
 
   const stamp = () => new Date().toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-  function create({ socket, host, variant, onMode, barHost }) {
+  function create({ socket, host, variant, onMode, barHost, onClose }) {
     const S = { pages: [], cur: 0, mode: 'slides', tool: 'pen', color: 0, size: 1, live: {}, erasing: null };
     host.classList.add('wb-root');
     if (variant) host.classList.add('wb-' + variant);
     host.innerHTML = `
       <div class="wb-toolbar">
+        <div class="wb-group wb-closeg"><button class="wb-btn wb-close" data-act="close" title="Close whiteboard">✕ Close</button></div>
         <div class="wb-group wb-modes">${MODES.map(([k, l]) => `<button class="wb-btn" data-mode="${k}">${l}</button>`).join('')}</div>
         <div class="wb-more">
         <div class="wb-group">
@@ -120,6 +121,7 @@
           <canvas class="wb-bgc"></canvas><canvas class="wb-ink"></canvas><canvas class="wb-livec"></canvas>
         </div>
       </div>
+      <div class="wb-rotate">Turn your device sideways for a bigger board</div>
       <div class="wb-saved" hidden>
         <div class="wb-saved-box">
           <div class="wb-saved-head"><span>Saved boards</span><button class="wb-btn" data-act="saved-close">✕</button></div>
@@ -138,11 +140,23 @@
 
     const page = () => S.pages[S.cur];
 
+    function layoutClasses() {
+      const fs = host.classList.contains('wb-fullscreen');
+      const land = window.innerWidth > window.innerHeight;
+      host.classList.toggle('wb-strip', fs && land);
+      host.classList.toggle('wb-portrait', fs && !land);
+    }
+
     function fit() {
+      layoutClasses();
       const r = stage.getBoundingClientRect();
-      const topPad = (barHost || S.mode === 'annotate') ? 0 : bar.offsetHeight + 16;
+      const strip = host.classList.contains('wb-strip');
+      const topPad = (barHost || strip || S.mode === 'annotate') ? 0 : bar.offsetHeight + 16;
+      const leftPad = strip ? bar.offsetWidth + 10 : 0;
+      const rightPad = parseFloat(getComputedStyle(stage).paddingRight) || 0;
       stage.style.paddingTop = topPad + 'px';
-      const availW = r.width, availH = r.height - topPad;
+      stage.style.paddingLeft = leftPad + 'px';
+      const availW = r.width - leftPad - rightPad, availH = r.height - topPad;
       if (availW < 40 || availH < 40) return false;
       const w = Math.min(availW, availH * LW / LH), h = w * LH / LW;
       surface.style.width = w + 'px'; surface.style.height = h + 'px';
@@ -167,14 +181,44 @@
       const pg = page(); if (!pg) return;
       pg.strokes.forEach(s => { if (!S.erasing || !S.erasing.has(s.id)) drawStroke(ctx, s); });
     }
-    let liveRaf = 0;
+    let liveRaf = 0, fullLive = true, inc = null;
+
+    // Opaque pen strokes only paint their newest segments; everything else repaints in full
+    function drawIncremental(st) {
+      const ctx = livec.getContext('2d');
+      ctx.setTransform(livec.width / LW, 0, 0, livec.height / LH, 0, 0);
+      ctx.save();
+      ctx.strokeStyle = st.c; ctx.lineWidth = st.w; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const p = st.p;
+      for (let i = inc.idx; i < p.length; i++) {
+        ctx.beginPath();
+        if (i === 1) {
+          ctx.moveTo(p[0][0], p[0][1]);
+          ctx.lineTo((p[0][0] + p[1][0]) / 2, (p[0][1] + p[1][1]) / 2);
+        } else {
+          const a = p[i - 2], b = p[i - 1], c = p[i];
+          ctx.moveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+          ctx.quadraticCurveTo(b[0], b[1], (b[0] + c[0]) / 2, (b[1] + c[1]) / 2);
+        }
+        ctx.stroke();
+      }
+      inc.idx = p.length;
+      ctx.restore();
+    }
+
     function redrawLive() {
       liveRaf = 0;
+      const mine = active && active.type === 'draw' ? active.st : null;
+      const others = Object.values(S.live).some(s => s !== mine);
+      if (!fullLive && mine && mine.a === 1 && !others && inc && inc.id === mine.id) { drawIncremental(mine); return; }
+      fullLive = false;
       const ctx = prep(livec);
       Object.values(S.live).forEach(s => drawStroke(ctx, s));
+      inc = (mine && mine.a === 1 && !others) ? { id: mine.id, idx: mine.p.length } : null;
     }
     const schedLive = () => { if (!liveRaf) liveRaf = requestAnimationFrame(redrawLive); };
-    function redrawAll() { if (fit()) { redrawBg(); redrawInk(); redrawLive(); } }
+    const liveFull = () => { fullLive = true; redrawLive(); };
+    function redrawAll() { if (fit()) { redrawBg(); redrawInk(); liveFull(); } }
 
     function updateUI() {
       host.classList.toggle('wb-annotate', S.mode === 'annotate');
@@ -206,7 +250,7 @@
         op.strokes.forEach(s => { if (!pg.strokes.some(x => x.id === s.id)) pg.strokes.push(s); });
         pg.strokes.sort(byN);
       }
-      if (pg && pg === page()) { redrawInk(); redrawLive(); }
+      if (pg && pg === page()) { redrawInk(); liveFull(); }
     }
 
     socket.on('board:state', (st) => {
@@ -237,8 +281,7 @@
     let active = null, lastPen = 0, pendingPts = [], flushTimer = 0;
     const toolStyle = () => S.tool === 'hl' ? HL : { c: COLORS[S.color], a: 1, w: SIZES[S.size] };
 
-    function pt(e) {
-      const r = surface.getBoundingClientRect();
+    function pt(e, r) {
       return [(e.clientX - r.left) / r.width * LW, (e.clientY - r.top) / r.height * LH];
     }
 
@@ -265,18 +308,20 @@
       if (active || (e.pointerType === 'mouse' && e.button !== 0) || !page()) return;
       e.preventDefault();
       try { surface.setPointerCapture(e.pointerId); } catch (_) {}
-      const p = pt(e);
+      const rect = surface.getBoundingClientRect();
+      const p = pt(e, rect);
       if (S.tool === 'eraser') {
-        active = { pid: e.pointerId, type: 'erase' };
+        active = { pid: e.pointerId, type: 'erase', rect };
         S.erasing = new Set();
         eraseAt(p);
       } else {
         const t = toolStyle();
         const st = { id: rid('s_'), c: t.c, w: t.w, a: t.a, p: [p] };
         S.live[st.id] = st;
-        active = { pid: e.pointerId, type: 'draw', st, page: page().id };
+        active = { pid: e.pointerId, type: 'draw', st, page: page().id, rect };
         pendingPts = [p];
         flushTimer = flushTimer || setTimeout(flushLive, 50);
+        fullLive = true; inc = null;
         schedLive();
       }
     });
@@ -285,7 +330,7 @@
       if (!active || e.pointerId !== active.pid) return;
       const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
       (evs.length ? evs : [e]).forEach(ev => {
-        const p = pt(ev);
+        const p = pt(ev, active.rect);
         if (active.type === 'erase') { eraseAt(p); return; }
         const last = active.st.p[active.st.p.length - 1];
         if (Math.hypot(p[0] - last[0], p[1] - last[1]) >= 1.5) {
@@ -311,6 +356,7 @@
         if (pg) pg.strokes.push(a.st);
         socket.emit('board:stroke', { page: a.page, stroke: a.st });
         if (pg === page()) redrawInk();
+        fullLive = true; inc = null;
         schedLive();
       }
     }
@@ -369,6 +415,7 @@
         case 'clear': if (pg && pg.strokes.length) socket.emit('board:clear', { page: pg.id, name: stamp() }); break;
         case 'saved': savedPanel.hidden = false; loadSaved(); break;
         case 'saved-close': savedPanel.hidden = true; break;
+        case 'close': if (onClose) onClose(); break;
       }
     };
     host.addEventListener('click', onClick);
@@ -376,7 +423,13 @@
 
     if (window.ResizeObserver) { const ro = new ResizeObserver(() => redrawAll()); ro.observe(stage); if (!barHost) ro.observe(bar); }
     updateUI();
-    return { refresh: redrawAll, getMode: () => S.mode };
+    window.addEventListener('resize', () => redrawAll());
+    window.addEventListener('orientationchange', () => setTimeout(redrawAll, 200));
+    return {
+      refresh: redrawAll,
+      getMode: () => S.mode,
+      setFullscreen(on) { host.classList.toggle('wb-fullscreen', !!on); requestAnimationFrame(redrawAll); },
+    };
   }
 
   window.Whiteboard = { create };

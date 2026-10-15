@@ -4,8 +4,8 @@
 .wb-toolbar {
   position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 3;
   display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: calc(100% - 16px);
-  padding: 6px 8px; background: rgba(15, 23, 42, 0.94); border: 1px solid #334155; border-radius: 14px;
-  backdrop-filter: blur(10px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); pointer-events: auto;
+  padding: 6px 8px; background: #0f172a; border: 1px solid #334155; border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); pointer-events: auto;
 }
 .wb-group { display: flex; align-items: center; gap: 4px; }
 .wb-toolbar { column-gap: 14px; }
@@ -62,3 +62,26 @@
 .wb-saved-name { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
 .wb-saved-btns { display: flex; flex-wrap: wrap; gap: 6px; }
 .wb-empty { padding: 24px 4px; color: #64748b; font-size: 13px; text-align: center; }
+
+/* ── Full-screen mode (iPhone / iPad) ── */
+.wb-close { display: none; }
+.wb-fullscreen .wb-close { display: inline-flex; align-items: center; }
+.wb-fullscreen .wb-stage { padding-right: env(safe-area-inset-right); }
+.wb-rotate { display: none; position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 7px 14px; border-radius: 999px; background: rgba(15, 23, 42, 0.92); border: 1px solid #334155; color: #94a3b8; font-size: 12px; font-weight: 600; pointer-events: none; white-space: nowrap; z-index: 4; }
+.wb-portrait .wb-rotate { display: block; }
+
+.wb-strip .wb-toolbar {
+  top: 0; left: 0; bottom: 0; transform: none; max-width: none; width: 176px;
+  padding: 8px 8px 8px max(8px, env(safe-area-inset-left)); border-radius: 0 14px 14px 0; border-left: none;
+  display: grid; grid-template-columns: repeat(4, 1fr); align-content: start; gap: 5px;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.wb-strip .wb-group, .wb-strip .wb-more { display: contents; }
+.wb-strip .wb-group > :first-child { grid-column-start: 1; }
+.wb-strip .wb-close { grid-column-end: span 4; justify-content: center; }
+.wb-strip .wb-modes .wb-btn { grid-column-end: span 2; padding: 0; min-width: 0; font-size: 12px; }
+.wb-strip .wb-btn { min-width: 0; padding: 0; justify-content: center; }
+.wb-strip .wb-swatch { width: 28px; height: 28px; justify-self: center; align-self: center; }
+.wb-strip .wb-size { width: 100%; }
+.wb-strip .wb-page { text-align: center; min-width: 0; font-size: 12px; }
+.wb-strip .wb-danger, .wb-strip [data-act="saved"] { grid-column-end: span 2; }

@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SmarterBoard">
   <title>SmarterBoard Controller</title>
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -328,6 +332,13 @@
     .save-status.saved { color: #22c55e; }
 
     /* ── Modals (shared) ── */
+    html { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+    html.board-open, html.board-open body { overflow: hidden; overscroll-behavior: none; }
+    #boardOverlay.wb-full { padding: 0; background: #0b1220; align-items: stretch; justify-content: stretch; }
+    #boardOverlay.wb-full .modal { width: 100vw !important; height: 100vh !important; max-width: none !important; max-height: none !important; border-radius: 0 !important; border: none !important; }
+    @supports (height: 100dvh) { #boardOverlay.wb-full .modal { height: 100dvh !important; } }
+    #boardOverlay.wb-full .modal-header { display: none; }
+    html:has(#boardOverlay.wb-full.open) { padding: 0; }
     .overlay {
       display: none;
       position: fixed;
@@ -1296,7 +1307,8 @@
   <script src="/whiteboard.js"></script>
   <script>
     const socket = io();
-    const boardApi = Whiteboard.create({ socket, host: document.getElementById('boardHostCtl'), variant: 'controller' });
+    const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const boardApi = Whiteboard.create({ socket, host: document.getElementById('boardHostCtl'), variant: 'controller', onClose: () => closeBoardModal() });
     const dot = document.getElementById('dot');
     socket.on('connect',    () => dot.classList.remove('disconnected'));
     socket.on('disconnect', () => dot.classList.add('disconnected'));
@@ -1761,10 +1773,29 @@
 
     // ── Whiteboard ─────────────────────────────────────────
     function openBoardModal() {
-      document.getElementById('boardOverlay').classList.add('open');
+      const ov = document.getElementById('boardOverlay');
+      ov.classList.add('open');
+      document.documentElement.classList.add('board-open');
+      if (IS_IOS) {
+        ov.classList.add('wb-full');
+        boardApi.setFullscreen(true);
+        try {
+          const req = ov.requestFullscreen || ov.webkitRequestFullscreen;
+          if (req) { const r = req.call(ov); if (r && r.catch) r.catch(() => {}); }
+        } catch (_) {}
+      }
       setTimeout(() => boardApi.refresh(), 30);
     }
-    function closeBoardModal() { document.getElementById('boardOverlay').classList.remove('open'); }
+    function closeBoardModal() {
+      const ov = document.getElementById('boardOverlay');
+      ov.classList.remove('open', 'wb-full');
+      document.documentElement.classList.remove('board-open');
+      boardApi.setFullscreen(false);
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+      } catch (_) {}
+    }
 
     // ── Groups / Awards modals ─────────────────────────────
     function openGroupsModal()  { renderForcedGroupsCard(); document.getElementById('groupsOverlay').classList.add('open'); }
