@@ -1023,7 +1023,7 @@
     .sp-disp-btn.sp-disp-play:hover { background: #1ed760; }
 
     /* ── Settings button ── */
-    #settingsBtn, #snapBtn, #fsBtn, #appBtn, #boardBtn {
+    #settingsBtn, #snapBtn, #fsBtn, #appBtn {
       position: fixed;
       bottom: 16px;
       z-index: 50;
@@ -1047,8 +1047,6 @@
     #snapBtn     { right: 54px; }
     #fsBtn       { right: 92px; }
     #appBtn      { right: 130px; }
-    #boardBtn    { right: 168px; }
-    #boardBtn.on { color: #93c5fd; border-color: #3b82f6; }
 
     /* ── Whiteboard overlay ── */
     #boardHost { position: fixed; top: 0; bottom: 0; left: 0; right: 0; z-index: 5; display: none; background: #0b1220; }
@@ -1056,7 +1054,7 @@
     body.bm-split #boardHost { left: 50%; }
     body.bm-split .slides-bg { right: 50%; }
     body.bm-annotate #boardHost { background: transparent; }
-    #settingsBtn:hover, #snapBtn:hover, #fsBtn:hover, #appBtn:hover, #boardBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
+    #settingsBtn:hover, #snapBtn:hover, #fsBtn:hover, #appBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
     #settingsBtn.active { color: #94a3b8; border-color: #64748b; background: rgba(15,23,42,0.95); }
 
     #settingsPanel {
@@ -1387,6 +1385,18 @@
 
 <!-- Whiteboard -->
 <div id="boardHost"></div>
+
+<!-- Whiteboard toolbar widget (permanent) -->
+<div class="widget" id="boardWidget">
+  <div class="widget-handle" id="boardHandle">
+    <div class="grip">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <div class="widget-label">Whiteboard</div>
+  </div>
+  <div class="widget-body" style="padding:10px;" id="boardBarBody"></div>
+</div>
 
 <!-- Class Widget -->
 <div class="widget" id="classWidget">
@@ -1804,8 +1814,6 @@
   </svg>
 </button>
 
-<button id="boardBtn" onclick="toggleBoard()" title="Whiteboard">✎</button>
-
 <button id="appBtn" onclick="openAppWindow()" title="Open in app window (no address bar)">
   <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4">
     <rect x="1" y="2" width="11" height="9" rx="1.5"/><path d="M1 4.5h11"/>
@@ -1842,14 +1850,14 @@
   let boardModeNow = 'slides';
   const boardApi = Whiteboard.create({
     socket, host: document.getElementById('boardHost'), variant: 'display',
+    barHost: document.getElementById('boardBarBody'),
     onMode: (m) => {
       boardModeNow = m;
       document.body.classList.remove('bm-slides', 'bm-board', 'bm-split', 'bm-annotate');
       document.body.classList.add('bm-' + m);
-      document.getElementById('boardBtn')?.classList.toggle('on', m !== 'slides');
+      if (typeof reapplyBodyScale === 'function') setTimeout(() => reapplyBodyScale('board'), 0);
     },
   });
-  function toggleBoard() { socket.emit('board:mode', boardModeNow === 'slides' ? 'board' : 'slides'); }
 
   // ── Class roster state ─────────────────────────────────────
   let allRosters    = {};
@@ -2060,6 +2068,8 @@
     const sw = document.getElementById('spotifyWidget');
     makeDraggable(sw, document.getElementById('spotifyHandle'),    'spotify',  16, 16);
     const bw = document.getElementById('bookWidget');
+    const bdw = document.getElementById('boardWidget');
+    makeDraggable(bdw, document.getElementById('boardHandle'),     'board',    window.innerWidth - bdw.offsetWidth - 16, 16);
     makeDraggable(bw, document.getElementById('bookHandle'),       'book',     Math.round((window.innerWidth - bw.offsetWidth) / 2), window.innerHeight - bw.offsetHeight - 16);
     tickClock();           // populate clock content before measuring heights
     applyWidgetVisibility();
@@ -3583,6 +3593,7 @@
     { key: 'order',    label: 'Order',     id: 'orderWidget'    },
     { key: 'spotify',  label: 'Spotify',   id: 'spotifyWidget'  },
     { key: 'book',     label: 'Reading',   id: 'bookWidget'     },
+    { key: 'board',    label: 'Whiteboard', id: 'boardWidget'   },
   ];
 
   const VIS_KEY   = 'croom_widget_vis_v1';

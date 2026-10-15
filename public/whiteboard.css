@@ -7,8 +7,8 @@
   padding: 6px 8px; background: rgba(15, 23, 42, 0.94); border: 1px solid #334155; border-radius: 14px;
   backdrop-filter: blur(10px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); pointer-events: auto;
 }
-.wb-group { display: flex; align-items: center; gap: 4px; padding-right: 6px; border-right: 1px solid #334155; }
-.wb-group:last-child { border-right: none; padding-right: 0; }
+.wb-group { display: flex; align-items: center; gap: 4px; }
+.wb-toolbar { column-gap: 14px; }
 .wb-btn {
   min-width: 34px; height: 34px; padding: 0 10px; border-radius: 9px; border: 1px solid #334155;
   background: #1e293b; color: #cbd5e1; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
@@ -34,9 +34,21 @@
 .wb-root.wb-annotate .wb-surface { background: repeating-conic-gradient(#1e293b 0% 25%, #172033 0% 50%) 50% / 24px 24px; box-shadow: none; }
 .wb-root.wb-display.wb-annotate { pointer-events: none; }
 .wb-root.wb-display.wb-annotate .wb-surface { background: none; }
-.wb-display .wb-btn { min-width: 40px; height: 40px; font-size: 14px; }
-.wb-display .wb-size, .wb-display .wb-swatch { transform: scale(1.1); }
-.wb-toolbar.wb-floating { position: fixed; z-index: 20; }
+.wb-more { display: contents; }
+.wb-btn.wb-ico { display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; }
+
+/* Toolbar living inside the display's permanent widget */
+.wb-toolbar.wb-inline { position: static; transform: none; max-width: none; flex-direction: column; flex-wrap: nowrap; gap: 6px; padding: 0; background: none; border: none; box-shadow: none; backdrop-filter: none; }
+.wb-inline .wb-more { display: flex; flex-direction: column; gap: 6px; }
+.wb-inline.wb-slides .wb-more { display: none; }
+.wb-inline .wb-group { width: 100%; justify-content: space-between; gap: 3px; padding: 0; border: none; }
+.wb-inline .wb-group { flex-wrap: nowrap; }
+.wb-inline .wb-modes .wb-btn { padding: 0 1px; font-size: 10px; letter-spacing: -0.2px; }
+.wb-inline .wb-btn { flex: 1; min-width: 0; height: 30px; padding: 0 4px; font-size: 11px; }
+.wb-inline .wb-btn.wb-ico { padding: 0; }
+.wb-inline .wb-swatch { width: 22px; height: 22px; flex: none; }
+.wb-inline .wb-size { width: 28px; height: 28px; flex: none; }
+.wb-inline .wb-page { flex: 1; min-width: 0; font-size: 12px; }
 
 .wb-saved { position: absolute; inset: 0; z-index: 5; background: rgba(2, 6, 23, 0.78); display: flex; align-items: center; justify-content: center; pointer-events: auto; }
 .wb-saved[hidden] { display: none; }

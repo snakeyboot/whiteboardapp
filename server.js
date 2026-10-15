@@ -799,7 +799,7 @@ function getBoard(rosterId) {
         const { rows } = await pool.query('SELECT data FROM whiteboards WHERE roster_id=$1', [rosterId]);
         if (rows[0]) b = JSON.parse(rows[0].data);
       } catch (e) { console.error('board load', e); }
-      if (!b || !Array.isArray(b.pages) || !b.pages.length) b = { pages: [{ id: bid('pg_'), bg: 'blank', strokes: [] }], cur: 0, seq: 0 };
+      if (!b || !Array.isArray(b.pages) || !b.pages.length) b = { pages: [{ id: bid('pg_'), bg: 'lined', strokes: [] }], cur: 0, seq: 0 };
       b.seq = b.seq || 0;
       b.cur = Math.min(Math.max(b.cur || 0, 0), b.pages.length - 1);
       b.pages.forEach(p => { p.undo = []; p.redo = []; });
@@ -1182,7 +1182,7 @@ io.on('connection', async (socket) => {
   }));
 
   socket.on('board:pageAdd', () => boardOp(async (b) => {
-    const page = { id: bid('pg_'), bg: b.pages[b.cur]?.bg || 'blank', strokes: [], undo: [], redo: [] };
+    const page = { id: bid('pg_'), bg: b.pages[b.cur]?.bg || 'lined', strokes: [], undo: [], redo: [] };
     b.pages.splice(b.cur + 1, 0, page);
     b.cur += 1;
     io.emit('board:state', boardSnapshot(b));
