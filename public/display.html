@@ -1023,7 +1023,7 @@
     .sp-disp-btn.sp-disp-play:hover { background: #1ed760; }
 
     /* ── Settings button ── */
-    #settingsBtn, #snapBtn, #fsBtn, #appBtn {
+    #settingsBtn, #snapBtn, #fsBtn, #appBtn, #gestBtn {
       position: fixed;
       bottom: 16px;
       z-index: 50;
@@ -1047,6 +1047,17 @@
     #snapBtn     { right: 54px; }
     #fsBtn       { right: 92px; }
     #appBtn      { right: 130px; }
+    #gestBtn     { right: 168px; }
+    #gestBtn.on  { color: #93c5fd; border-color: #3b82f6; background: rgba(30,58,95,0.9); }
+
+    /* ── Two-finger gesture layer over the slides ── */
+    #slideGesture { position: absolute; inset: 0; z-index: 4; display: none; touch-action: none; background: transparent; }
+    #slideGestureHint {
+      position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+      padding: 6px 14px; border-radius: 999px; background: rgba(15,23,42,0.85); border: 1px solid #334155;
+      color: #94a3b8; font-size: 12px; font-weight: 600; pointer-events: none; opacity: 0; transition: opacity 0.25s;
+    }
+    #slideGestureHint.show { opacity: 1; }
 
     /* ── Whiteboard overlay ── */
     #boardHost { position: fixed; top: 0; bottom: 0; left: 0; right: 0; z-index: 5; display: none; background: #0b1220; }
@@ -1054,7 +1065,7 @@
     body.bm-split #boardHost { left: 50%; }
     body.bm-split .slides-bg { right: 50%; }
     body.bm-annotate #boardHost { background: transparent; }
-    #settingsBtn:hover, #snapBtn:hover, #fsBtn:hover, #appBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
+    #settingsBtn:hover, #snapBtn:hover, #fsBtn:hover, #appBtn:hover, #gestBtn:hover { color: #64748b; border-color: #475569; background: rgba(15,23,42,0.9); }
     #settingsBtn.active { color: #94a3b8; border-color: #64748b; background: rgba(15,23,42,0.95); }
 
     #settingsPanel {
@@ -1380,6 +1391,7 @@
       <img src="/images/oops.png" alt="">
       <p>Oops! No slideshow loaded</p>
     </div>
+    <div id="slideGesture"><div id="slideGestureHint"></div></div>
   </div>
 </div>
 
@@ -1814,6 +1826,8 @@
   </svg>
 </button>
 
+<button id="gestBtn" onclick="toggleGesture()" title="Two-finger swipe: next/previous slide, scroll">✋</button>
+
 <button id="appBtn" onclick="openAppWindow()" title="Open in app window (no address bar)">
   <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4">
     <rect x="1" y="2" width="11" height="9" rx="1.5"/><path d="M1 4.5h11"/>
@@ -1855,6 +1869,7 @@
       boardModeNow = m;
       document.body.classList.remove('bm-slides', 'bm-board', 'bm-split', 'bm-annotate');
       document.body.classList.add('bm-' + m);
+      if (typeof updateGestureLayer === 'function') updateGestureLayer();
       if (typeof reapplyBodyScale === 'function') setTimeout(() => reapplyBodyScale('board'), 0);
     },
   });
@@ -2497,6 +2512,85 @@
     activeRawUrl = rawUrl;
     applyMatZoom();
   }
+
+  // ── Two-finger gestures over the slide area ───────────────
+  let gestureOn = false;
+  const gestLayer = document.getElementById('slideGesture');
+  const gestHint  = document.getElementById('slideGestureHint');
+  let gestHintTimer = null;
+
+  function gestToast(msg) {
+    gestHint.textContent = msg;
+    gestHint.classList.add('show');
+    clearTimeout(gestHintTimer);
+    gestHintTimer = setTimeout(() => gestHint.classList.remove('show'), 1800);
+  }
+
+  function updateGestureLayer() {
+    const show = gestureOn && boardModeNow !== 'board' && boardModeNow !== 'annotate';
+    gestLayer.style.display = show ? 'block' : 'none';
+    document.getElementById('gestBtn').classList.toggle('on', gestureOn);
+  }
+
+  function toggleGesture() {
+    gestureOn = !gestureOn;
+    updateGestureLayer();
+    if (gestureOn) gestToast('Gestures on: two fingers to flip or scroll');
+  }
+
+  function activeIsSlides() {
+    const base = embedBaseMap[activeRawUrl];
+    return !!base && base.includes('docs.google.com/presentation');
+  }
+
+  function gestureNext(dir) {
+    if (!activeIsSlides()) return;
+    socket.emit(dir > 0 ? 'slides:next' : 'slides:prev');
+  }
+
+  function gestureScroll(dy) {
+    const iframe = iframeMap[activeRawUrl];
+    if (!iframe) return;
+    try {
+      iframe.contentWindow.scrollBy(0, dy);
+      if (!iframe.contentDocument) throw new Error('blocked');
+    } catch (_) {
+      gestToast("This item can't be scrolled by gesture");
+    }
+  }
+
+  (function initGestures() {
+    let g = null; // {sx, sy, lastY, mode, fired}
+    const centroid = (t) => ({ x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 });
+    gestLayer.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (e.touches.length >= 2 && !g) {
+        const c = centroid(e.touches);
+        g = { sx: c.x, sy: c.y, lastY: c.y, mode: null, fired: false };
+      }
+    }, { passive: false });
+    gestLayer.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (!g || e.touches.length < 2) return;
+      const c = centroid(e.touches);
+      const dx = c.x - g.sx, dy = c.y - g.sy;
+      if (!g.mode && Math.max(Math.abs(dx), Math.abs(dy)) > 14) g.mode = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+      if (g.mode === 'v') { gestureScroll(g.lastY - c.y); g.lastY = c.y; }
+      else if (g.mode === 'h' && !g.fired && Math.abs(dx) > 70) { g.fired = true; gestureNext(dx < 0 ? 1 : -1); }
+    }, { passive: false });
+    const end = (e) => { e.preventDefault(); if (e.touches.length === 0) g = null; };
+    gestLayer.addEventListener('touchend', end, { passive: false });
+    gestLayer.addEventListener('touchcancel', end, { passive: false });
+
+    // Trackpad / mouse-wheel equivalent
+    let wheelCool = 0;
+    gestLayer.addEventListener('wheel', e => {
+      e.preventDefault();
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        if (Math.abs(e.deltaX) > 20 && Date.now() > wheelCool) { wheelCool = Date.now() + 700; gestureNext(e.deltaX > 0 ? 1 : -1); }
+      } else gestureScroll(e.deltaY);
+    }, { passive: false });
+  })();
 
   function navigateToSlide(n) {
     const iframe  = iframeMap[activeRawUrl];
