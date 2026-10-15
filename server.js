@@ -376,6 +376,17 @@ async function initDB() {
   `);
   await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS word_wall TEXT DEFAULT '[]'`);
   await pool.query(`ALTER TABLE rosters ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT FALSE`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS whiteboards (roster_id TEXT PRIMARY KEY, data TEXT NOT NULL)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS whiteboard_saves (
+      id TEXT PRIMARY KEY,
+      roster_id TEXT NOT NULL,
+      name TEXT,
+      bg TEXT,
+      strokes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS app_config (
       key TEXT PRIMARY KEY,
@@ -771,6 +782,84 @@ function rememberActiveRoster(id) {
     .catch(e => console.error('save active roster', e));
 }
 
+// ── Whiteboard ────────────────────────────────────────────
+let boardMode = 'slides';
+const boards = {};      // rosterId → Promise<board>
+const boardTimers = {};
+const BOARD_BGS = ['blank', 'grid', 'lined'];
+const BOARD_MODES = ['slides', 'board', 'split', 'annotate'];
+const bid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+function getBoard(rosterId) {
+  if (!rosterId) return Promise.resolve(null);
+  if (!boards[rosterId]) {
+    boards[rosterId] = (async () => {
+      let b = null;
+      try {
+        const { rows } = await pool.query('SELECT data FROM whiteboards WHERE roster_id=$1', [rosterId]);
+        if (rows[0]) b = JSON.parse(rows[0].data);
+      } catch (e) { console.error('board load', e); }
+      if (!b || !Array.isArray(b.pages) || !b.pages.length) b = { pages: [{ id: bid('pg_'), bg: 'blank', strokes: [] }], cur: 0, seq: 0 };
+      b.seq = b.seq || 0;
+      b.cur = Math.min(Math.max(b.cur || 0, 0), b.pages.length - 1);
+      b.pages.forEach(p => { p.undo = []; p.redo = []; });
+      return b;
+    })();
+  }
+  return boards[rosterId];
+}
+
+function boardSnapshot(b) {
+  return { pages: b.pages.map(({ id, bg, strokes }) => ({ id, bg, strokes })), cur: b.cur };
+}
+
+function scheduleBoardSave(rosterId) {
+  clearTimeout(boardTimers[rosterId]);
+  boardTimers[rosterId] = setTimeout(async () => {
+    try {
+      const b = await getBoard(rosterId);
+      const data = JSON.stringify({ ...boardSnapshot(b), seq: b.seq });
+      await pool.query(
+        'INSERT INTO whiteboards (roster_id,data) VALUES ($1,$2) ON CONFLICT (roster_id) DO UPDATE SET data=$2',
+        [rosterId, data]);
+    } catch (e) { console.error('board save', e); }
+  }, 700);
+}
+
+async function broadcastBoardState() {
+  const b = await getBoard(state.activeRosterId);
+  if (b) io.emit('board:state', boardSnapshot(b));
+}
+
+function applyBoardOp(b, op) {
+  const pg = op.page ? b.pages.find(p => p.id === op.page) : null;
+  const byN = (x, y) => (x.n || 0) - (y.n || 0);
+  if (op.t === 'add' && pg) {
+    if (!pg.strokes.some(s => s.id === op.stroke.id)) { pg.strokes.push(op.stroke); pg.strokes.sort(byN); }
+  } else if (op.t === 'del' && pg) {
+    const ids = new Set(op.ids);
+    pg.strokes = pg.strokes.filter(s => !ids.has(s.id));
+  } else if (op.t === 'ins' && pg) {
+    op.strokes.forEach(s => { if (!pg.strokes.some(x => x.id === s.id)) pg.strokes.push(s); });
+    pg.strokes.sort(byN);
+  }
+}
+
+function cleanStroke(raw) {
+  if (!raw || typeof raw.id !== 'string' || raw.id.length > 40 || !Array.isArray(raw.p) || !raw.p.length || raw.p.length > 20000) return null;
+  const p = [];
+  for (const pt of raw.p) {
+    if (!Array.isArray(pt)) return null;
+    const x = Number(pt[0]), y = Number(pt[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    p.push([Math.round(x * 10) / 10, Math.round(y * 10) / 10]);
+  }
+  const c = /^#[0-9a-f]{3,8}$/i.test(raw.c) ? raw.c : '#111827';
+  const w = Math.min(60, Math.max(1, Number(raw.w) || 6));
+  const a = Math.min(1, Math.max(0.05, Number(raw.a) || 1));
+  return { id: raw.id, c, w, a, p };
+}
+
 let wwSaveChain = Promise.resolve();
 
 // ── Sockets ───────────────────────────────────────────────
@@ -800,6 +889,8 @@ io.on('connection', async (socket) => {
     } catch {}
   }
   socket.emit('state', { ...state, rosters, deckRemaining: pickDeck.length, deckTotal });
+  socket.emit('board:mode', boardMode);
+  try { const b0 = await getBoard(state.activeRosterId); if (b0) socket.emit('board:state', boardSnapshot(b0)); } catch (e) { console.error('board init', e); }
   socket.emit('presets:all', await getAllPresets());
   socket.emit('wordlists:all', await getAllWordLists());
   socket.emit('wordwall:update', state.wordWall);
@@ -926,6 +1017,10 @@ io.on('connection', async (socket) => {
       }
       io.emit('roster:all', updated);
       io.emit('roster:activated', { id: state.activeRosterId, name: state.activeRosterName });
+      broadcastBoardState().catch(() => {});
+      pool.query('DELETE FROM whiteboards WHERE roster_id=$1', [id]).catch(() => {});
+      pool.query('DELETE FROM whiteboard_saves WHERE roster_id=$1', [id]).catch(() => {});
+      delete boards[id];
     } catch (e) { console.error('roster:delete', e); }
   });
 
@@ -956,7 +1051,7 @@ io.on('connection', async (socket) => {
         }
       }
       io.emit('roster:all', updated);
-      if (switched) io.emit('roster:activated', { id: state.activeRosterId, name: state.activeRosterName });
+      if (switched) { io.emit('roster:activated', { id: state.activeRosterId, name: state.activeRosterName }); broadcastBoardState().catch(() => {}); }
     } catch (e) { console.error('roster:archive', e); }
   });
 
@@ -985,6 +1080,150 @@ io.on('connection', async (socket) => {
     } catch {}
     if (changed) await buildDeck(id);
     io.emit('roster:activated', { id, name: state.activeRosterName });
+    if (changed) broadcastBoardState().catch(() => {});
+  });
+
+  // ── Whiteboard ──
+  const boardOp = async (fn) => {
+    const rosterId = state.activeRosterId;
+    const b = await getBoard(rosterId);
+    if (b) { await fn(b, rosterId); scheduleBoardSave(rosterId); }
+  };
+  const boardPage = (b, id) => b.pages.find(p => p.id === id);
+  const pushUndo = (pg, entry) => { pg.undo.push(entry); if (pg.undo.length > 100) pg.undo.shift(); pg.redo = []; };
+
+  socket.on('board:mode', (mode) => {
+    if (!BOARD_MODES.includes(mode)) return;
+    boardMode = mode;
+    io.emit('board:mode', boardMode);
+  });
+
+  socket.on('board:live', (d) => {
+    if (!d || typeof d.id !== 'string' || !Array.isArray(d.pts) || d.pts.length > 400) return;
+    socket.broadcast.emit('board:live', d);
+  });
+
+  socket.on('board:stroke', ({ page, stroke } = {}) => boardOp(async (b) => {
+    const pg = boardPage(b, page), st = cleanStroke(stroke);
+    if (!pg || !st || pg.strokes.some(s => s.id === st.id)) return;
+    st.n = ++b.seq;
+    pg.strokes.push(st);
+    pushUndo(pg, { fwd: { t: 'add', page, stroke: st }, inv: { t: 'del', page, ids: [st.id] } });
+    io.emit('board:op', { t: 'add', page, stroke: st });
+  }));
+
+  socket.on('board:erase', ({ page, ids } = {}) => boardOp(async (b) => {
+    const pg = boardPage(b, page);
+    if (!pg || !Array.isArray(ids)) return;
+    const set = new Set(ids);
+    const removed = pg.strokes.filter(s => set.has(s.id));
+    if (!removed.length) return;
+    applyBoardOp(b, { t: 'del', page, ids: removed.map(s => s.id) });
+    pushUndo(pg, { fwd: { t: 'del', page, ids: removed.map(s => s.id) }, inv: { t: 'ins', page, strokes: removed } });
+    io.emit('board:op', { t: 'del', page, ids: removed.map(s => s.id) });
+  }));
+
+  const saveBoardPage = async (rosterId, pg, name) => {
+    const rec = { id: bid('bs_'), name: String(name || new Date().toLocaleString()).slice(0, 80), bg: pg.bg, strokes: pg.strokes };
+    await pool.query('INSERT INTO whiteboard_saves (id,roster_id,name,bg,strokes) VALUES ($1,$2,$3,$4,$5)',
+      [rec.id, rosterId, rec.name, rec.bg, JSON.stringify(rec.strokes)]);
+    return rec;
+  };
+
+  socket.on('board:clear', ({ page, name } = {}) => boardOp(async (b, rosterId) => {
+    const pg = boardPage(b, page);
+    if (!pg || !pg.strokes.length) return;
+    const removed = pg.strokes;
+    const rec = await saveBoardPage(rosterId, pg, name);
+    pg.strokes = [];
+    pushUndo(pg, { fwd: { t: 'del', page, ids: removed.map(s => s.id) }, inv: { t: 'ins', page, strokes: removed }, save: rec });
+    io.emit('board:op', { t: 'del', page, ids: removed.map(s => s.id) });
+    io.emit('board:saves:changed');
+  }));
+
+  socket.on('board:undo', ({ page } = {}) => boardOp(async (b, rosterId) => {
+    const pg = boardPage(b, page);
+    const entry = pg && pg.undo.pop();
+    if (!entry) return;
+    applyBoardOp(b, entry.inv);
+    pg.redo.push(entry);
+    io.emit('board:op', entry.inv);
+    if (entry.save) {
+      await pool.query('DELETE FROM whiteboard_saves WHERE id=$1', [entry.save.id]);
+      io.emit('board:saves:changed');
+    }
+  }));
+
+  socket.on('board:redo', ({ page } = {}) => boardOp(async (b, rosterId) => {
+    const pg = boardPage(b, page);
+    const entry = pg && pg.redo.pop();
+    if (!entry) return;
+    applyBoardOp(b, entry.fwd);
+    pg.undo.push(entry);
+    io.emit('board:op', entry.fwd);
+    if (entry.save) {
+      await pool.query('INSERT INTO whiteboard_saves (id,roster_id,name,bg,strokes) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING',
+        [entry.save.id, rosterId, entry.save.name, entry.save.bg, JSON.stringify(entry.save.strokes)]);
+      io.emit('board:saves:changed');
+    }
+  }));
+
+  socket.on('board:bg', ({ page, bg } = {}) => boardOp(async (b) => {
+    const pg = boardPage(b, page);
+    if (!pg || !BOARD_BGS.includes(bg)) return;
+    pg.bg = bg;
+    io.emit('board:bg', { page, bg });
+  }));
+
+  socket.on('board:cur', (index) => boardOp(async (b) => {
+    const i = Math.min(Math.max(parseInt(index) || 0, 0), b.pages.length - 1);
+    b.cur = i;
+    io.emit('board:cur', i);
+  }));
+
+  socket.on('board:pageAdd', () => boardOp(async (b) => {
+    const page = { id: bid('pg_'), bg: b.pages[b.cur]?.bg || 'blank', strokes: [], undo: [], redo: [] };
+    b.pages.splice(b.cur + 1, 0, page);
+    b.cur += 1;
+    io.emit('board:state', boardSnapshot(b));
+  }));
+
+  socket.on('board:pageDel', ({ page, name } = {}) => boardOp(async (b, rosterId) => {
+    const pg = boardPage(b, page);
+    if (!pg || b.pages.length < 2) return;
+    if (pg.strokes.length) { await saveBoardPage(rosterId, pg, name); io.emit('board:saves:changed'); }
+    b.pages = b.pages.filter(p => p.id !== page);
+    b.cur = Math.min(b.cur, b.pages.length - 1);
+    io.emit('board:state', boardSnapshot(b));
+  }));
+
+  socket.on('board:saves:list', async (cb) => {
+    try {
+      const { rows } = await pool.query(
+        'SELECT id,name,bg,strokes,created_at FROM whiteboard_saves WHERE roster_id=$1 ORDER BY created_at DESC LIMIT 40',
+        [state.activeRosterId]);
+      cb && cb(rows.map(r => ({ id: r.id, name: r.name, bg: r.bg, strokes: JSON.parse(r.strokes || '[]') })));
+    } catch (e) { console.error('board:saves:list', e); cb && cb([]); }
+  });
+
+  socket.on('board:save:delete', async (id) => {
+    try {
+      await pool.query('DELETE FROM whiteboard_saves WHERE id=$1 AND roster_id=$2', [id, state.activeRosterId]);
+      io.emit('board:saves:changed');
+    } catch (e) { console.error('board:save:delete', e); }
+  });
+
+  socket.on('board:save:restore', async (id) => {
+    try {
+      const { rows } = await pool.query('SELECT bg,strokes FROM whiteboard_saves WHERE id=$1 AND roster_id=$2', [id, state.activeRosterId]);
+      if (!rows[0]) return;
+      await boardOp(async (b) => {
+        const strokes = JSON.parse(rows[0].strokes || '[]').map(s => ({ ...s, id: bid('s_'), n: ++b.seq }));
+        b.pages.push({ id: bid('pg_'), bg: rows[0].bg || 'blank', strokes, undo: [], redo: [] });
+        b.cur = b.pages.length - 1;
+        io.emit('board:state', boardSnapshot(b));
+      });
+    } catch (e) { console.error('board:save:restore', e); }
   });
 
   // ── Slides ──

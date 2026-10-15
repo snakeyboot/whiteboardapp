@@ -7,6 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/whiteboard.css">
   <meta name="theme-color" content="#0f172a">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -954,6 +955,7 @@
             <button class="btn btn-gray btn-sm" onclick="openGroupsModal()">Groups</button>
             <button class="btn btn-gray btn-sm" onclick="openSeatingModal()">Seating</button>
             <button class="btn btn-gray btn-sm" onclick="openAwardsModal()">🏆 Awards</button>
+            <button class="btn btn-blue btn-sm" style="grid-column:1 / -1;" onclick="openBoardModal()">✎ Whiteboard</button>
           </div>
           <div class="deck-badge" id="deckBadge"></div>
         </div>
@@ -1087,6 +1089,17 @@
     </div>
 
   </div><!-- end sections -->
+
+  <!-- Whiteboard Modal -->
+  <div class="overlay" id="boardOverlay">
+    <div class="modal" style="width:min(98vw,1180px);max-width:none;height:94vh;max-height:none;display:flex;flex-direction:column;padding:0;overflow:hidden;">
+      <div class="modal-header">
+        <span class="modal-title">✎ Whiteboard</span>
+        <button class="modal-close" onclick="closeBoardModal()">✕</button>
+      </div>
+      <div id="boardHostCtl" style="flex:1;min-height:0;background:#0b1220;"></div>
+    </div>
+  </div>
 
   <!-- Groups Modal -->
   <div class="overlay" id="groupsOverlay" onclick="if(event.target===this)closeGroupsModal()">
@@ -1280,8 +1293,10 @@
   <div id="conflictDropdown" class="conflict-dropdown" style="display:none;position:fixed;z-index:300;"></div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/whiteboard.js"></script>
   <script>
     const socket = io();
+    const boardApi = Whiteboard.create({ socket, host: document.getElementById('boardHostCtl'), variant: 'controller' });
     const dot = document.getElementById('dot');
     socket.on('connect',    () => dot.classList.remove('disconnected'));
     socket.on('disconnect', () => dot.classList.add('disconnected'));
@@ -1743,6 +1758,13 @@
       if (!confirm(`Permanently delete "${rosters[id]?.name}"? This cannot be undone.`)) return;
       socket.emit('roster:delete', id);
     }
+
+    // ── Whiteboard ─────────────────────────────────────────
+    function openBoardModal() {
+      document.getElementById('boardOverlay').classList.add('open');
+      setTimeout(() => boardApi.refresh(), 30);
+    }
+    function closeBoardModal() { document.getElementById('boardOverlay').classList.remove('open'); }
 
     // ── Groups / Awards modals ─────────────────────────────
     function openGroupsModal()  { renderForcedGroupsCard(); document.getElementById('groupsOverlay').classList.add('open'); }
