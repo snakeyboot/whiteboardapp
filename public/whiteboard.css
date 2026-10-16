@@ -85,3 +85,8 @@
 .wb-strip .wb-size { width: 100%; }
 .wb-strip .wb-page { text-align: center; min-width: 0; font-size: 12px; }
 .wb-strip .wb-danger, .wb-strip [data-act="saved"] { grid-column-end: span 2; }
+
+/* ── Zoom reset button ── */
+.wb-zoomreset { display: none; position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 4; }
+.wb-zoomed .wb-zoomreset { display: inline-flex; align-items: center; }
+.wb-surface { transform-origin: 50% 50%; }

@@ -1865,6 +1865,11 @@
   const boardApi = Whiteboard.create({
     socket, host: document.getElementById('boardHost'), variant: 'display',
     barHost: document.getElementById('boardBarBody'),
+    scrollUnder: (dx, dy) => {
+      const f = iframeMap[activeRawUrl];
+      if (!f) return false;
+      try { if (!f.contentDocument) return false; f.contentWindow.scrollBy(dx, dy); return true; } catch (_) { return false; }
+    },
     onMode: (m) => {
       boardModeNow = m;
       document.body.classList.remove('bm-slides', 'bm-board', 'bm-split', 'bm-annotate');

@@ -84,7 +84,7 @@
 
   const stamp = () => new Date().toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-  function create({ socket, host, variant, onMode, barHost, onClose }) {
+  function create({ socket, host, variant, onMode, barHost, onClose, scrollUnder }) {
     const S = { pages: [], cur: 0, mode: 'slides', tool: 'pen', color: 0, size: 1, live: {}, erasing: null };
     host.classList.add('wb-root');
     if (variant) host.classList.add('wb-' + variant);
@@ -121,6 +121,7 @@
           <canvas class="wb-bgc"></canvas><canvas class="wb-ink"></canvas><canvas class="wb-livec"></canvas>
         </div>
       </div>
+      <button class="wb-btn wb-zoomreset" data-act="zoomreset" title="Back to full board">Fit</button>
       <div class="wb-rotate">Turn your device sideways for a bigger board</div>
       <div class="wb-saved" hidden>
         <div class="wb-saved-box">
@@ -139,6 +140,15 @@
     const qa = (sel) => bar.querySelectorAll(sel);
 
     const page = () => S.pages[S.cur];
+
+    // ── Pinch zoom / pan (controller only) ──
+    const zoomEnabled = variant === 'controller';
+    const Z = { s: 1, tx: 0, ty: 0, res: 1 };
+    let lastFitW = 0;
+    function applyZoom() {
+      surface.style.transform = (Z.s === 1 && !Z.tx && !Z.ty) ? '' : `translate(${Z.tx}px, ${Z.ty}px) scale(${Z.s})`;
+      host.classList.toggle('wb-zoomed', Z.s > 1);
+    }
 
     function layoutClasses() {
       const fs = host.classList.contains('wb-fullscreen');
@@ -159,8 +169,11 @@
       const availW = r.width - leftPad - rightPad, availH = r.height - topPad;
       if (availW < 40 || availH < 40) return false;
       const w = Math.min(availW, availH * LW / LH), h = w * LH / LW;
+      if (Math.abs(w - lastFitW) > 2 && (Z.s !== 1 || Z.tx || Z.ty)) { Z.s = 1; Z.tx = 0; Z.ty = 0; Z.res = 1; applyZoom(); }
+      lastFitW = w;
       surface.style.width = w + 'px'; surface.style.height = h + 'px';
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      let dpr = Math.min(window.devicePixelRatio || 1, 2) * Z.res;
+      dpr = Math.min(dpr, 4096 / w);
       [bgc, ink, livec].forEach(c => { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); });
       return true;
     }
@@ -269,6 +282,7 @@
       setTimeout(redrawAll, 0);
     });
     socket.on('board:live', (d) => {
+      if (d.cancel) { delete S.live[d.id]; schedLive(); return; }
       if (!page() || d.page !== page().id) return;
       const s = S.live[d.id] || (S.live[d.id] = { id: d.id, c: d.c, w: d.w, a: d.a, p: [] });
       s.p.push(...d.pts); s.t = Date.now();
@@ -302,9 +316,62 @@
       if (changed) redrawInk();
     }
 
+    // Two fingers never draw: they pinch-zoom and pan the board instead
+    const ptrs = new Map();
+    let gesturing = false, g0 = null;
+
+    function cancelStroke() {
+      if (!active) return;
+      if (active.type === 'draw') {
+        const { id, c, w, a } = active.st;
+        delete S.live[id];
+        socket.emit('board:live', { page: active.page, id, c, w, a, pts: [], cancel: true });
+        pendingPts = [];
+        fullLive = true; inc = null; schedLive();
+      } else {
+        S.erasing = null; redrawInk();
+      }
+      active = null;
+    }
+
+    function twoPtrs() {
+      const [a, b] = [...ptrs.values()];
+      return { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] };
+    }
+
+    function beginGesture() {
+      cancelStroke();
+      gesturing = true;
+      const r = surface.getBoundingClientRect(), t = twoPtrs();
+      g0 = { d: t.d, mid: t.mid, s: Z.s, tx: Z.tx, ty: Z.ty, O: [r.left + r.width / 2 - Z.tx, r.top + r.height / 2 - Z.ty] };
+    }
+
+    function updateGesture() {
+      const t = twoPtrs();
+      const s = Math.min(5, Math.max(1, g0.s * t.d / g0.d));
+      const px = (g0.mid[0] - g0.O[0] - g0.tx) / g0.s, py = (g0.mid[1] - g0.O[1] - g0.ty) / g0.s;
+      let tx = t.mid[0] - g0.O[0] - px * s, ty = t.mid[1] - g0.O[1] - py * s;
+      const limX = (s - 1) * surface.offsetWidth / 2 + 40, limY = (s - 1) * surface.offsetHeight / 2 + 40;
+      Z.s = s;
+      Z.tx = s === 1 ? 0 : Math.max(-limX, Math.min(limX, tx));
+      Z.ty = s === 1 ? 0 : Math.max(-limY, Math.min(limY, ty));
+      applyZoom();
+    }
+
+    function endGesture() {
+      gesturing = false; g0 = null;
+      const res = Math.min(4, Math.max(1, Math.round(Z.s * 2) / 2));
+      if (res !== Z.res) { Z.res = res; redrawAll(); }
+    }
+
     surface.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'pen') lastPen = Date.now();
       else if (e.pointerType === 'touch' && Date.now() - lastPen < 1500) return;
+      if (zoomEnabled && e.pointerType === 'touch') {
+        ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+        if (ptrs.size >= 2) { e.preventDefault(); beginGesture(); return; }
+        if (gesturing) return;
+      }
       if (active || (e.pointerType === 'mouse' && e.button !== 0) || !page()) return;
       e.preventDefault();
       try { surface.setPointerCapture(e.pointerId); } catch (_) {}
@@ -327,6 +394,8 @@
     });
 
     surface.addEventListener('pointermove', (e) => {
+      if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+      if (gesturing) { if (ptrs.size >= 2) { e.preventDefault(); updateGesture(); } return; }
       if (!active || e.pointerId !== active.pid) return;
       const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
       (evs.length ? evs : [e]).forEach(ev => {
@@ -341,6 +410,10 @@
     });
 
     function endPointer(e) {
+      if (ptrs.delete(e.pointerId) && gesturing) {
+        if (ptrs.size >= 2) beginGesture(); else if (ptrs.size === 0) endGesture();
+        return;
+      }
       if (!active || e.pointerId !== active.pid) return;
       const a = active; active = null;
       if (a.type === 'erase') {
@@ -363,6 +436,17 @@
     surface.addEventListener('pointerup', endPointer);
     surface.addEventListener('pointercancel', endPointer);
     surface.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Annotate mode on the display: the mouse wheel scrolls the slide content underneath
+    let wheelTimer = 0;
+    surface.addEventListener('wheel', (e) => {
+      if (variant !== 'display' || S.mode !== 'annotate' || active) return;
+      const k = e.deltaMode === 1 ? 40 : 1;
+      if (scrollUnder && scrollUnder(e.deltaX * k, e.deltaY * k)) { e.preventDefault(); return; }
+      surface.style.pointerEvents = 'none';
+      clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(() => { surface.style.pointerEvents = ''; }, 500);
+    }, { passive: false });
 
     // ── Toolbar ──
     function loadSaved() {
@@ -416,6 +500,7 @@
         case 'saved': savedPanel.hidden = false; loadSaved(); break;
         case 'saved-close': savedPanel.hidden = true; break;
         case 'close': if (onClose) onClose(); break;
+        case 'zoomreset': Z.s = 1; Z.tx = 0; Z.ty = 0; Z.res = 1; applyZoom(); redrawAll(); break;
       }
     };
     host.addEventListener('click', onClick);
