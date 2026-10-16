@@ -2000,32 +2000,35 @@
         </div>`).join('');
     }
 
-    // Drag the grip to reorder; commits the new order on release
+    // Drag the grip to reorder; commits the new order on release.
+    // Listeners live on the document: moving the row in the DOM drops any pointer capture on the grip.
     document.addEventListener('pointerdown', (e) => {
       const grip = e.target.closest('.mat-grip');
       if (!grip) return;
-      const row = grip.closest('.material-row'), list = row.parentElement;
+      const row = grip.closest('.material-row'), list = row.parentElement, pid = e.pointerId;
       e.preventDefault();
-      grip.setPointerCapture(e.pointerId);
       row.classList.add('dragging');
       const move = (ev) => {
+        if (ev.pointerId !== pid) return;
+        ev.preventDefault();
         const rows = [...list.querySelectorAll('.material-row')].filter(r => r !== row);
         const after = rows.find(r => ev.clientY < r.getBoundingClientRect().top + r.offsetHeight / 2);
         if (after) list.insertBefore(row, after); else list.appendChild(row);
       };
-      const up = () => {
-        grip.removeEventListener('pointermove', move);
-        grip.removeEventListener('pointerup', up);
-        grip.removeEventListener('pointercancel', up);
+      const end = (ev) => {
+        if (ev.pointerId !== pid) return;
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', end);
+        document.removeEventListener('pointercancel', end);
         row.classList.remove('dragging');
         const cur = getMaterials();
         const order = [...list.querySelectorAll('.material-row')].map(r => +r.dataset.i);
         if (order.some((v, k) => v !== k)) saveMaterials(order.map(k => cur[k]));
         renderMaterials();
       };
-      grip.addEventListener('pointermove', move);
-      grip.addEventListener('pointerup', up);
-      grip.addEventListener('pointercancel', up);
+      document.addEventListener('pointermove', move, { passive: false });
+      document.addEventListener('pointerup', end);
+      document.addEventListener('pointercancel', end);
     });
 
     function copyMatUrl(i) {

@@ -2785,26 +2785,30 @@
     grip.addEventListener('pointerdown', e => {
       e.preventDefault(); e.stopPropagation();
       closeOpenSwipe();
-      grip.setPointerCapture(e.pointerId);
+      const pid = e.pointerId;
       wrap.classList.add('dragging');
+      // Document-level listeners: moving the row in the DOM drops any pointer capture on the grip
       const move = ev => {
+        if (ev.pointerId !== pid) return;
+        ev.preventDefault();
         const others = [...body.querySelectorAll('.mat-swipe')].filter(r => r !== wrap);
         const after = others.find(r => ev.clientY < r.getBoundingClientRect().top + r.offsetHeight / 2);
         if (after) body.insertBefore(wrap, after); else body.appendChild(wrap);
       };
-      const up = () => {
-        grip.removeEventListener('pointermove', move);
-        grip.removeEventListener('pointerup', up);
-        grip.removeEventListener('pointercancel', up);
+      const end = ev => {
+        if (ev.pointerId !== pid) return;
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', end);
+        document.removeEventListener('pointercancel', end);
         wrap.classList.remove('dragging');
         const cur = currentDisplayMats();
         const order = [...body.querySelectorAll('.mat-swipe')].map(r => +r.dataset.i);
         if (order.some((v, k) => v !== k)) commitMaterials(order.map(k => cur[k]));
         else renderMaterialsWidget();
       };
-      grip.addEventListener('pointermove', move);
-      grip.addEventListener('pointerup', up);
-      grip.addEventListener('pointercancel', up);
+      document.addEventListener('pointermove', move, { passive: false });
+      document.addEventListener('pointerup', end);
+      document.addEventListener('pointercancel', end);
     });
   }
 
