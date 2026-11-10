@@ -972,6 +972,37 @@
       gap: 10px; padding: 36px 16px; color: #475569; flex: 1;
     }
 
+
+    /* ── Split-flap order reveal ── */
+    #orderModalBox.flap-mode { max-width: min(660px, 96vw) !important; max-height: 92vh !important; }
+    #orderListWrap.flap-board { position: relative; gap: 7px !important; padding: 16px 18px !important; scroll-behavior: smooth; }
+    .flap-row { display: flex; align-items: center; gap: 10px; position: relative; }
+    .flap-row.done { z-index: 3; }
+    .flap-num { width: 28px; text-align: right; flex: none; font-size: 13px; font-weight: 800; color: #475569; }
+    .flap-row.done .flap-num { color: #fbbf24; }
+    .flap-chars { flex: 1; min-width: 0; container-type: inline-size; display: grid; grid-template-columns: repeat(var(--L), minmax(0, 1fr)); gap: 3px; }
+    .flap {
+      position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;
+      font-size: clamp(11px, calc(100cqw / var(--L) * 1.15), 34px); height: 1.55em;
+      background: linear-gradient(#273244 0 50%, #1b2433 50% 100%); border-radius: 4px; color: #e2e8f0;
+      font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-weight: 800; text-transform: uppercase;
+      box-shadow: inset 0 -1px 0 rgba(0,0,0,0.6);
+    }
+    .flap::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0,0,0,0.7); }
+    .flap-row.done .flap { color: #fde68a; }
+    @keyframes flapflipA { 0% { transform: scaleY(1); } 50% { transform: scaleY(0.12); } 100% { transform: scaleY(1); } }
+    @keyframes flapflipB { 0% { transform: scaleY(1); } 50% { transform: scaleY(0.12); } 100% { transform: scaleY(1); } }
+    .flap-spot {
+      position: absolute; z-index: 2; pointer-events: none; border-radius: 10px; opacity: 0;
+      border: 2px solid #fbbf24; box-shadow: 0 0 0 4000px rgba(2, 6, 23, 0.74), 0 0 26px 4px rgba(251, 191, 36, 0.55);
+      transition: top 0.5s cubic-bezier(.3,.8,.3,1), height 0.3s, left 0.3s, width 0.3s, opacity 0.5s;
+    }
+    #flapControls { display: none; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid #1e293b; }
+    .flap-ctl { padding: 9px 16px; border-radius: 9px; border: 1px solid #334155; background: #1e293b; color: #cbd5e1; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .flap-ctl.primary { background: #2563eb; border-color: #3b82f6; color: #fff; }
+    .flap-ctl.on { background: #854d0e; border-color: #ca8a04; color: #fde68a; }
+    .flap-ctl:disabled { opacity: 0.45; cursor: default; }
+
     /* ── Forced groups reveal animation ── */
     @keyframes fgNameIn {
       from { opacity: 0; transform: translateY(-6px); }
@@ -1629,7 +1660,7 @@
 
 <!-- Random Order Overlay -->
 <div class="att-overlay" id="orderOverlay" onclick="if(event.target===this)closeOrderModal()">
-  <div class="att-modal" style="max-width:min(440px,96vw);max-height:88vh;display:flex;flex-direction:column;">
+  <div class="att-modal" id="orderModalBox" style="max-width:min(440px,96vw);max-height:88vh;display:flex;flex-direction:column;">
     <div class="att-header">
       <div>
         <div class="att-title">Random Order</div>
@@ -1646,6 +1677,14 @@
     </div>
     <!-- List or empty state -->
     <div id="orderListWrap" style="flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:5px;"></div>
+    <!-- Split-flap reveal controls -->
+    <div id="flapControls">
+      <button class="flap-ctl primary" id="flapNext" onclick="flapNext()">Reveal ▶</button>
+      <button class="flap-ctl" id="flapAuto" onclick="flapAutoToggle()">⏩ Auto</button>
+      <button class="flap-ctl" id="flapEdit" onclick="flapEdit()" style="display:none;">✎ Edit</button>
+      <span id="flapProg" style="flex:1;text-align:right;font-size:12px;color:#64748b;font-weight:700;"></span>
+      <button class="flap-ctl" id="flapSnd" onclick="flapSoundToggle()" title="Sound on/off">🔊</button>
+    </div>
     <!-- Footer -->
     <div class="att-footer" style="border-top:1px solid #1e293b;gap:8px;">
       <button class="group-shuffle-btn" onclick="shuffleOrder()" style="flex:none;padding:8px 16px;">🔀 Shuffle</button>
@@ -1681,7 +1720,7 @@
     <div class="widget-label">Order</div>
     <button class="handle-btn" onclick="closeOrderWidget()" title="Close">✕</button>
   </div>
-  <div class="widget-body" style="padding:0;" id="orderWidgetBody"></div>
+  <div class="widget-body" style="padding:0;" id="orderWidgetBody"><div id="orderScroll" style="height:360px;overflow-y:auto;padding:8px 10px;container-type:inline-size;"></div></div>
 </div>
 
 <!-- Spotify Widget -->
@@ -2074,6 +2113,10 @@
     const savedWwH = parseInt(localStorage.getItem(WW_H_KEY)) || 268;
     document.getElementById('wwBody').style.height = savedWwH + 'px';
 
+    // Order board: same width as before, adjustable height, one scrolling column
+    document.getElementById('orderWidget').dataset.noTransform = 'true';
+    document.getElementById('orderScroll').style.height = (parseInt(localStorage.getItem(ORDER_H_KEY)) || Math.max(260, Math.min(380, Math.round(window.innerHeight * 0.6)))) + 'px';
+
     // Materials uses the same direct-sizing mode; only its list scrolls (zoom row stays visible)
     mw.dataset.noTransform = 'true';
     document.getElementById('matsBody').style.height = (parseInt(localStorage.getItem(MATS_H_KEY)) || 114) + 'px';
@@ -2096,6 +2139,7 @@
     addResizeHandles();
     addVertResize('wordWallWidget', 'wwBody', WW_H_KEY, 268);   // vertical height drag handle
     addVertResize('matsWidget', 'matsBody', MATS_H_KEY, 114);
+    addVertResize('orderWidget', 'orderScroll', ORDER_H_KEY, 360);
     WIDGET_DEFS.forEach(d => reapplyBodyScale(d.key));
     // One RAF deferred re-pass: browser finishes its first layout cycle first,
     // so offsetHeight / getBoundingClientRect values are fully settled.
@@ -3054,13 +3098,13 @@
   }
 
   function shuffleOrder() {
-    if (orderRevealing) return;
+    if (flap && flap.busy) return;
     const r = allRosters[activeRosterId];
     if (!r) return;
     const present = parseRosterStudents(r.students).filter(s => (s.attendance || 'present') !== 'absent');
     orderList = present.map(s => fullNameDisplay(s));
     shuffleArray(orderList);
-    renderOrderListModal(true);
+    startFlapReveal();
   }
 
   function shuffleArray(arr) {
@@ -3070,7 +3114,191 @@
     }
   }
 
+
+  // ── Split-flap order reveal ─────────────────────────────────
+  const FLAP_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const flapRnd = () => FLAP_LETTERS[Math.floor(Math.random() * 26)];
+  let flap = null;
+  let flapSoundOn = localStorage.getItem('croom_flap_sound') !== '0';
+  let flapAC = null, flapNoise = null;
+
+  function flapCtx() {
+    try {
+      if (!flapAC) {
+        flapAC = new (window.AudioContext || window.webkitAudioContext)();
+        const len = Math.floor(flapAC.sampleRate * 0.02);
+        flapNoise = flapAC.createBuffer(1, len, flapAC.sampleRate);
+        const d = flapNoise.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+      }
+      if (flapAC.state === 'suspended') flapAC.resume();
+    } catch (_) { return null; }
+    return flapAC;
+  }
+
+  function flapClick(vol, when) {
+    if (!flapSoundOn) return;
+    const ac = flapCtx(); if (!ac) return;
+    const src = ac.createBufferSource(); src.buffer = flapNoise;
+    src.playbackRate.value = 0.8 + Math.random() * 0.6;
+    const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2000 + Math.random() * 1500; f.Q.value = 0.9;
+    const g = ac.createGain(); g.gain.value = vol;
+    src.connect(f); f.connect(g); g.connect(ac.destination);
+    src.start(ac.currentTime + (when || 0));
+  }
+
+  function flapTone(freq, dur, vol, when) {
+    if (!flapSoundOn) return;
+    const ac = flapCtx(); if (!ac) return;
+    const t = ac.currentTime + (when || 0);
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur + 0.05);
+  }
+
+  const flapThunk = () => { flapTone(130, 0.28, 0.35); flapClick(0.25, 0); };
+  const flapDing  = () => { flapTone(784, 0.55, 0.16); flapTone(1175, 0.7, 0.14, 0.12); };
+
+  function flapSoundToggle() {
+    flapSoundOn = !flapSoundOn;
+    localStorage.setItem('croom_flap_sound', flapSoundOn ? '1' : '0');
+    if (flapSoundOn) flapClick(0.1, 0);
+    updateFlapUI();
+  }
+
+  function flapSetCell(c, ch) {
+    c.textContent = ch;
+    c._ff = !c._ff;
+    c.style.animation = `${c._ff ? 'flapflipA' : 'flapflipB'} 110ms ease-in-out`;
+  }
+
+  function startFlapReveal() {
+    stopFlap();
+    const wrap = document.getElementById('orderListWrap');
+    const L = Math.min(28, Math.max(8, ...orderList.map(n => n.length)));
+    wrap.classList.add('flap-board');
+    document.getElementById('orderModalBox').classList.add('flap-mode');
+    wrap.innerHTML = orderList.map((n, i) => `
+      <div class="flap-row">
+        <span class="flap-num">${i + 1}</span>
+        <div class="flap-chars" style="--L:${L}">${'<span class="flap"></span>'.repeat(L)}</div>
+      </div>`).join('') + '<div class="flap-spot" id="flapSpot"></div>';
+    const rows = [...wrap.querySelectorAll('.flap-row')].map((el, i) => ({
+      el, cells: [...el.querySelectorAll('.flap')], state: 'flipping',
+      chars: orderList[i].toUpperCase().padEnd(L, ' ').slice(0, L).split(''), lock: [],
+    }));
+    rows.forEach(r => r.cells.forEach(c => { c.textContent = flapRnd(); }));
+    flap = { rows, L, idx: -1, busy: false, auto: false, finished: false, autoTimer: 0, timer: setInterval(flapTick, 90) };
+    orderRevealing = true;
+    document.getElementById('flapControls').style.display = 'flex';
+    updateFlapUI();
+  }
+
+  function flapTick() {
+    if (!flap) return;
+    let clicks = 0;
+    flap.rows.forEach(r => {
+      if (r.state === 'done') return;
+      r.cells.forEach((c, ci) => {
+        if (r.state === 'resolving') {
+          if (c.dataset.locked) return;
+          if (r.lock[ci] <= 0) {
+            c.textContent = ''; flapSetCell(c, r.chars[ci] === ' ' ? '' : r.chars[ci]);
+            c.dataset.locked = '1'; clicks += 2;
+          } else { r.lock[ci]--; flapSetCell(c, flapRnd()); clicks++; }
+        } else if (Math.random() < 0.28) { flapSetCell(c, flapRnd()); clicks++; }
+      });
+      if (r.state === 'resolving' && r.cells.every(c => c.dataset.locked)) {
+        r.state = 'done'; r.el.classList.add('done'); flapRowDone();
+      }
+    });
+    const n = Math.min(4, Math.ceil(clicks / 25));
+    for (let k = 0; k < n; k++) flapClick(0.03, Math.random() * 0.08);
+  }
+
+  function flapMoveSpot(r) {
+    const spot = document.getElementById('flapSpot'), wrap = document.getElementById('orderListWrap');
+    if (!spot) return;
+    const pad = 5;
+    spot.style.opacity = '1';
+    spot.style.top = (r.el.offsetTop - pad) + 'px';
+    spot.style.left = (r.el.offsetLeft - pad) + 'px';
+    spot.style.width = (r.el.offsetWidth + pad * 2) + 'px';
+    spot.style.height = (r.el.offsetHeight + pad * 2) + 'px';
+    wrap.scrollTo({ top: r.el.offsetTop - wrap.clientHeight / 2 + r.el.offsetHeight / 2, behavior: 'smooth' });
+  }
+
+  function flapNext() {
+    if (!flap || flap.busy || flap.finished || flap.idx + 1 >= flap.rows.length) return;
+    flapCtx();
+    flap.idx++;
+    const r = flap.rows[flap.idx];
+    r.state = 'resolving';
+    r.lock = r.cells.map((_, ci) => Math.round(4 + ci * 1.2 + Math.random() * 3));
+    flap.busy = true;
+    flapMoveSpot(r);
+    flapThunk();
+    updateFlapUI();
+  }
+
+  function flapRowDone() {
+    flapDing();
+    flap.busy = false;
+    if (flap.idx >= flap.rows.length - 1) { finishFlap(); }
+    else if (flap.auto) { flap.autoTimer = setTimeout(flapNext, 1100); }
+    updateFlapUI();
+  }
+
+  function finishFlap() {
+    flap.finished = true; flap.auto = false;
+    clearTimeout(flap.autoTimer);
+    const f = flap;
+    setTimeout(() => {
+      if (flap !== f) return;
+      const spot = document.getElementById('flapSpot'); if (spot) spot.style.opacity = '0';
+      clearInterval(f.timer);
+      orderRevealing = false;
+    }, 1300);
+  }
+
+  function flapAutoToggle() {
+    if (!flap || flap.finished) return;
+    flapCtx();
+    flap.auto = !flap.auto;
+    clearTimeout(flap.autoTimer);
+    if (flap.auto && !flap.busy) flapNext();
+    updateFlapUI();
+  }
+
+  function flapEdit() { renderOrderListModal(false); }
+
+  function updateFlapUI() {
+    const next = document.getElementById('flapNext'), auto = document.getElementById('flapAuto');
+    if (!next) return;
+    const doneN = flap ? flap.rows.filter(r => r.state === 'done').length : 0;
+    next.disabled = !flap || flap.busy || flap.finished;
+    next.textContent = flap && flap.idx < 0 ? 'Reveal ▶' : 'Next ▶';
+    auto.disabled = !flap || flap.finished;
+    auto.classList.toggle('on', !!(flap && flap.auto));
+    auto.textContent = flap && flap.auto ? '⏸ Pause' : '⏩ Auto';
+    document.getElementById('flapEdit').style.display = flap && flap.finished ? '' : 'none';
+    document.getElementById('flapProg').textContent = flap ? `${doneN} / ${flap.rows.length}` : '';
+    document.getElementById('flapSnd').textContent = flapSoundOn ? '🔊' : '🔇';
+  }
+
+  function stopFlap() {
+    if (flap) { clearInterval(flap.timer); clearTimeout(flap.autoTimer); }
+    flap = null;
+    orderRevealing = false;
+    const wrap = document.getElementById('orderListWrap'), box = document.getElementById('orderModalBox'), ctl = document.getElementById('flapControls');
+    if (wrap) wrap.classList.remove('flap-board');
+    if (box) box.classList.remove('flap-mode');
+    if (ctl) ctl.style.display = 'none';
+  }
+
   function renderOrderListModal(reveal = false) {
+    stopFlap();
     const wrap = document.getElementById('orderListWrap');
     if (!orderList.length) {
       wrap.innerHTML = `
@@ -3155,6 +3383,7 @@
   });
 
   function closeOrderModal() {
+    stopFlap();
     document.getElementById('orderOverlay').classList.remove('open');
   }
 
@@ -3179,15 +3408,16 @@
   }
 
   function renderOrderWidget() {
-    document.getElementById('orderWidgetBody').innerHTML = `
-      <div style="overflow-y:auto;max-height:55vh;padding:8px 10px;display:flex;flex-direction:column;gap:3px;">
+    document.getElementById('orderScroll').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:4px;">
         ${orderList.map((name, i) => `
-          <div style="display:flex;align-items:center;gap:9px;padding:5px 6px;border-radius:6px;background:${i % 2 === 0 ? '#0f172a' : 'transparent'};">
-            <span style="font-size:11px;font-weight:700;color:#475569;min-width:20px;text-align:right;flex-shrink:0;">${i + 1}</span>
-            <span style="font-size:13px;font-weight:600;color:#e2e8f0;">${name}</span>
+          <div style="display:flex;align-items:baseline;gap:0.45em;padding:0.14em 0.3em;border-radius:8px;font-size:clamp(18px,13cqw,44px);background:${i % 2 === 0 ? '#0f172a' : 'transparent'};">
+            <span style="font-size:0.55em;font-weight:800;color:#64748b;min-width:1.3em;text-align:right;flex-shrink:0;">${i + 1}</span>
+            <span style="font-weight:700;line-height:1.15;color:#f1f5f9;overflow-wrap:anywhere;">${name}</span>
           </div>
         `).join('')}
       </div>`;
+    reapplyBodyScale('order');
   }
 
   function openGroupModal() {
@@ -3894,6 +4124,7 @@
   const LOCK_KEY  = 'croom_lock_sizes_v1';
   const WW_H_KEY     = 'croom_ww_height_v1';
   const MATS_H_KEY   = 'croom_mats_height_v1';
+  const ORDER_H_KEY  = 'croom_order_height_v1';
   const WW_MIN_H     = 60;
   const WW_MAX_H     = 900;
   const GROUPS_H_KEY = 'croom_groups_height_v1';
