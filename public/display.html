@@ -997,6 +997,7 @@
       border: 2px solid #fbbf24; box-shadow: 0 0 0 4000px rgba(2, 6, 23, 0.74), 0 0 26px 4px rgba(251, 191, 36, 0.55);
       transition: top 0.5s cubic-bezier(.3,.8,.3,1), height 0.3s, left 0.3s, width 0.3s, opacity 0.5s;
     }
+    .flap-spot.fast { transition-duration: 0.16s, 0.12s, 0.12s, 0.12s, 0.3s; }
     #flapControls { display: none; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid #1e293b; }
     .flap-ctl { padding: 9px 16px; border-radius: 9px; border: 1px solid #334155; background: #1e293b; color: #cbd5e1; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .flap-ctl.primary { background: #2563eb; border-color: #3b82f6; color: #fff; }
@@ -3235,18 +3236,23 @@
     flap.idx++;
     const r = flap.rows[flap.idx];
     r.state = 'resolving';
-    r.lock = r.cells.map((_, ci) => Math.round(4 + ci * 1.2 + Math.random() * 3));
+    const fast = flap.auto;
+    r.fast = fast;
+    r.lock = r.cells.map((_, ci) => fast ? Math.round(0.6 + ci * 0.14 + Math.random() * 0.8) : Math.round(4 + ci * 1.2 + Math.random() * 3));
     flap.busy = true;
+    const spot = document.getElementById('flapSpot');
+    if (spot) spot.classList.toggle('fast', fast);
     flapMoveSpot(r);
-    flapThunk();
+    if (!fast) flapThunk();
     updateFlapUI();
   }
 
   function flapRowDone() {
-    flapDing();
+    const fastRow = flap.rows[flap.idx] && flap.rows[flap.idx].fast;
+    if (fastRow) flapTone(1175, 0.18, 0.1); else flapDing();
     flap.busy = false;
     if (flap.idx >= flap.rows.length - 1) { finishFlap(); }
-    else if (flap.auto) { flap.autoTimer = setTimeout(flapNext, 1100); }
+    else if (flap.auto) { flap.autoTimer = setTimeout(flapNext, 50); }
     updateFlapUI();
   }
 
