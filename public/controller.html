@@ -272,8 +272,8 @@
       letter-spacing: 0.05em;
       flex-shrink: 0;
     }
-    .mat-slides  { background: #F9AB00; color: #1a1a1a; }
-    .mat-doc     { background: #1a73e8; color: #fff; }
+    .mat-slides  { background: #FDD835; color: #1a1a1a; }
+    .mat-doc     { background: #1a73e8; color: #fff; } /* blue */
     .mat-pdf     { background: #9f1239; color: #fca5a5; }
     .mat-form    { background: #7c3aed; color: #fff; }
     .mat-youtube { background: #ff0000; color: #fff; }
@@ -985,7 +985,7 @@
       <button class="add-btn" id="matAddBtn" onclick="openAddMaterialForm()">+ Add Material</button>
       <div class="mat-add-form" id="matAddForm">
         <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;" id="matFormLabel">Add Material</div>
-        <input type="url" id="matUrl" placeholder="Paste URL…" oninput="matAutoDetect()" onblur="matFetchTitle()">
+        <input type="url" id="matUrl" placeholder="Paste URL…" oninput="matAutoDetect()" onpaste="setTimeout(matFetchTitle,0)" onchange="matFetchTitle()" onblur="matFetchTitle()">
         <div class="mat-form-row">
           <select id="matType" style="flex:1;">
             <option value="slides">Google Slides</option>
@@ -996,7 +996,7 @@
             <option value="web">Website</option>
             <option value="reader">Reader Mode</option>
           </select>
-          <input type="text" id="matTitle" placeholder="Title (optional)" style="flex:2;">
+          <input type="text" id="matTitle" placeholder="Title (optional)" style="flex:2;" oninput="this.dataset.auto='0'">
         </div>
         <div class="mat-form-row">
           <button class="btn btn-blue btn-sm" id="matConfirmBtn" onclick="confirmAddMaterial()">Add</button>
@@ -1935,17 +1935,25 @@
       document.getElementById('matType').value = detectType(url);
     }
 
+    let matTitleFetchedFor = '';
     async function matFetchTitle() {
       const url = document.getElementById('matUrl').value.trim();
       if (!url) return;
       matAutoDetect();
       const titleEl = document.getElementById('matTitle');
-      if (titleEl.value.trim()) return; // don't overwrite if user already typed something
+      // Re-fetch if the URL changed and the title was auto-filled (or is empty); never clobber typed titles
+      const autoFilled = titleEl.dataset.auto === '1';
+      if (url === matTitleFetchedFor) return;
+      if (titleEl.value.trim() && !autoFilled) return;
+      matTitleFetchedFor = url;
       titleEl.placeholder = 'Fetching title…';
       try {
         const res = await fetch(`/api/fetch-title?url=${encodeURIComponent(url)}`);
         const { title } = await res.json();
-        if (title) titleEl.value = title;
+        if (title && document.getElementById('matUrl').value.trim() === url && (!titleEl.value.trim() || titleEl.dataset.auto === '1')) {
+          titleEl.value = title;
+          titleEl.dataset.auto = '1';
+        }
       } catch {}
       titleEl.placeholder = 'Title (optional)';
     }
@@ -2052,7 +2060,7 @@
     function openAddMaterialForm() {
       editMatIdx = -1;
       document.getElementById('matUrl').value   = '';
-      document.getElementById('matTitle').value = '';
+      document.getElementById('matTitle').value = ''; document.getElementById('matTitle').dataset.auto = '0'; matTitleFetchedFor = '';
       document.getElementById('matType').value  = 'slides';
       document.getElementById('matFormLabel').textContent  = 'Add Material';
       document.getElementById('matConfirmBtn').textContent = 'Add';
@@ -2067,7 +2075,7 @@
       if (!m) return;
       editMatIdx = i;
       document.getElementById('matUrl').value   = m.originalUrl || m.url;
-      document.getElementById('matTitle').value = (m.title && m.title !== m.url && m.title !== m.originalUrl) ? m.title : '';
+      document.getElementById('matTitle').value = (m.title && m.title !== m.url && m.title !== m.originalUrl) ? m.title : ''; document.getElementById('matTitle').dataset.auto = '0'; matTitleFetchedFor = '';
       document.getElementById('matType').value  = m.type || 'web';
       document.getElementById('matFormLabel').textContent  = 'Edit Material';
       document.getElementById('matConfirmBtn').textContent = 'Save';
@@ -2081,7 +2089,7 @@
       editMatIdx = -1;
       document.getElementById('matAddForm').classList.remove('open');
       document.getElementById('matUrl').value   = '';
-      document.getElementById('matTitle').value = '';
+      document.getElementById('matTitle').value = ''; document.getElementById('matTitle').dataset.auto = '0'; matTitleFetchedFor = '';
     }
 
     function confirmAddMaterial() {

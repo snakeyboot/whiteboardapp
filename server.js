@@ -299,17 +299,34 @@ app.get('/api/book-info', async (req, res) => {
 
 app.get('/api/fetch-title', async (req, res) => {
   const { url } = req.query;
-  if (!url) return res.json({ title: '' });
+  if (!url || !/^https?:\/\//i.test(url)) return res.json({ title: '' });
+  const fromFilename = () => {
+    try {
+      const f = decodeURIComponent(new URL(url).pathname.split('/').pop() || '');
+      return /\.pdf$/i.test(f) ? f.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim() : '';
+    } catch { return ''; }
+  };
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(5000), headers: { 'User-Agent': 'Mozilla/5.0' } });
-    const html = await r.text();
-    const m = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-    const raw = m ? m[1].trim() : '';
+    // YouTube: oEmbed gives a clean title
+    if (/youtube\.com|youtu\.be/.test(url)) {
+      const o = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(5000) });
+      if (o.ok) return res.json({ title: ((await o.json()).title || '').trim() });
+    }
+    const r = await fetch(url, { signal: AbortSignal.timeout(5000), redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!/html/i.test(r.headers.get('content-type') || '')) return res.json({ title: fromFilename() });
+    const html = (await r.text()).slice(0, 200000);
+    const m = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)
+           || html.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const raw = (m ? m[1] : '').replace(/&amp;/g, '&').replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').trim();
     // Google appends " - Google Slides / Docs / Drive" — strip it
     const title = raw.replace(/\s*[-–—]\s*Google (Slides|Docs|Drive|Sheets|Forms)$/i, '').trim();
-    res.json({ title });
+    // Private files redirect to a sign-in page; don't use that as a title
+    if (/^(sign in|google accounts|error|404|access denied|just a moment)/i.test(title) || /accounts\.google\.com/.test(r.url)) {
+      return res.json({ title: fromFilename() });
+    }
+    res.json({ title: title || fromFilename() });
   } catch {
-    res.json({ title: '' });
+    res.json({ title: fromFilename() });
   }
 });
 
